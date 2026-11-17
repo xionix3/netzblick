@@ -5,6 +5,24 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.1.0] – 2026-11-17
+
+### Neu
+- **Kundenportal von Netz Burgenland eingebunden.** Beide Portale nutzen dieselbe Anmeldung, darum reicht normalerweise der Smart-Meter-Zugang. Wer im Kundenportal ein anderes Konto hat, trägt es bei der Anmeldung oder unter „Konto“ ein.
+- **Seite „Anlagen“:** Zählpunktnummer (kopierbar), Adresse, Zählernummer, Gerät, Zählerstand, Messwerte seit, Netzebene, Lastprofil, Lieferant, Vertragsbeginn, letzte Abrechnung, Energiegemeinschaft.
+- **Seite „Abrechnung“:** laufendes Abrechnungsjahr aus den Smart-Meter-Werten mit Hochrechnung (nach dem Verlauf des Vorjahres), Vergleich gemessen gegen abgerechnet, Kosten gegen Teilbeträge, abgerechnete Jahresverbräuche, Rechnungen und Teilbeträge. Externe Rechnungssteller werden erkannt.
+- **Seite „Konto“** mit dem Status beider Portale, Wahl des Zugangs zum Kundenportal und Abmelden; **Seite „Info“** mit Marke, Version, Kontakt, Datenschutz und Lizenzen.
+- **Menü:** auf dem Handy als Schublade (Knopf oder Wischen vom linken Rand), auf dem Tablet fest am Rand.
+- **Mehrfachauswahl der Zählpunkte:** in der Diagrammlegende ein- und ausblenden, im Filter und in der Zählpunktwahl („nur dieser“). Farben bleiben je Zählpunkt gleich.
+- **Diagrammart umschaltbar:** Balken, Linien (Zählpunkte einzeln), Fläche (gestapelt) und Kreis mit Aufteilung nach Zählpunkt, Tageszeit oder Werktag/Wochenende samt Tabelle. Die Wahl wird je Auflösung gemerkt.
+- Eigener Zeitraum „Seit der letzten Abrechnung“.
+- Tablet- und Querformat-Layout: Summe und Kennzahlen neben dem Diagramm, Analysen zweispaltig.
+- Animiertes Markenzeichen beim Start, im Menü und auf der Info-Seite.
+
+### Geändert
+- Zählpunkte heißen ohne eigenen Namen jetzt nach ihrer Zählpunktnummer (wie im Smart-Meter-Portal), in engen Stellen gekürzt (AT0090…12345678).
+- Einstellungen und Abmelden sind ins Menü gewandert.
+
 ## [1.0.0] – 2026-11-17
 
 Erste Version.
@@ -22,5 +40,6 @@ Erste Version.
 - Kennzeichnung von Ersatz-, vorläufigen und fehlenden Werten.
 - Offline-Anzeige zuletzt geladener Werte, Dunkelmodus, Demo-Modus.
 
-[Unveröffentlicht]: https://github.com/xionix3/netzblick/compare/v1.0.0...HEAD
+[Unveröffentlicht]: https://github.com/xionix3/netzblick/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/xionix3/netzblick/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/xionix3/netzblick/releases/tag/v1.0.0

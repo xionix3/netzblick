@@ -57,14 +57,14 @@ const browser = await puppeteer.launch({ executablePath: chrome, headless: true,
 const results = [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function scenario(name, { query = '', theme = 'light', actions, checks, shot }) {
+async function scenario(name, { query = '', theme = 'light', viewport, actions, checks, shot }) {
   const page = await browser.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
   await page.emulateTimezone('Europe/Vienna');
   await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: theme }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
-  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true, ...viewport });
   const started = Date.now();
   try {
     await page.goto(base + '?demo=1' + query, { waitUntil: 'networkidle0' });
@@ -158,29 +158,116 @@ await scenario('Zeitraum wechseln (Pfeil zurück)', {
   actions: async (page) => { await page.click('#prevBtn'); await page.waitForFunction(() => !document.body.classList.contains('is-loading')); },
   checks: (s) => [expect(s.title === 'September 2026', `nach „zurück“ falscher Titel: ${s.title}`)],
 });
-await scenario('Einstellungen und Zählpunktwahl öffnen', {
+const openMenuItem = async (page, id) => {
+  if (await page.$eval('.menu-btn', (b) => getComputedStyle(b).display !== 'none')) {
+    await page.click('#pageUsage:not([hidden]) .menu-btn, #pageOther:not([hidden]) .menu-btn');
+    await sleep(350);
+  }
+  await page.click(`.nav-item[data-nav="${id}"]`);
+  await sleep(400);
+};
+const waitText = (page, re, timeout = 8000) => page.waitForFunction((src) => new RegExp(src).test(document.body.innerText), { timeout }, re.source);
+
+await scenario('Menü: Einstellungen und Zählpunktwahl öffnen', {
   query: '&period=month',
   actions: async (page) => {
-    await page.click('#settingsBtn');
-    await sleep(300);
+    await openMenuItem(page, 'settings');
     await page.click('#sheetClose');
     await sleep(300);
     await page.click('#meterBtn');
     await sleep(300);
   },
-  checks: (s) => [expect(s.sheetOpen, 'Zählpunkt-Auswahl nicht geöffnet'), expect(/Alle Zählpunkte/.test(s.text), 'Auswahl „Alle Zählpunkte“ fehlt')],
+  checks: (s) => [expect(s.sheetOpen, 'Zählpunkt-Auswahl nicht geöffnet'), expect(/Alle auswählen/.test(s.text) && /nur dieser/.test(s.text), 'Mehrfachauswahl fehlt')],
+});
+await scenario('Mehrfachauswahl: Zählpunkt in der Legende abwählen', {
+  query: '&period=month&date=2026-10-01&sel=all',
+  shot: 'auswahl',
+  actions: async (page) => {
+    const before = await page.$eval('#heroValue', (el) => el.textContent);
+    await page.evaluate(() => document.querySelectorAll('#mainLegend .lg--btn')[1].click());
+    await page.waitForFunction((b) => !document.body.classList.contains('is-loading') && document.querySelector('#heroValue').textContent !== b, { timeout: 10000 }, before);
+  },
+  checks: async (s, page) => [
+    expect(/1 von 2 Zählpunkten/.test(s.text), 'Hinweis-Chip zur Auswahl fehlt'),
+    expect(await page.$eval('#meterName', (el) => el.textContent.startsWith('AT0090…')), 'Zählpunkt heißt nicht nach seiner Nummer'),
+    expect(await page.$$eval('#mainLegend .lg--btn.is-off', (l) => l.length === 1), 'abgewählter Zählpunkt nicht markiert'),
+  ],
+});
+await scenario('Diagrammart: Linien und Kreis', {
+  query: '&period=month&date=2026-10-01&sel=all',
+  shot: 'kreis',
+  actions: async (page) => {
+    await page.click('#typeSeg button[aria-label="Linien"]');
+    await sleep(300);
+    await page.click('#typeSeg button[aria-label="Kreis (Aufteilung)"]');
+    await sleep(500);
+  },
+  checks: async (s, page) => [
+    expect(await page.$$eval('#splitBox tbody tr', (r) => r.length === 2), 'Aufteilung nach Zählpunkten fehlt'),
+    expect(/Tageszeit/.test(s.text), 'Umschalter Tageszeit fehlt'),
+    expect(await page.$eval('#typeSeg button[aria-label="Kreis (Aufteilung)"]', (b) => b.classList.contains('on')), 'Kreis nicht aktiv'),
+  ],
+});
+await scenario('Seite Anlagen mit Daten aus dem Kundenportal', {
+  query: '&page=plants',
+  shot: 'anlagen',
+  actions: async (page) => { await waitText(page, /Zählernummer/); },
+  checks: (s) => [expect(/1KFM0200012345/.test(s.text), 'Zählernummer fehlt'), expect(/Energiegemeinschaft/.test(s.text), 'Energiegemeinschaft fehlt'), expect(/Musterstrom/.test(s.text), 'Lieferant fehlt')],
+});
+await scenario('Seite Abrechnung: laufendes Jahr und Hochrechnung', {
+  query: '&page=billing&price=0.29',
+  shot: 'abrechnung',
+  actions: async (page) => { await waitText(page, /Hochrechnung/, 15000); },
+  checks: (s) => [
+    expect(/Abrechnungsjahr seit/.test(s.text), 'laufendes Abrechnungsjahr fehlt'),
+    expect(/Abgerechnete Jahresverbräuche/.test(s.text), 'Jahresverbräuche fehlen'),
+    expect(/Teilbeträge|Nächster Teilbetrag/.test(s.text), 'Teilbeträge fehlen'),
+    expect(/externen|stellt .* aus/.test(s.text), 'Hinweis auf externen Rechnungssteller fehlt'),
+  ],
+});
+await scenario('Seite Konto und Info', {
+  query: '&page=account',
+  actions: async (page) => { await waitText(page, /Verbunden über die Smart-Meter-Anmeldung/); await openMenuItem(page, 'info'); },
+  checks: (s) => [expect(/geister-it/.test(s.text) && /Patrick Schlögl/.test(s.text), 'Info ohne Marke'), expect(/Version/.test(s.text), 'Version fehlt')],
+});
+await scenario('Tablet quer: Menü fest, Summe neben dem Diagramm', {
+  query: '&period=month&sel=all',
+  viewport: { width: 1280, height: 800, deviceScaleFactor: 1, isMobile: false, hasTouch: true },
+  shot: 'tablet',
+  checks: async (s, page) => {
+    const g = await page.evaluate(() => {
+      const r = (q) => { const x = document.querySelector(q).getBoundingClientRect(); return { left: x.left, right: x.right, top: x.top, width: x.width }; };
+      return { nav: r('#nav').width, navX: r('#nav').left, hero: r('#hero'), main: r('#mainPanel'), menu: getComputedStyle(document.querySelector('.menu-btn')).display };
+    });
+    return [
+      expect(g.nav > 200 && g.navX >= 0, 'Menü ist nicht fest sichtbar'),
+      expect(g.menu === 'none', 'Menü-Knopf sollte ausgeblendet sein'),
+      expect(g.hero.right <= g.main.left + 1 && Math.abs(g.hero.top - g.main.top) < 60, 'Summe und Diagramm stehen nicht nebeneinander'),
+    ];
+  },
+});
+await scenario('Handy quer: Diagramm neben der Summe', {
+  query: '&period=day&date=2026-10-07&sel=all',
+  viewport: { width: 844, height: 390, deviceScaleFactor: 2, isMobile: true, hasTouch: true, isLandscape: true },
+  shot: 'quer',
+  checks: async (s, page) => {
+    const g = await page.evaluate(() => {
+      const r = (q) => { const x = document.querySelector(q).getBoundingClientRect(); return { left: x.left, right: x.right }; };
+      return { hero: r('#hero'), main: r('#mainPanel'), ctl: getComputedStyle(document.querySelector('#controls')).position };
+    });
+    return [expect(g.hero.right <= g.main.left + 1, 'im Querformat nicht nebeneinander'), expect(g.ctl === 'static', 'Steuerung sollte im Querformat nicht kleben')];
+  },
 });
 await scenario('Anmeldeseite nach „Demo beenden“', {
   query: '&period=month',
   shot: 'anmeldung',
   actions: async (page) => {
-    await page.click('#settingsBtn');
-    await sleep(300);
-    await page.evaluate(() => [...document.querySelectorAll('#sheetBody .btn')].find((b) => b.textContent.includes('Demo beenden')).click());
+    if (await page.$eval('.menu-btn', (b) => getComputedStyle(b).display !== 'none')) { await page.click('#pageUsage .menu-btn'); await sleep(350); }
+    await page.evaluate(() => [...document.querySelectorAll('.nav-item')].find((b) => b.textContent.includes('Demo beenden')).click());
     await sleep(500);
     await page.evaluate(() => { document.querySelector('#heroValue').textContent = 'x'; }); // Summen-Prüfung gilt hier nicht
   },
-  checks: async (s, page) => [expect(await page.$eval('#login', (el) => !el.hidden), 'Anmeldeseite nicht sichtbar')],
+  checks: async (s, page) => [expect(await page.$eval('#login', (el) => !el.hidden), 'Anmeldeseite nicht sichtbar'), expect(/von geister-it/.test(s.text), 'Marke auf der Anmeldeseite fehlt')],
 });
 
 await browser.close();

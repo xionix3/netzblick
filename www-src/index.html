@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="light dark" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://smartmeter.netzburgenland.at capacitor: http://localhost https://localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://smartmeter.netzburgenland.at https://api.portal.netzburgenland.at capacitor: http://localhost https://localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'" />
   <title>Netzblick</title>
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="app.css" />
@@ -14,9 +14,14 @@
     <!-- Anmeldung -->
     <section id="login" class="login" hidden>
       <div class="login-inner">
-        <div class="counter counter--hero" id="loginCounter" aria-hidden="true"></div>
-        <h1 class="login-title">Netzblick</h1>
-        <p class="login-lead">Deine Smart-Meter-Daten von Netz Burgenland, übersichtlich auf dem Handy.</p>
+        <div class="brand">
+          <span id="loginMark"></span>
+          <div class="brand-text">
+            <h1 class="login-title">Netzblick</h1>
+            <p class="brand-by">von geister-it</p>
+          </div>
+        </div>
+        <p class="login-lead">Deine Smart-Meter-Daten von Netz Burgenland, übersichtlich auf Handy und Tablet.</p>
         <form id="loginForm" class="form" novalidate>
           <label class="field">
             <span>Benutzername oder E-Mail</span>
@@ -26,6 +31,18 @@
             <span>Passwort</span>
             <input id="pass" name="password" type="password" autocomplete="current-password" required />
           </label>
+          <details class="kp-extra">
+            <summary>Andere Zugangsdaten für das Kundenportal?</summary>
+            <p class="hint">Meist nicht nötig: Netzblick holt Anlagen, Verträge und Abrechnungen mit derselben Anmeldung aus dem Kundenportal. Nur wenn du dort ein anderes Konto hast, trag es hier ein.</p>
+            <label class="field">
+              <span>E-Mail für das Kundenportal</span>
+              <input id="kpUser" name="kp-email" type="email" autocomplete="off" autocapitalize="off" spellcheck="false" />
+            </label>
+            <label class="field">
+              <span>Passwort für das Kundenportal</span>
+              <input id="kpPass" name="kp-password" type="password" autocomplete="off" />
+            </label>
+          </details>
           <label class="switch">
             <input id="remember" type="checkbox" checked />
             <span class="switch-track" aria-hidden="true"></span>
@@ -35,79 +52,105 @@
           <button id="loginBtn" class="btn btn--primary" type="submit">Anmelden</button>
           <button id="demoBtn" class="btn btn--ghost" type="button">Demo mit Beispieldaten ansehen</button>
         </form>
-        <p class="fineprint">Inoffizielle App, nicht von Netz Burgenland. Deine Zugangsdaten gehen ausschließlich an smartmeter.netzburgenland.at.</p>
+        <p class="fineprint">Inoffizielle App, nicht von Netz Burgenland. Deine Zugangsdaten gehen ausschließlich an die Portale von Netz Burgenland.</p>
       </div>
     </section>
 
-    <!-- Übersicht -->
+    <!-- App -->
     <section id="dash" class="dash" hidden>
-      <header class="top">
-        <div class="top-row">
-          <button id="meterBtn" class="meter-btn" type="button" aria-haspopup="dialog">
-            <span class="meter-btn-text"><span id="meterName" class="meter-name"></span><span id="meterSub" class="meter-sub"></span></span>
-            <span class="meter-btn-icon" data-icon="down"></span>
-          </button>
-          <div class="top-actions">
-            <button id="refreshBtn" class="icon-btn" type="button" aria-label="Daten neu laden" data-icon="refresh"></button>
-            <button id="settingsBtn" class="icon-btn" type="button" aria-label="Einstellungen" data-icon="settings"></button>
-          </div>
-        </div>
-        <div id="readingBox" class="reading" hidden>
-          <div id="counter" class="counter" role="img"></div>
-          <div class="reading-meta"><span>Zählerstand</span><span id="readingTime"></span></div>
-        </div>
-      </header>
+      <nav id="nav" class="nav" aria-label="Menü"></nav>
+      <div id="navScrim" class="nav-scrim" hidden></div>
 
-      <div class="controls" id="controls">
-        <div class="seg" role="tablist" aria-label="Zeitraum" id="periodTabs">
-          <button role="tab" data-kind="day">Tag</button>
-          <button role="tab" data-kind="week">Woche</button>
-          <button role="tab" data-kind="month">Monat</button>
-          <button role="tab" data-kind="year">Jahr</button>
-          <button role="tab" data-kind="total">Gesamt</button>
-          <button role="tab" data-kind="custom" aria-label="Eigener Zeitraum" data-icon="calendar"></button>
+      <div class="main">
+        <!-- Verbrauch -->
+        <div id="pageUsage" class="page">
+          <header class="top">
+            <div class="top-row">
+              <button class="icon-btn menu-btn" type="button" aria-label="Menü öffnen" data-icon="menu" data-menu></button>
+              <button id="meterBtn" class="meter-btn" type="button" aria-haspopup="dialog">
+                <span class="meter-btn-text"><span id="meterName" class="meter-name"></span><span id="meterSub" class="meter-sub"></span></span>
+                <span class="meter-btn-icon" data-icon="down"></span>
+              </button>
+              <div class="top-actions">
+                <button id="refreshBtn" class="icon-btn" type="button" aria-label="Daten neu laden" data-icon="refresh"></button>
+              </div>
+            </div>
+            <div id="readingBox" class="reading" hidden>
+              <div id="counter" class="counter" role="img"></div>
+              <div class="reading-meta"><span>Zählerstand</span><span id="readingTime"></span></div>
+            </div>
+          </header>
+
+          <div class="controls" id="controls">
+            <div class="seg" role="tablist" aria-label="Zeitraum" id="periodTabs">
+              <button role="tab" data-kind="day">Tag</button>
+              <button role="tab" data-kind="week">Woche</button>
+              <button role="tab" data-kind="month">Monat</button>
+              <button role="tab" data-kind="year">Jahr</button>
+              <button role="tab" data-kind="total">Gesamt</button>
+              <button role="tab" data-kind="custom" aria-label="Eigener Zeitraum" data-icon="calendar"></button>
+            </div>
+            <div class="period-nav">
+              <button id="prevBtn" class="icon-btn" type="button" aria-label="Vorheriger Zeitraum" data-icon="prev"></button>
+              <button id="periodTitle" class="period-title" type="button" aria-label="Zeitraum wählen"></button>
+              <button id="nextBtn" class="icon-btn" type="button" aria-label="Nächster Zeitraum" data-icon="next"></button>
+              <input id="dateInput" class="hidden-input" type="date" tabindex="-1" aria-hidden="true" />
+              <input id="monthInput" class="hidden-input" type="month" tabindex="-1" aria-hidden="true" />
+            </div>
+            <div class="chips" id="chips"></div>
+          </div>
+          <div id="progress" class="progress" aria-hidden="true"></div>
+
+          <main id="content" class="content">
+            <div id="banner" class="banner" role="status" hidden></div>
+
+            <section class="hero" id="hero" aria-live="polite">
+              <p class="hero-label" id="heroLabel"></p>
+              <p class="hero-value"><span id="heroValue"></span><span class="hero-unit">kWh</span></p>
+              <p class="hero-delta" id="heroDelta"></p>
+              <div class="hero-extra" id="heroExtra"></div>
+            </section>
+
+            <section class="panel panel--main" id="mainPanel">
+              <div class="panel-tools">
+                <div class="legend" id="mainLegend"></div>
+                <div class="type-seg" id="typeSeg" role="group" aria-label="Diagrammart"></div>
+              </div>
+              <div class="chart chart--main" id="mainChart"></div>
+              <div id="splitBox" class="split" hidden></div>
+              <p class="note" id="mainNote" hidden></p>
+            </section>
+
+            <section class="kpis" id="kpis" aria-label="Kennzahlen"></section>
+
+            <section id="analysis" class="analysis"></section>
+
+            <section class="panel panel--table" id="tablePanel">
+              <div class="panel-head">
+                <h2>Werte</h2>
+                <button id="csvBtn" class="btn btn--small" type="button"><span data-icon="share"></span>CSV teilen</button>
+              </div>
+              <div id="tableWrap"></div>
+            </section>
+
+            <footer class="foot" id="foot"></footer>
+          </main>
         </div>
-        <div class="period-nav">
-          <button id="prevBtn" class="icon-btn" type="button" aria-label="Vorheriger Zeitraum" data-icon="prev"></button>
-          <button id="periodTitle" class="period-title" type="button" aria-label="Zeitraum wählen"></button>
-          <button id="nextBtn" class="icon-btn" type="button" aria-label="Nächster Zeitraum" data-icon="next"></button>
-          <input id="dateInput" class="hidden-input" type="date" tabindex="-1" aria-hidden="true" />
-          <input id="monthInput" class="hidden-input" type="month" tabindex="-1" aria-hidden="true" />
+
+        <!-- Weitere Seiten -->
+        <div id="pageOther" class="page" hidden>
+          <header class="top top--page">
+            <div class="top-row">
+              <button class="icon-btn menu-btn" type="button" aria-label="Menü öffnen" data-icon="menu" data-menu></button>
+              <h1 id="pageTitle" class="page-title"></h1>
+              <div class="top-actions">
+                <button id="pageRefresh" class="icon-btn" type="button" aria-label="Neu laden" data-icon="refresh"></button>
+              </div>
+            </div>
+          </header>
+          <main id="pageBody" class="content page-body"></main>
         </div>
-        <div class="chips" id="chips"></div>
       </div>
-      <div id="progress" class="progress" aria-hidden="true"></div>
-
-      <main id="content" class="content">
-        <div id="banner" class="banner" role="status" hidden></div>
-
-        <section class="hero" id="hero" aria-live="polite">
-          <p class="hero-label" id="heroLabel"></p>
-          <p class="hero-value"><span id="heroValue"></span><span class="hero-unit">kWh</span></p>
-          <p class="hero-delta" id="heroDelta"></p>
-          <div class="hero-extra" id="heroExtra"></div>
-        </section>
-
-        <section class="panel" id="mainPanel">
-          <div class="legend" id="mainLegend"></div>
-          <div class="chart chart--main" id="mainChart"></div>
-          <p class="note" id="mainNote" hidden></p>
-        </section>
-
-        <section class="kpis" id="kpis" aria-label="Kennzahlen"></section>
-
-        <section id="analysis"></section>
-
-        <section class="panel" id="tablePanel">
-          <div class="panel-head">
-            <h2>Werte</h2>
-            <button id="csvBtn" class="btn btn--small" type="button"><span data-icon="share"></span>CSV teilen</button>
-          </div>
-          <div id="tableWrap"></div>
-        </section>
-
-        <footer class="foot" id="foot"></footer>
-      </main>
     </section>
 
     <div id="scrim" class="scrim" hidden></div>
@@ -120,7 +163,13 @@
       <div id="sheetBody" class="sheet-body"></div>
     </div>
     <div id="toast" class="toast" role="status" hidden></div>
-    <div id="boot" class="boot"><div class="counter counter--boot" id="bootCounter" aria-hidden="true"></div><p id="bootText">Netzblick startet …</p></div>
+    <div id="boot" class="boot">
+      <div class="intro">
+        <span id="bootMark"></span>
+        <div class="intro-word"><span class="intro-name">Netzblick</span><span class="intro-by">von geister-it</span></div>
+      </div>
+      <p id="bootText" class="boot-text"></p>
+    </div>
   </div>
   <script src="app.js"></script>
 </body>

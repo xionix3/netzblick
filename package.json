@@ -1,6 +1,6 @@
 {
   "name": "netzblick",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Inoffizielle Android-App für die Verbrauchsdaten aus dem Smart-Meter-Portal von Netz Burgenland",

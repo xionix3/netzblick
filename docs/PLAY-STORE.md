@@ -58,7 +58,7 @@ Solange das Repository privat ist, ist die Datei nicht öffentlich. Möglichkeit
 ### App-Zugriff
 Die App braucht ein Konto beim Portal von Netz Burgenland. Für die Prüfer gibt es den Demo-Modus. Vorschlag für das Formular:
 
-> Für die volle Funktion ist ein Kundenkonto beim Smart-Meter-Portal von Netz Burgenland (Österreich) nötig. Ohne Konto lassen sich alle Funktionen mit Beispieldaten prüfen: Auf der Anmeldeseite auf „Demo mit Beispieldaten ansehen“ tippen.
+> Für die volle Funktion ist ein Kundenkonto bei Netz Burgenland (Österreich) nötig, das für das Smart-Meter-Portal und das Kundenportal gilt. Ohne Konto lassen sich alle Funktionen mit Beispieldaten prüfen, auch die Seiten Anlagen, Abrechnung und Konto: Auf der Anmeldeseite auf „Demo mit Beispieldaten ansehen“ tippen.
 
 ### Werbung
 Keine Werbung.
@@ -74,7 +74,8 @@ Fakten für das Formular (die Zuordnung zu Googles Kategorien vor dem Absenden m
 
 | Frage | Fakten zu Netzblick |
 |---|---|
-| Welche Daten verlassen das Gerät? | Benutzername/E-Mail und Passwort sowie die Datenabrufe, und zwar ausschließlich an `smartmeter.netzburgenland.at` zur Anmeldung und zum Laden der eigenen Messwerte |
+| Welche Daten verlassen das Gerät? | Benutzername/E-Mail und Passwort, Sitzungs-Token und die Datenabrufe, und zwar ausschließlich an `smartmeter.netzburgenland.at` und `api.portal.netzburgenland.at` (beide Netz Burgenland) zur Anmeldung und zum Laden der eigenen Daten |
+| Welche Daten lädt die App? | Messwerte, Zählerstände, Zählpunkte; aus dem Kundenportal Name, Kundennummer, E-Mail, Adresse, Zählernummer, Lieferant, Verträge, abgerechnete Verbräuche, Rechnungs- und Teilbeträge. Nur Anzeige, keine Weitergabe; Kundenportal-Daten nur im Arbeitsspeicher |
 | Erhält der Entwickler Daten? | Nein, es gibt keinen eigenen Server |
 | Werden Daten an Dritte weitergegeben, verkauft, für Werbung oder Analyse genutzt? | Nein |
 | Verschlüsselung bei der Übertragung | Ja, ausschließlich HTTPS |
@@ -91,10 +92,10 @@ Fakten für das Formular (die Zuordnung zu Googles Kategorien vor dem Absenden m
 | App-Name (max. 30) | `Netzblick: Stromverbrauch` | 25 |
 | Kurzbeschreibung (max. 80) | `Deine Smart-Meter-Werte von Netz Burgenland: Diagramme, Filter und Vergleiche` | 77 |
 
-**Vollständige Beschreibung:**
+**Vollständige Beschreibung** (rund 1.800 von 4.000 Zeichen):
 
 ```text
-Netzblick zeigt die Werte deines Smart Meters aus dem Verbrauchsdatenportal von Netz Burgenland – übersichtlich, schnell und zum Filtern.
+Netzblick zeigt die Werte deines Smart Meters aus dem Verbrauchsdatenportal von Netz Burgenland – übersichtlich, schnell und zum Filtern. Dazu kommen deine Anlagen und Abrechnungen aus dem Kundenportal, mit derselben Anmeldung.
 
 Melde dich mit deinem gewohnten Portal-Zugang an und sieh sofort:
 • deinen Verbrauch für Tag, Woche, Monat, Jahr oder einen eigenen Zeitraum
@@ -104,14 +105,16 @@ Melde dich mit deinem gewohnten Portal-Zugang an und sieh sofort:
 • wann am Tag Strom gebraucht wird (Lastgang), den typischen Tagesverlauf und den Verbrauch je Wochentag
 • Spitzenleistung, Grundlast und Nachtanteil
 • deinen aktuellen Zählerstand
+• wie viel du seit der letzten Jahresabrechnung verbraucht hast, worauf es hinausläuft und ob die Teilbeträge reichen
+• Zählernummer, Lieferant, Netzebene, Energiegemeinschaft und abgerechnete Jahresverbräuche
 
-Filter nach Wochentagen und Uhrzeit zeigen zum Beispiel, was nachts oder am Wochenende verbraucht wird. Mehrere Zählpunkte lassen sich einzeln oder gemeinsam ansehen und benennen. Alle Werte gibt es auch als Tabelle und als CSV-Export.
+Filter nach Wochentagen und Uhrzeit zeigen zum Beispiel, was nachts oder am Wochenende verbraucht wird. Mehrere Zählpunkte lassen sich beliebig kombinieren und benennen. Diagramme als Balken, Linien, Fläche oder Kreis. Optimiert für Handy und Tablet, im Hoch- und Querformat. Alle Werte gibt es auch als Tabelle und als CSV-Export.
 
-Datenschutz: Netzblick verbindet sich ausschließlich mit dem Portal von Netz Burgenland. Kein eigener Server, keine Werbung, kein Tracking. Zugangsdaten werden auf Wunsch verschlüsselt auf dem Gerät gespeichert.
+Datenschutz: Netzblick verbindet sich ausschließlich mit den Portalen von Netz Burgenland und liest dort nur. Kein eigener Server, keine Werbung, kein Tracking. Zugangsdaten werden auf Wunsch verschlüsselt auf dem Gerät gespeichert.
 
 Ohne Konto ausprobieren: Auf der Anmeldeseite „Demo mit Beispieldaten ansehen“ tippen.
 
-Hinweis: Netzblick ist eine inoffizielle App und steht in keiner Verbindung zu Netz Burgenland. Für die Nutzung ist ein Zugang zum Smart-Meter-Portal von Netz Burgenland nötig.
+Hinweis: Netzblick ist eine inoffizielle App und steht in keiner Verbindung zu Netz Burgenland. Für die Nutzung ist ein Zugang zu den Portalen von Netz Burgenland nötig.
 ```
 
 **Kategorie:** Tools. **Tags:** Energie, Strom, Smart Meter.
@@ -122,6 +125,7 @@ Hinweis: Netzblick ist eine inoffizielle App und steht in keiner Verbindung zu N
 |---|---|---|
 | `icon-512.png` | App-Symbol | 512 × 512 PNG |
 | `feature-graphic.png` | Vorstellungsgrafik | 1024 × 500 PNG |
-| `phone-1.png` … `phone-4.png` | Screenshots Smartphone | 1080 × 1920 (9:16), Demo-Daten |
+| `phone-1.png` … `phone-6.png` | Screenshots Smartphone | 1080 × 1920 (9:16), Demo-Daten |
+| `tablet-1.png`, `tablet-2.png` | Screenshots Tablet 7 und 10 Zoll (dieselben Bilder für beide) | 1920 × 1080 (16:9), Demo-Daten |
 
 Neu erzeugen nach Änderungen an der Oberfläche: `npm run build`, dann `node scripts/store-assets.mjs`.
