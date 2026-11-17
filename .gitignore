@@ -3,3 +3,6 @@ www/
 test/*.png
 *.log
 .DS_Store
+# Persönliche Android-Studio-Einstellungen
+android/.idea/
+.idea/

@@ -2,12 +2,12 @@
 
 Stand: 17. November 2026
 
-Netzblick ist eine private, nicht-kommerzielle App. Sie zeigt die Smart-Meter-Daten an, die Netz Burgenland in seinem Verbrauchsdatenportal bereitstellt.
+Netzblick ist eine nicht-kommerzielle App von Patrick Schlögl (geister-it). Sie zeigt die Smart-Meter-Daten an, die Netz Burgenland in seinem Verbrauchsdatenportal bereitstellt.
 Diese Erklärung beschreibt, welche Daten die App verarbeitet und wohin sie fließen.
 
 ## Kurz gesagt
 
-- Netzblick hat **keinen eigenen Server**. Die Entwicklerin bzw. der Entwickler erhält keinerlei Daten von dir.
+- Netzblick hat **keinen eigenen Server**. Der Entwickler erhält keinerlei Daten von dir.
 - Die App verbindet sich ausschließlich mit **smartmeter.netzburgenland.at**, dem Portal von Netz Burgenland, und zwar verschlüsselt über HTTPS.
 - Es gibt **keine Werbung, kein Tracking, keine Analyse- oder Absturzdienste** von Dritten.
 
@@ -39,10 +39,11 @@ Netzblick benötigt nur die Berechtigung **Internet**, um das Portal zu erreiche
 
 ## Deine Rechte
 
-Da die App selbst keine Daten an den Entwickler bzw. die Entwicklerin übermittelt, liegen dort keine Daten über dich vor.
+Da die App selbst keine Daten an den Entwickler übermittelt, liegen dort keine Daten über dich vor.
 Fragen zu den Daten im Portal (Auskunft, Berichtigung, Löschung) richtest du an Netz Burgenland.
 
-## Kontakt
+## Verantwortlich und Kontakt
 
-Fragen zu dieser App: über die [Issues im GitHub-Repository](https://github.com/xionix3/netzblick/issues)
-<!-- Vor der Veröffentlichung im Play Store hier eine E-Mail-Adresse ergänzen. -->
+Patrick Schlögl (geister-it)
+
+E-Mail: [patrick-schloegl@gmx.at](mailto:patrick-schloegl@gmx.at)

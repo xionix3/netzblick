@@ -220,9 +220,9 @@ Die Antwortformate in den Tests stammen aus dem echten Portal (anonymisiert).
   ```
   GitHub baut daraufhin signierte APK und AAB und legt sie unter **Releases** ab.
 - **Release-Schlüssel einrichten** (einmalig): [docs/RELEASE.md](docs/RELEASE.md).
-- **Play Store:** Checkliste, vorbereitete Store-Texte und Datensicherheits-Angaben in [docs/PLAY-STORE.md](docs/PLAY-STORE.md).
+- **Play Store:** Checkliste, vorbereitete Store-Texte und Datensicherheits-Angaben in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), Anleitung für Tester in [docs/TESTER.md](docs/TESTER.md).
 
 ## Lizenz
 
-[MIT](LICENSE). Netzblick steht in keiner Verbindung zu Netz Burgenland oder VIVAVIS; genannte Namen gehören ihren Inhabern.
+[MIT](LICENSE), © 2026 Patrick Schlögl (geister-it), patrick-schloegl@gmx.at. Netzblick steht in keiner Verbindung zu Netz Burgenland oder VIVAVIS; genannte Namen gehören ihren Inhabern.
 Verwendet [Capacitor](https://capacitorjs.com) (MIT), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) und die Schrift [Barlow](https://github.com/jpt/barlow) (SIL OFL 1.1).

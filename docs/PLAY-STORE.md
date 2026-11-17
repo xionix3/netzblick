@@ -9,16 +9,31 @@ Die Regeln ändern sich regelmäßig, deshalb vor dem Einreichen kurz in der Pla
 - [ ] **Kein Eindruck einer offiziellen App.** Kein Logo von Netz Burgenland, „inoffiziell“ in der Beschreibung. Ist schon berücksichtigt.
 - [ ] **Release-Schlüssel** eingerichtet ([RELEASE.md](RELEASE.md)). Er dient als Upload-Schlüssel für Play.
 
+## Kontotyp: privat oder Firma (geister-it)
+
+Diese Entscheidung lässt sich später **nicht ändern**. Ein privates Konto kann nicht in ein Firmenkonto umgewandelt werden und umgekehrt.
+
+| | Privates Konto | Organisationskonto (geister-it) |
+|---|---|---|
+| Voraussetzung | Ausweis | eingetragenes Unternehmen, **D-U-N-S-Nummer** (kostenlos, Vergabe dauert bis zu 30 Tage), Firmen-Website und -Dokumente |
+| Geschlossener Test vor dem Start | **12 Tester, 14 Tage** | entfällt |
+| Im Store angezeigt als | dein Name | Firmenname |
+
+Mit 12 Testern ist das private Konto der schnellste Weg. Das Organisationskonto lohnt sich, wenn noch weitere Apps unter geister-it erscheinen sollen.
+
 ## Ablauf
 
-1. **Entwicklerkonto** in der [Play Console](https://play.google.com/console) anlegen: einmalig 25 US-Dollar, Identitätsprüfung mit Ausweis.
+1. **Entwicklerkonto** in der [Play Console](https://play.google.com/console) anlegen: einmalig 25 US-Dollar, Identitätsprüfung mit Ausweis (bzw. D-U-N-S beim Firmenkonto).
 2. **App anlegen:** Name, Standardsprache Deutsch (de-AT), App (nicht Spiel), kostenlos.
 3. **App-Inhalte ausfüllen** (siehe unten): Datenschutzerklärung, App-Zugriff, Werbung, Einstufung, Zielgruppe, Datensicherheit.
 4. **Store-Eintrag:** Texte und Grafiken unten.
 5. **Geschlossener Test:** Bei privaten Entwicklerkonten, die nach dem 13. 11. 2023 angelegt wurden, müssen mindestens **12 Testerinnen und Tester 14 Tage lang ununterbrochen** im geschlossenen Test angemeldet sein. Erst danach lässt sich der Produktionszugang beantragen.
    - `netzblick-X.Y.Z.aab` aus dem GitHub-Release hochladen.
-   - Tester per E-Mail-Liste oder Google-Gruppe einladen und den Opt-in-Link teilen.
-   - Die Tester sollten die App in dieser Zeit wirklich verwenden.
+   - Unter *Testen → Geschlossener Test → Tester* eine **E-Mail-Liste** mit den Google-Konten der Tester anlegen.
+   - Länder: Österreich (und ggf. Deutschland) auswählen. Feedback-Kontakt: patrick-schloegl@gmx.at.
+   - Release zur Prüfung einreichen (dauert meist einige Stunden bis einen Tag).
+   - Danach den **Opt-in-Link** kopieren und mit der Anleitung [TESTER.md](TESTER.md) verschicken.
+   - Die Tester sollten die App in dieser Zeit wirklich verwenden, zumindest alle paar Tage kurz öffnen.
 6. **Produktionszugang beantragen.** Danach Release in „Produktion“ hochladen. Die Prüfung dauert meist einige Tage.
 
 ## Technische Anforderungen
@@ -34,11 +49,11 @@ Die Regeln ändern sich regelmäßig, deshalb vor dem Einreichen kurz in der Pla
 ## App-Inhalte (Play Console → Richtlinien → App-Inhalte)
 
 ### Datenschutzerklärung
-Benötigt wird eine **öffentlich erreichbare URL**. Die Vorlage ist [DATENSCHUTZ.md](../DATENSCHUTZ.md) (vorher die Kontakt-E-Mail ergänzen).
+Benötigt wird eine **öffentlich erreichbare URL**. Der Text steht fertig in [DATENSCHUTZ.md](../DATENSCHUTZ.md).
 Solange das Repository privat ist, ist die Datei nicht öffentlich. Möglichkeiten:
 - Repository öffentlich machen und den Link auf `DATENSCHUTZ.md` verwenden
 - GitHub Pages (für private Repositories nur mit bezahltem Plan)
-- den Text auf einer eigenen Seite oder einem öffentlichen Gist ablegen
+- den Text auf der Website von geister-it oder in einem öffentlichen Gist ablegen
 
 ### App-Zugriff
 Die App braucht ein Konto beim Portal von Netz Burgenland. Für die Prüfer gibt es den Demo-Modus. Vorschlag für das Formular:
