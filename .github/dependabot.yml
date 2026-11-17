@@ -1,0 +1,22 @@
+# Hält GitHub-Actions und npm-Pakete aktuell (wöchentlich, gebündelt).
+# Große Versionssprünge von Capacitor werden bewusst ausgelassen: die brauchen eine Migration.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '@capacitor/*'
+        update-types: [version-update:semver-major]

@@ -1,0 +1,84 @@
+# Prüft jeden Push und Pull Request: Unit-Tests, Oberfläche im Browser, Android-Build.
+# Die Debug-APK liegt danach unter „Actions“ → Lauf → Artifacts.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit-Tests
+        run: npm test
+
+      - name: Oberfläche bauen
+        run: npm run build
+
+      - name: End-to-End-Test (Chrome, Handyformat)
+        run: npm run screenshots
+
+      - name: Screenshots aufheben
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: screenshots
+          path: docs/screenshots/*.png
+          if-no-files-found: ignore
+
+  android:
+    name: Android-Build
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - run: npm ci
+
+      - name: Oberfläche ins Android-Projekt kopieren
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Debug-APK bauen
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: netzblick-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

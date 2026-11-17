@@ -1,0 +1,11 @@
+name: Idee oder Wunsch
+description: Vorschlag für eine neue Funktion
+labels: [idee]
+body:
+  - type: textarea
+    id: wunsch
+    attributes:
+      label: Was wünschst du dir?
+      description: Welches Problem würde die Funktion lösen?
+    validations:
+      required: true
