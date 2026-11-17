@@ -40,6 +40,8 @@ function fillIcons(root = document) {
 }
 // Web-Vorschau (ohne native Schicht): nur Demo-Daten möglich, da der Browser die Portal-API blockiert
 const PREVIEW = (document.querySelector('meta[name="netzblick-mode"]') || {}).content === 'demo-preview';
+/* global __APP_VERSION__ */
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ================================================================ Zustand */
@@ -887,7 +889,7 @@ function openSettings() {
           toast('Einstellungen gespeichert');
         },
       }, 'Speichern')),
-    h('p', { class: 'fineprint', text: 'Netzblick 1.0. Inoffizielle App, nicht von Netz Burgenland oder VIVAVIS. Die Daten kommen aus smartmeter.netzburgenland.at; Zugangsdaten bleiben auf diesem Gerät.' }));
+    h('p', { class: 'fineprint', text: `Netzblick ${APP_VERSION}. Inoffizielle App, nicht von Netz Burgenland oder VIVAVIS. Die Daten kommen aus smartmeter.netzburgenland.at; Zugangsdaten bleiben auf diesem Gerät.` }));
   openSheet('Einstellungen', body);
 }
 

@@ -1,0 +1,36 @@
+name: Fehler melden
+description: Etwas funktioniert nicht wie erwartet
+labels: [fehler]
+body:
+  - type: markdown
+    attributes:
+      value: Bitte keine Zugangsdaten, Zählpunktnummern oder Adressen posten.
+  - type: textarea
+    id: beschreibung
+    attributes:
+      label: Was ist passiert?
+      description: Was hast du gemacht, was hast du erwartet, was ist stattdessen passiert?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App-Version
+      description: Steht unten in den Einstellungen, z. B. 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: geraet
+    attributes:
+      label: Handy und Android-Version
+      placeholder: z. B. Pixel 8, Android 16
+  - type: dropdown
+    id: demo
+    attributes:
+      label: Tritt der Fehler auch im Demo-Modus auf?
+      options: ['Ja', 'Nein', 'Nicht ausprobiert']
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot (optional)
+      description: Persönliche Daten vorher unkenntlich machen.

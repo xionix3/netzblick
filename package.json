@@ -2,11 +2,25 @@
   "name": "netzblick",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Inoffizielle Android-App für die Verbrauchsdaten aus dem Smart-Meter-Portal von Netz Burgenland",
+  "author": "Patrick Schlögl (geister-it) <patrick-schloegl@gmx.at>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xionix3/netzblick.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "sync": "npm run build && npx cap sync android",
-    "apk": "npm run sync && cd android && ./gradlew assembleDebug"
+    "apk": "npm run sync && cd android && ./gradlew assembleDebug",
+    "test": "node --test --test-reporter=spec \"test/unit/*.test.mjs\"",
+    "test:e2e": "node test/e2e/smoke.mjs",
+    "screenshots": "node test/e2e/smoke.mjs --screenshots",
+    "check": "npm test && npm run build && npm run test:e2e"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
