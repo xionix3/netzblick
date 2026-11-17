@@ -48,6 +48,7 @@ export class PortalApi {
     this.accounts = [];
     this.credentials = null;
     this.reloginPromise = null;
+    this.cognito = null;
   }
 
   async login(username, password) {
@@ -69,6 +70,8 @@ export class PortalApi {
     if (!accounts.length) throw new ApiError('NO_METER', 'Zu diesem Zugang sind keine Zählpunkte hinterlegt.');
     this.accounts = accounts;
     this.credentials = { username, password };
+    // Cognito-Token desselben Benutzerpools wie das Kundenportal → dort ohne zweite Anmeldung nutzbar
+    this.cognito = body.data.cognitoToken || null;
     return accounts;
   }
 

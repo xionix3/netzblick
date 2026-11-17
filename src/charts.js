@@ -1,12 +1,12 @@
 // Diagramme (ECharts, nur benötigte Module → kleines Bundle)
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart, HeatmapChart } from 'echarts/charts';
+import { BarChart, LineChart, HeatmapChart, PieChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { num, time, dateLong, dateShort, WEEKDAYS_SHORT, MONTHS_SHORT, MONTHS_LONG, isoDate } from './format.js';
 import { STATUS_LABEL } from './model.js';
 
-echarts.use([BarChart, LineChart, HeatmapChart, GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, CanvasRenderer]);
+echarts.use([BarChart, LineChart, HeatmapChart, PieChart, GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, CanvasRenderer]);
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -16,7 +16,7 @@ export function tokens() {
   const v = (n) => cs.getPropertyValue(n).trim();
   return {
     surface: v('--surface'), ink: v('--ink'), ink2: v('--ink-2'), muted: v('--muted'), line: v('--line'), axis: v('--axis'),
-    s: [v('--series-1'), v('--series-2'), v('--series-3')],
+    s: [v('--series-1'), v('--series-2'), v('--series-3'), v('--series-4')],
     compare: v('--compare'), older: v('--older'),
     seq: v('--seq').split(',').map((x) => x.trim()),
     font: v('--font-ui') || 'sans-serif',
@@ -114,18 +114,29 @@ export function bucketLabel(bucket, d) {
   return String(d.getFullYear());
 }
 
+/** Welche Darstellung „automatisch“ bedeutet */
+export function autoChartType(bucket) {
+  return bucket === 'quarter' ? 'area' : 'bar';
+}
+
 /**
  * Hauptdiagramm.
- * cfg: {bucket, axis:[Date], days, series:[{name, color, data:[{v,s}]}], compare:{name, data:[number|null], axis:[Date]}|null}
+ * cfg: {bucket, axis:[Date], days, type:'bar'|'line'|'area',
+ *       series:[{name, color, data:[{v,s}]}], compare:{name, data:[number|null], axis:[Date]}|null}
+ * Balken und Flächen stapeln mehrere Zählpunkte (Summe), Linien zeigen sie einzeln (Vergleich).
  */
 export function mainOption(T, cfg) {
   const { bucket, axis, series, compare } = cfg;
-  const isLine = bucket === 'quarter';
-  const factor = isLine ? 4 : 1; // kWh je Viertelstunde → kW
-  const unit = isLine ? 'kW' : 'kWh';
-  const stacked = series.length > 1;
+  const type = cfg.type || autoChartType(bucket);
+  const power = bucket === 'quarter';
+  const factor = power ? 4 : 1; // kWh je Viertelstunde → kW
+  const unit = power ? 'kW' : 'kWh';
+  const multi = series.length > 1;
+  const stacked = multi && type !== 'line';
+  const continuous = type !== 'bar';
   // Blass nur bei Tages-/Viertelstundenwerten; ein Ersatzwert soll keinen ganzen Monat einfärben
   const est = (s) => (bucket === 'day' || bucket === 'quarter') && s && s !== 'W';
+  const fewPoints = axis.length <= 31;
   const out = [];
 
   if (compare) {
@@ -133,9 +144,9 @@ export function mainOption(T, cfg) {
       name: compare.name,
       type: 'line',
       data: compare.data.map((v) => (v == null ? null : v * factor)),
-      step: isLine ? false : 'middle',
+      step: continuous ? false : 'middle',
       showSymbol: false,
-      lineStyle: { color: T.compare, width: 1.5 },
+      lineStyle: { color: T.compare, width: 1.5, type: continuous ? [4, 3] : 'solid' },
       itemStyle: { color: T.compare },
       z: 1,
       silent: true,
@@ -143,19 +154,21 @@ export function mainOption(T, cfg) {
     });
   }
   series.forEach((s, si) => {
-    if (isLine) {
+    if (continuous) {
       out.push({
         name: s.name,
         type: 'line',
         stack: stacked ? 'sum' : undefined,
         data: s.data.map((p) => (p.v == null ? null : p.v * factor)),
-        showSymbol: false,
+        showSymbol: !power && fewPoints,
+        symbol: 'circle',
         symbolSize: 8,
+        smooth: power ? false : 0.2,
         lineStyle: { color: s.color, width: 2, join: 'round', cap: 'round' },
         itemStyle: { color: s.color, borderColor: T.surface, borderWidth: 2 },
-        areaStyle: { color: s.color, opacity: stacked ? 0.28 : 0.1 },
+        areaStyle: type === 'area' ? { color: s.color, opacity: stacked ? 0.3 : 0.14 } : undefined,
         emphasis: { disabled: true },
-        z: 3,
+        z: 3 + si,
         connectNulls: false,
       });
     } else {
@@ -164,13 +177,13 @@ export function mainOption(T, cfg) {
         type: 'bar',
         stack: stacked ? 'sum' : undefined,
         barMaxWidth: 24,
-        barCategoryGap: axis.length > 20 ? '28%' : '40%',
+        barCategoryGap: axis.length > 60 ? '12%' : axis.length > 20 ? '28%' : '40%',
         data: s.data.map((p) => ({
-          value: p.v,
+          value: p.v == null ? null : p.v * factor,
           itemStyle: {
             color: s.color,
             opacity: est(p.s) ? 0.45 : 1,
-            borderRadius: stacked ? (si === series.length - 1 ? [4, 4, 0, 0] : 0) : [4, 4, 0, 0],
+            borderRadius: axis.length > 120 ? 0 : stacked ? (si === series.length - 1 ? [4, 4, 0, 0] : 0) : [4, 4, 0, 0],
             borderColor: stacked ? T.surface : undefined,
             borderWidth: stacked ? 1 : 0,
           },
@@ -181,14 +194,14 @@ export function mainOption(T, cfg) {
     }
   });
 
-  const fmtVal = (v) => (v == null ? '–' : `${num(v, isLine && v < 10 ? 2 : undefined)} ${unit}`);
+  const fmtVal = (v) => (v == null ? '–' : `${num(v, power && v < 10 ? 2 : undefined)} ${unit}`);
   return {
     animationDuration: 450,
     animationEasing: 'cubicOut',
     textStyle: { fontFamily: T.font },
     grid: { left: 6, right: 10, top: 30, bottom: 6, containLabel: true },
     tooltip: baseTooltip(T, {
-      axisPointer: isLine
+      axisPointer: continuous
         ? { type: 'line', lineStyle: { color: T.axis, width: 1 }, snap: true }
         : { type: 'shadow', shadowStyle: { color: T.line, opacity: 0.5 } },
       formatter: (params) => {
@@ -201,8 +214,8 @@ export function mainOption(T, cfg) {
           if (p.v != null) { sum += p.v; any = true; }
           html += row(s.color, fmtVal(p.v == null ? null : p.v * factor), s.name + (est(p.s) ? ` (${STATUS_LABEL[p.s]})` : ''));
         });
-        if (stacked && any) html += row('transparent', fmtVal(sum * factor), 'zusammen');
-        if (isLine && any) html += `<div class="tt-sub">${num(sum, 3)} kWh in 15 Minuten</div>`;
+        if (multi && any) html += row('transparent', fmtVal(sum * factor), 'zusammen');
+        if (power && any) html += `<div class="tt-sub">${num(sum, 3)} kWh in 15 Minuten</div>`;
         if (compare) {
           const cv = compare.data[i];
           const cd = compare.axis[i];
@@ -214,13 +227,46 @@ export function mainOption(T, cfg) {
     xAxis: {
       type: 'category',
       data: axis.map((d) => d.getTime()),
-      boundaryGap: !isLine,
+      boundaryGap: !continuous,
       axisLine: { lineStyle: { color: T.axis } },
       axisTick: { show: false },
       axisLabel: { color: T.muted, fontFamily: T.font, fontSize: 11, hideOverlap: true, ...axisLabelFor(bucket, axis, cfg.days) },
     },
     yAxis: yAxis(T, unit),
     series: out,
+  };
+}
+
+/**
+ * Kreisdiagramm (Ring) für eine Aufteilung. items: [{name, value, color}]
+ * Beschriftung außen nur mit Prozent; Namen stehen in der Tabelle darunter.
+ */
+export function donutOption(T, items, { unit = 'kWh' } = {}) {
+  const total = items.reduce((a, x) => a + x.value, 0) || 1;
+  return {
+    animationDuration: 500,
+    animationEasing: 'cubicOut',
+    textStyle: { fontFamily: T.font },
+    tooltip: {
+      ...baseTooltip(T), trigger: 'item',
+      formatter: (p) => `<div class="tt-title">${esc(p.name)}</div>` + row(p.color, `${num(p.value)} ${unit}`, `${num((p.value / total) * 100, 0)} %`),
+    },
+    series: [{
+      type: 'pie',
+      radius: ['52%', '76%'],
+      center: ['50%', '52%'],
+      avoidLabelOverlap: true,
+      minAngle: 3,
+      padAngle: 1.2,
+      itemStyle: { borderColor: T.surface, borderWidth: 2, borderRadius: 4 },
+      label: {
+        show: true, position: 'outside', color: T.ink2, fontFamily: T.font, fontSize: 12, fontWeight: 600,
+        formatter: (p) => `${num((p.value / total) * 100, 0)} %`,
+      },
+      labelLine: { show: true, length: 6, length2: 6, lineStyle: { color: T.axis } },
+      emphasis: { scale: true, scaleSize: 4 },
+      data: items.map((x) => ({ name: x.name, value: x.value, itemStyle: { color: x.color } })),
+    }],
   };
 }
 
@@ -399,5 +445,35 @@ export function yearsOption(T, yearsData) {
     xAxis: { type: 'category', data: MONTHS_SHORT, boundaryGap: false, axisLine: { lineStyle: { color: T.axis } }, axisTick: { show: false }, axisLabel: { color: T.muted, fontSize: 11, interval: 2 } },
     yAxis: yAxis(T, 'kWh'),
     series,
+  };
+}
+
+/** Abgerechnete Jahresverbräuche: ein Balken je Abrechnungsjahr, nur der neueste beschriftet */
+export function billedYearsOption(T, labels, values) {
+  const last = values.length - 1;
+  return {
+    animationDuration: 400,
+    textStyle: { fontFamily: T.font },
+    grid: { left: 6, right: 10, top: 30, bottom: 6, containLabel: true },
+    tooltip: baseTooltip(T, {
+      axisPointer: { type: 'shadow', shadowStyle: { color: T.line, opacity: 0.5 } },
+      formatter: (params) => {
+        const i = params[0].dataIndex;
+        const prev = i > 0 ? values[i - 1] : null;
+        const ch = prev ? (values[i] - prev) / prev : null;
+        return `<div class="tt-title">${esc(labels[i])}</div>` + row(T.s[0], `${num(values[i])} kWh`, 'abgerechnet')
+          + (ch != null ? `<div class="tt-sub">${ch >= 0 ? '+' : '−'}${num(Math.abs(ch) * 100, 1)} % zum Jahr davor</div>` : '');
+      },
+    }),
+    xAxis: {
+      type: 'category', data: labels.map((l) => (l.match(/\d{4}/g) || [l]).slice(-1)[0]),
+      axisLine: { lineStyle: { color: T.axis } }, axisTick: { show: false }, axisLabel: { color: T.muted, fontSize: 11 },
+    },
+    yAxis: yAxis(T, 'kWh'),
+    series: [{
+      type: 'bar', barMaxWidth: 28,
+      data: values.map((v, i) => ({ value: v, itemStyle: { color: T.s[0], opacity: i === last ? 1 : 0.55, borderRadius: [4, 4, 0, 0] } })),
+      label: { show: true, position: 'top', color: T.ink2, fontSize: 11, fontFamily: T.font, formatter: (p) => (p.dataIndex === last ? num(p.value) : '') },
+    }],
   };
 }

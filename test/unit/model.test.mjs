@@ -28,7 +28,8 @@ test('Zählpunkte: Bilanz-Duplikate werden ignoriert, Register richtig zugeordne
   assert.deepEqual(Object.keys(a.flows), ['consumption']);
   assert.equal(a.flows.consumption.q15.id, '1-0:1.8.0*H15');
   assert.deepEqual(a.flows.consumption.daily.map((r) => r.id), ['1-0:1.8.1*H24', '1-0:1.8.2*H24']);
-  assert.equal(meterLabel(a), 'Musterstraße 1');
+  assert.equal(meterLabel(a), MP1); // Standard: Zählpunktnummer wie im Smart-Meter-Portal
+  assert.equal(meterLabel(a, {}, { compact: true }), `${MP1.slice(0, 6)}…${MP1.slice(-8)}`);
   assert.equal(meterLabel(a, { [MP1]: 'Haus' }), 'Haus');
   assert.equal(firstDataDate(mps, 'consumption').toISOString(), '2018-06-25T22:00:00.000Z');
 });
@@ -246,4 +247,33 @@ test('Zwei Zählpunkte werden je Zeitpunkt addiert', () => {
   assert.equal(m.length, 4);
   assert.ok(m.every((p) => Math.abs(p.v - 0.3) < 1e-9));
   assert.ok(MP2);
+});
+
+/* ------------------------------------------------------------ Aufteilung und Auswahl */
+import { splitByDayPart, splitByWeekpart, splitByMeter, normalizeSelection, compactId } from '../../src/model.js';
+
+test('Aufteilung: Tageszeit, Werktag/Wochenende und Zählpunkte', () => {
+  const pts = [
+    { t: new Date(2026, 9, 5, 3, 0), v: 1 }, // Mo nachts
+    { t: new Date(2026, 9, 5, 8, 15), v: 2 }, // Mo vormittags
+    { t: new Date(2026, 9, 10, 13, 0), v: 3 }, // Sa nachmittags
+    { t: new Date(2026, 9, 11, 20, 45), v: 4 }, // So abends
+    { t: new Date(2026, 9, 11, 21, 0), v: null },
+  ];
+  assert.deepEqual(splitByDayPart(pts).map((x) => x.value), [1, 2, 3, 4]);
+  assert.match(splitByDayPart(pts)[0].name, /0–6 Uhr/);
+  assert.deepEqual(splitByWeekpart(pts).map((x) => [x.id, x.value]), [['weekday', 3], ['weekend', 7]]);
+  assert.deepEqual(splitByDayPart([]), []);
+  assert.deepEqual(splitByMeter([{ id: 'a', name: 'A', points: pts }, { id: 'b', name: 'B', points: [] }]).map((x) => [x.id, x.value]), [['a', 10]]);
+});
+
+test('Auswahl: gespeicherte Zählpunkte prüfen, Reihenfolge wie im Portal, nie leer', () => {
+  const mps = [{ id: 'X' }, { id: 'Y' }, { id: 'Z' }];
+  assert.deepEqual(normalizeSelection('all', mps), ['X', 'Y', 'Z']);
+  assert.deepEqual(normalizeSelection(['Z', 'X'], mps), ['X', 'Z']);
+  assert.deepEqual(normalizeSelection('Y', mps), ['Y']); // Version 1.0 speicherte eine einzelne ID
+  assert.deepEqual(normalizeSelection(['weg'], mps), ['X', 'Y', 'Z']);
+  assert.deepEqual(normalizeSelection(null, mps), ['X', 'Y', 'Z']);
+  assert.equal(compactId('AT0090000000000000000000000012345'), 'AT0090…00012345');
+  assert.equal(compactId('kurz'), 'kurz');
 });

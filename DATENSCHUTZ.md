@@ -2,13 +2,14 @@
 
 Stand: 17. November 2026
 
-Netzblick ist eine nicht-kommerzielle App von Patrick Schlögl (geister-it). Sie zeigt die Smart-Meter-Daten an, die Netz Burgenland in seinem Verbrauchsdatenportal bereitstellt.
+Netzblick ist eine nicht-kommerzielle App von Patrick Schlögl (geister-it). Sie zeigt die Smart-Meter-Daten an, die Netz Burgenland in seinem Verbrauchsdatenportal bereitstellt, sowie Anlagen-, Vertrags- und Abrechnungsdaten aus dem Kundenportal von Netz Burgenland.
 Diese Erklärung beschreibt, welche Daten die App verarbeitet und wohin sie fließen.
 
 ## Kurz gesagt
 
 - Netzblick hat **keinen eigenen Server**. Der Entwickler erhält keinerlei Daten von dir.
-- Die App verbindet sich ausschließlich mit **smartmeter.netzburgenland.at**, dem Portal von Netz Burgenland, und zwar verschlüsselt über HTTPS.
+- Die App verbindet sich ausschließlich mit den Portalen von Netz Burgenland, **smartmeter.netzburgenland.at** und **api.portal.netzburgenland.at**, und zwar verschlüsselt über HTTPS.
+- Vom Kundenportal werden Daten nur **gelesen**. Die App ändert dort nichts.
 - Es gibt **keine Werbung, kein Tracking, keine Analyse- oder Absturzdienste** von Dritten.
 
 ## Welche Daten verarbeitet werden
@@ -16,11 +17,13 @@ Diese Erklärung beschreibt, welche Daten die App verarbeitet und wohin sie flie
 | Daten | Zweck | Wo sie gespeichert werden |
 |---|---|---|
 | Benutzername bzw. E-Mail-Adresse und Passwort deines Portal-Zugangs | Anmeldung beim Portal von Netz Burgenland | Nur wenn „Angemeldet bleiben“ aktiv ist: auf deinem Gerät, verschlüsselt (AES-256-GCM, Schlüssel im Android Keystore) |
-| Sitzungs-Token des Portals | Abruf deiner Daten nach der Anmeldung | nur im Arbeitsspeicher, bis die App beendet wird |
+| Optional: eigene Zugangsdaten für das Kundenportal (nur wenn du sie eingibst) | Anmeldung beim Kundenportal, falls es ein anderes Konto ist | wie oben, verschlüsselt auf deinem Gerät |
+| Sitzungs-Token beider Portale | Abruf deiner Daten nach der Anmeldung. Das Smart-Meter-Portal liefert bei der Anmeldung auch ein Token für das Kundenportal (gleiche Anmeldung von Netz Burgenland). | nur im Arbeitsspeicher, bis die App beendet wird |
 | Zählpunkte, Adresse, Messwerte, Zählerstände | Anzeige, Diagramme, Auswertungen | Zwischenspeicher auf deinem Gerät für die Offline-Anzeige |
+| Aus dem Kundenportal: Name, Kundennummer, E-Mail, Adresse, Zählernummer, Lieferant, Verträge, abgerechnete Verbräuche, Rechnungsbeträge, Teilbeträge | Anzeige auf den Seiten Anlagen, Abrechnung und Konto, Hochrechnung des Abrechnungsjahres | nur im Arbeitsspeicher, bis die App beendet wird |
 | Einstellungen (Strompreis, Namen der Zählpunkte, Darstellung) | Berechnung der Kosten, Anzeige | auf deinem Gerät |
 
-Die Zugangsdaten werden nur an das Portal von Netz Burgenland übertragen, genauso wie bei der Anmeldung im Web-Portal.
+Die Zugangsdaten werden nur an die Portale von Netz Burgenland übertragen, genauso wie bei der Anmeldung im Web-Portal.
 Für die Verarbeitung deiner Daten auf den Servern von Netz Burgenland gilt deren Datenschutzerklärung.
 
 ## CSV-Export
@@ -29,13 +32,14 @@ Wenn du „CSV teilen“ verwendest, erzeugt die App eine Datei mit den angezeig
 
 ## Löschen
 
-- **Abmelden** (Einstellungen) löscht gespeicherte Zugangsdaten und den Zwischenspeicher der Messwerte.
+- **Abmelden** (Menü oder Konto) löscht gespeicherte Zugangsdaten beider Portale und den Zwischenspeicher der Messwerte.
+- **Zwischenspeicher leeren** (Konto) löscht nur die zwischengespeicherten Messwerte.
 - **Deinstallieren** entfernt alle Daten der App vom Gerät.
 - Android-Backups sind für Netzblick deaktiviert. Es landen also keine Daten der App in Cloud-Sicherungen.
 
 ## Berechtigungen
 
-Netzblick benötigt nur die Berechtigung **Internet**, um das Portal zu erreichen.
+Netzblick benötigt nur die Berechtigung **Internet**, um die Portale zu erreichen.
 
 ## Deine Rechte
 

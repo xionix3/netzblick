@@ -63,11 +63,13 @@ export function meterPointsFrom(accounts) {
   return list;
 }
 
-export function meterLabel(mp, names = {}) {
-  if (names[mp.id]) return names[mp.id];
-  const a = mp.address;
-  if (a && a.street) return `${a.street} ${a.houseNumber || ''}`.trim();
-  return 'Zählpunkt …' + mp.id.slice(-6);
+/** Zählpunktnummer kompakt: Länderkennung + Netzbetreiber … letzte 8 Stellen */
+export const compactId = (id) => (id && id.length > 16 ? `${id.slice(0, 6)}…${id.slice(-8)}` : id || '');
+
+/** Anzeigename: eigener Name, sonst die Zählpunktnummer (wie im Smart-Meter-Portal) */
+export function meterLabel(mp, names = {}, { compact = false } = {}) {
+  if (names && names[mp.id]) return names[mp.id];
+  return compact ? compactId(mp.id) : mp.id;
 }
 
 export const shortId = (mp) => '…' + mp.id.slice(-6);
@@ -485,3 +487,51 @@ export function dailyTotals(points) {
 }
 
 export { daysBetween };
+
+/* ------------------------------------------------------------------ Aufteilung (Kreisdiagramm) */
+
+export const DAY_PARTS = [
+  { id: 'night', name: 'Nachts', from: 0, to: 6 },
+  { id: 'morning', name: 'Vormittags', from: 6, to: 12 },
+  { id: 'afternoon', name: 'Nachmittags', from: 12, to: 18 },
+  { id: 'evening', name: 'Abends', from: 18, to: 24 },
+];
+
+/** Summe je Tagesabschnitt (braucht Viertelstundenwerte) */
+export function splitByDayPart(points) {
+  const sums = DAY_PARTS.map(() => 0);
+  let any = false;
+  for (const p of points) {
+    if (p.v == null) continue;
+    const h = p.t.getHours();
+    const i = DAY_PARTS.findIndex((d) => h >= d.from && h < d.to);
+    sums[i] += p.v;
+    any = true;
+  }
+  return any ? DAY_PARTS.map((d, i) => ({ id: d.id, name: `${d.name} ${d.from}–${d.to} Uhr`, value: sums[i] })) : [];
+}
+
+/** Summe Werktage gegen Wochenende (Tages- oder Viertelstundenwerte) */
+export function splitByWeekpart(points) {
+  let wd = 0, we = 0, any = false;
+  for (const p of points) {
+    if (p.v == null) continue;
+    if (dow(p.t) >= 5) we += p.v; else wd += p.v;
+    any = true;
+  }
+  return any ? [{ id: 'weekday', name: 'Werktage', value: wd }, { id: 'weekend', name: 'Wochenende', value: we }] : [];
+}
+
+/** Summe je Zählpunkt; parts: [{id, name, points}] */
+export function splitByMeter(parts) {
+  return parts.map((x) => ({ id: x.id, name: x.name, value: x.points.reduce((a, p) => a + (p.v || 0), 0) }))
+    .filter((x) => x.value > 0);
+}
+
+/** Auswahl der Zählpunkte: gespeicherte Liste gegen vorhandene prüfen; nie leer */
+export function normalizeSelection(saved, mps) {
+  const ids = mps.map((m) => m.id);
+  let sel = Array.isArray(saved) ? saved.filter((id) => ids.includes(id)) : saved === 'all' ? ids : ids.includes(saved) ? [saved] : [];
+  if (!sel.length) sel = ids.slice();
+  return ids.filter((id) => sel.includes(id)); // Reihenfolge wie im Portal
+}

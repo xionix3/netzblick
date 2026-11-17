@@ -59,6 +59,10 @@ export const DEFAULT_SETTINGS = {
   meterNames: {},
   theme: 'system',
   compareMode: 'prev',
+  chartTypes: null, // Diagrammart je Auflösung: {quarter|day|month|year: 'bar'|'line'|'area'|'pie'}
+  splitBy: 'meter', // Kreisdiagramm: 'meter' | 'daypart' | 'weekpart'
+  kundenportal: 'auto', // 'auto' (Anmeldung des Smart-Meter-Portals) | 'own' (eigene Zugangsdaten) | 'off'
+  intro: true, // Marken-Animation beim Start
 };
 export function loadSettings() {
   try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) }; } catch { return { ...DEFAULT_SETTINGS }; }

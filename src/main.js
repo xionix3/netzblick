@@ -1,48 +1,27 @@
-// Netzblick – App-Steuerung
+// Netzblick – App-Steuerung: Start, Anmeldung, Menü, Verbrauchsansicht
 import { PortalApi, ApiError } from './api.js';
+import { KundenportalApi, extractTokens } from './kundenportal.js';
 import {
-  DataStore, meterPointsFrom, meterLabel, shortId, firstDataDate, loadView, mergeSum, applyFilters, filtersActive, hourFilterActive,
+  DataStore, meterPointsFrom, meterLabel, compactId, firstDataDate, loadView, mergeSum, applyFilters, filtersActive, hourFilterActive,
   DEFAULT_FILTERS, bucketAxis, seriesOnAxis, computeStats, likeForLikeCut, forecast, dailyProfile, carpet, weekdayAverages,
-  monthsByYear, dailyTotals, STATUS_LABEL, aggregate,
+  monthsByYear, dailyTotals, STATUS_LABEL, splitByDayPart, splitByWeekpart, splitByMeter, normalizeSelection,
 } from './model.js';
-import { makePeriod, shiftPeriod, periodTitle, periodShortName, PERIOD_LABELS, daysBetween, addDays, startOfDay } from './time.js';
-import { num, kwh, kw, watt, euro, pct, signedPct, dateLong, dateTime, dateShort, time, isoDate, WEEKDAYS_SHORT, MONTHS_LONG } from './format.js';
+import { makePeriod, shiftPeriod, periodTitle, periodShortName, daysBetween, addDays, startOfDay } from './time.js';
+import { num, kwh, kw, watt, euro, pct, dateLong, dateTime, dateShort, time, isoDate, WEEKDAYS_SHORT, MONTHS_LONG } from './format.js';
 import * as charts from './charts.js';
 import { icons } from './icons.js';
-import { http, secure, loadSettings, saveSettings, shareCsv, onBack, onResume, setSystemBars, isNative } from './platform.js';
+import { http, secure, loadSettings, saveSettings, shareCsv, onBack, onResume, setSystemBars } from './platform.js';
 import { demoHttp } from './demo.js';
 import { cacheClear } from './cache.js';
+import { $, h, icon, fillIcons, reduceMotion, setCounter, countUp, openSheet, closeSheet, toast, brandMark, spinBrand } from './ui.js';
+import * as pages from './pages.js';
+import { parseBillingPeriod } from './kundenportal.js';
 
-/* ================================================================ Hilfen */
-const $ = (id) => document.getElementById(id);
-function h(tag, attrs = {}, ...kids) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs || {})) {
-    if (v == null || v === false) continue;
-    if (k === 'class') el.className = v;
-    else if (k === 'text') el.textContent = v;
-    else if (k === 'html') el.innerHTML = v; // nur für eigene, statische Icons
-    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
-    else if (k === 'style') el.setAttribute('style', v);
-    else el.setAttribute(k, v === true ? '' : v);
-  }
-  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
-  return el;
-}
-const icon = (name) => h('span', { class: 'ic', html: icons[name] });
-function fillIcons(root = document) {
-  root.querySelectorAll('[data-icon]').forEach((el) => {
-    if (!el.dataset.iconDone) {
-      el.insertAdjacentHTML('afterbegin', icons[el.dataset.icon] || '');
-      el.dataset.iconDone = '1';
-    }
-  });
-}
 // Web-Vorschau (ohne native Schicht): nur Demo-Daten möglich, da der Browser die Portal-API blockiert
 const PREVIEW = (document.querySelector('meta[name="netzblick-mode"]') || {}).content === 'demo-preview';
 /* global __APP_VERSION__ */
 const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev';
-const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PARAMS = new URLSearchParams(location.search);
 
 /* ================================================================ Zustand */
 const state = {
@@ -51,7 +30,7 @@ const state = {
   demo: false,
   accounts: [],
   mps: [],
-  selected: 'all',
+  selected: [],
   flow: 'consumption',
   period: makePeriod('month', new Date()),
   filters: JSON.parse(JSON.stringify(DEFAULT_FILTERS)),
@@ -61,7 +40,14 @@ const state = {
   loadSeq: 0,
   error: null,
   readings: new Map(),
+  page: 'usage',
+  kp: null,
+  kpCreds: null, // eigene Kundenportal-Zugangsdaten (nur im Speicher, wenn nicht „angemeldet bleiben“)
+  kpData: null,
+  kpError: null,
+  kpPromise: null,
 };
+if (!state.settings.chartTypes) state.settings.chartTypes = {};
 
 /* ================================================================ Thema */
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -72,78 +58,50 @@ function applyTheme() {
   const dark = t === 'dark' || (t === 'system' && darkQuery.matches);
   setSystemBars(dark);
   if (state.view) renderAll();
+  if (state.page !== 'usage') renderPage();
 }
 darkQuery.addEventListener?.('change', applyTheme);
 
-/* ================================================================ Rollenzählwerk */
-function setCounter(el, value, { digits = 6, animate = true } = {}) {
-  const v = Math.max(0, value || 0);
-  const intStr = Math.floor(v).toString().padStart(digits, '0');
-  const dec = Math.floor((v * 10) % 10);
-  const chars = [...intStr, String(dec)];
-  if (el.children.length !== chars.length) {
-    el.textContent = '';
-    chars.forEach((_, i) => {
-      const roll = h('span', { class: 'roll' + (i === chars.length - 1 ? ' roll--dec' : '') },
-        h('span', { class: 'strip' }, ...Array.from({ length: 10 }, (_, n) => h('span', { text: String(n) }))));
-      el.append(roll);
-    });
-  }
-  chars.forEach((c, i) => {
-    const strip = el.children[i].firstChild;
-    strip.style.transition = animate && !reduceMotion() ? `transform ${900 + i * 120}ms cubic-bezier(.2,.8,.2,1)` : 'none';
-    strip.style.transform = `translateY(-${Number(c) * 10}%)`;
-  });
-  el.setAttribute('aria-label', `Zählerstand ${num(v, 1)} Kilowattstunden`);
+/* ================================================================ Marken-Intro */
+const intro = { started: 0, minMs: 0 };
+function startIntro() {
+  const mark = brandMark('xl');
+  $('bootMark').append(mark);
+  spinBrand(mark, ['0', '0', '0'], false);
+  const skip = PARAMS.has('demo') || reduceMotion();
+  intro.started = performance.now();
+  intro.minMs = skip ? 0 : 1250;
+  if (skip) { spinBrand(mark, ['1', '8', '0'], false); $('boot').classList.add('play', 'instant'); return; }
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    $('boot').classList.add('play');
+    spinBrand(mark, ['1', '8', '0']);
+  }));
 }
-
-/* ================================================================ Bottom-Sheet */
-let sheetOnClose = null;
-function openSheet(title, body, onClose) {
-  $('sheetTitle').textContent = title;
-  const b = $('sheetBody');
-  b.textContent = '';
-  b.append(body);
-  fillIcons(b);
-  $('scrim').hidden = false;
-  $('sheet').hidden = false;
-  requestAnimationFrame(() => { $('sheet').classList.add('open'); $('scrim').classList.add('open'); });
-  sheetOnClose = onClose || null;
+function hideBoot() {
+  const boot = $('boot');
+  if (boot.hidden || boot.dataset.leaving) return;
+  boot.dataset.leaving = '1';
+  const wait = Math.max(0, intro.minMs - (performance.now() - intro.started));
   setTimeout(() => {
-    const first = b.querySelector('input, button, select');
-    if (first && !isNative) first.focus({ preventScroll: true });
-  }, 50);
-}
-function closeSheet() {
-  if ($('sheet').hidden) return false;
-  $('sheet').classList.remove('open');
-  $('scrim').classList.remove('open');
-  setTimeout(() => { $('sheet').hidden = true; $('scrim').hidden = true; }, 220);
-  const cb = sheetOnClose;
-  sheetOnClose = null;
-  if (cb) cb();
-  return true;
-}
-
-let toastTimer = null;
-function toast(msg) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.hidden = false;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.classList.remove('show'); setTimeout(() => (t.hidden = true), 250); }, 2600);
+    boot.classList.add('out');
+    setTimeout(() => { boot.hidden = true; }, reduceMotion() ? 0 : 320);
+  }, wait);
 }
 
 /* ================================================================ Anmeldung */
 function showLogin(message) {
-  $('boot').hidden = true;
+  hideBoot();
+  closeNav();
   $('dash').hidden = true;
   $('login').hidden = false;
-  setCounter($('loginCounter'), 0, { digits: 5, animate: false });
+  if (!$('loginMark').firstChild) {
+    const m = brandMark('lg');
+    $('loginMark').append(m);
+    spinBrand(m, ['1', '8', '0'], false);
+  }
   if (PREVIEW) {
     // Vorschau: keine Eingabefelder für Zugangsdaten, nur der Demo-Einstieg
-    $('loginForm').querySelectorAll('.field, .switch, #loginBtn').forEach((el) => { el.hidden = true; });
+    $('loginForm').querySelectorAll('.field, .switch, #loginBtn, .kp-extra').forEach((el) => { el.hidden = true; });
     message = 'Web-Vorschau mit Beispieldaten. Die Anmeldung mit deinem Netz-Burgenland-Zugang gibt es in der Android-App.';
     $('loginError').classList.add('is-info');
   }
@@ -151,7 +109,7 @@ function showLogin(message) {
   if (message) { err.textContent = message; err.hidden = false; } else err.hidden = true;
 }
 
-async function doLogin(username, password, { remember, demo = false, silent = false } = {}) {
+async function doLogin(username, password, { remember, demo = false, silent = false, kp = null } = {}) {
   state.demo = demo;
   state.api = new PortalApi(demo ? demoHttp : http);
   const accounts = await state.api.login(username, password);
@@ -164,6 +122,15 @@ async function doLogin(username, password, { remember, demo = false, silent = fa
     } else if (!silent) {
       await secure.remove('username').catch(() => {});
       await secure.remove('password').catch(() => {});
+    }
+    if (kp && kp.email && kp.password) {
+      state.settings.kundenportal = 'own';
+      saveSettings(state.settings);
+      state.kpCreds = kp;
+      if (remember) {
+        await secure.set('kpUser', kp.email).catch(() => {});
+        await secure.set('kpPass', kp.password).catch(() => {});
+      }
     }
     // Zählpunkt-Liste (ohne Token) für den Offline-Start merken
     try {
@@ -190,12 +157,14 @@ function bindLogin() {
       err.hidden = false;
       return;
     }
+    const kpEmail = $('kpUser').value.trim();
+    const kpPass = $('kpPass').value;
     const btn = $('loginBtn');
     btn.disabled = true;
     btn.textContent = 'Anmelden …';
     err.hidden = true;
     try {
-      await doLogin(u, p, { remember: $('remember').checked });
+      await doLogin(u, p, { remember: $('remember').checked, kp: kpEmail && kpPass ? { email: kpEmail, password: kpPass } : null });
     } catch (ex) {
       err.textContent = ex instanceof ApiError ? ex.message : 'Anmeldung fehlgeschlagen. Versuch es noch einmal.';
       if (ex.code === 'MUST_CHANGE_PASSWORD') err.textContent += ' Ändere es im Portal von Netz Burgenland und melde dich dann hier an.';
@@ -210,39 +179,250 @@ function bindLogin() {
 
 async function logout() {
   closeSheet();
-  await secure.remove('username').catch(() => {});
-  await secure.remove('password').catch(() => {});
+  closeNav();
+  for (const k of ['username', 'password', 'kpUser', 'kpPass']) await secure.remove(k).catch(() => {});
   try { localStorage.removeItem('nb.accounts'); } catch { /* */ }
   cacheClear();
-  state.api = null;
-  state.view = null;
+  Object.assign(state, { api: null, view: null, kp: null, kpData: null, kpError: null, kpCreds: null, page: 'usage' });
   state.readings.clear();
   $('pass').value = '';
+  $('kpPass').value = '';
   showLogin();
 }
 
-/* ================================================================ Übersicht */
+/* ================================================================ Kundenportal */
+function cognitoIdToken(api) {
+  const c = api && api.cognito;
+  if (!c) return null;
+  if (typeof c === 'string') return c;
+  const t = extractTokens({ cognitoToken: c });
+  return t ? t.idToken : null;
+}
+
+async function setupKp() {
+  const mode = state.settings.kundenportal;
+  if (mode === 'off' || !state.api) { state.kp = null; return null; }
+  const kp = new KundenportalApi(state.demo ? demoHttp : http);
+  if (mode === 'own') {
+    let creds = state.kpCreds;
+    if (!creds && !state.demo) {
+      const email = await secure.get('kpUser').catch(() => null);
+      const password = await secure.get('kpPass').catch(() => null);
+      if (email && password) creds = { email, password };
+    }
+    if (!creds) {
+      state.kp = kp;
+      throw new ApiError('KP_NO_CREDENTIALS', 'Für das Kundenportal sind eigene Zugangsdaten eingestellt, aber keine gespeichert. Trag sie unter „Konto“ ein.');
+    }
+    state.kp = kp;
+    await kp.login(creds.email, creds.password);
+  } else {
+    const t = cognitoIdToken(state.api);
+    if (t) kp.setToken(t, 'smartmeter');
+    kp.tokenProvider = async () => { await state.api.relogin(); return cognitoIdToken(state.api); };
+    state.kp = kp;
+    if (!t) throw new ApiError('KP_NO_TOKEN', 'Die Smart-Meter-Anmeldung hat keinen Zugang zum Kundenportal geliefert. Trag unter „Konto“ eigene Zugangsdaten ein.');
+  }
+  return kp;
+}
+
+/** Daten aus dem Kundenportal laden (einmal pro Sitzung, außer force) */
+function ensureKp({ force = false } = {}) {
+  if (state.settings.kundenportal === 'off' || !state.api) return Promise.resolve(null);
+  if (state.kpData && !force) return Promise.resolve(state.kpData);
+  if (state.kpPromise) return state.kpPromise;
+  state.kpPromise = (async () => {
+    if (!state.kp || !state.kp.connected || force) await setupKp();
+    const data = await state.kp.loadAll();
+    state.kpData = data;
+    state.kpError = null;
+    return data;
+  })().catch((e) => {
+    state.kpError = e;
+    throw e;
+  }).finally(() => {
+    state.kpPromise = null;
+    if (state.mps.length) { renderHeader(); }
+    if (state.page !== 'usage') renderPage();
+  });
+  return state.kpPromise;
+}
+
+/** Zusatzinfos eines Zählpunkts aus dem Kundenportal */
+function podFor(id) {
+  return state.kpData ? state.kpData.pods.find((p) => p.id === id) || null : null;
+}
+
+/* ================================================================ Menü */
+const NAV = [
+  { id: 'usage', label: 'Verbrauch', icon: 'chart' },
+  { id: 'plants', label: 'Anlagen', icon: 'plant' },
+  { id: 'billing', label: 'Abrechnung', icon: 'receipt' },
+  { id: 'account', label: 'Konto', icon: 'user' },
+  { id: 'settings', label: 'Einstellungen', icon: 'settings', sheet: true },
+  { id: 'info', label: 'Info', icon: 'info' },
+];
+let navMark = null;
+
+function buildNav() {
+  const nav = $('nav');
+  nav.textContent = '';
+  navMark = brandMark('sm');
+  spinBrand(navMark, ['1', '8', '0'], false);
+  nav.append(
+    h('div', { class: 'nav-brand' }, navMark,
+      h('div', { class: 'nav-brand-text' }, h('span', { class: 'nav-name', text: 'Netzblick' }), h('span', { class: 'nav-by', text: 'von geister-it' }))),
+    h('ul', { class: 'nav-list', role: 'list' }, ...NAV.map((it) => h('li', {},
+      h('button', {
+        type: 'button', class: 'nav-item', 'data-nav': it.id,
+        onclick: () => { if (it.sheet) { closeNav(); openSettings(); } else goto(it.id); },
+      }, icon(it.icon), h('span', { text: it.label }))))),
+    h('div', { class: 'nav-foot' },
+      h('p', { class: 'nav-user', id: 'navUser' }),
+      h('button', { type: 'button', class: 'nav-item nav-item--quiet', onclick: logout }, icon('logout'), h('span', { id: 'navLogout', text: 'Abmelden' })),
+      h('p', { class: 'nav-version', text: `Version ${APP_VERSION}` })),
+  );
+  syncNav();
+}
+
+function syncNav() {
+  document.querySelectorAll('.nav-item[data-nav]').forEach((b) => {
+    const on = b.dataset.nav === state.page;
+    b.classList.toggle('on', on);
+    if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  const acc = state.accounts[0];
+  const u = $('navUser');
+  if (u) u.textContent = state.demo ? 'Demo mit Beispieldaten' : acc ? `Angemeldet als ${acc.displayName || acc.email || ''}` : '';
+  const lo = $('navLogout');
+  if (lo) lo.textContent = state.demo ? 'Demo beenden' : 'Abmelden';
+}
+
+const navPermanent = () => window.matchMedia('(min-width: 1024px) and (min-height: 560px)').matches;
+function openNav() {
+  if (navPermanent()) return;
+  const nav = $('nav');
+  $('navScrim').hidden = false;
+  requestAnimationFrame(() => { nav.classList.add('open'); $('navScrim').classList.add('open'); });
+  if (navMark) { spinBrand(navMark, ['0', '0', '0'], false); requestAnimationFrame(() => requestAnimationFrame(() => spinBrand(navMark, ['1', '8', '0']))); }
+}
+function closeNav() {
+  const nav = $('nav');
+  if (!nav || !nav.classList.contains('open')) return false;
+  nav.classList.remove('open');
+  $('navScrim').classList.remove('open');
+  setTimeout(() => { $('navScrim').hidden = true; }, 220);
+  return true;
+}
+
+const PAGE_TITLES = { plants: 'Anlagen', billing: 'Abrechnung', account: 'Konto', info: 'Info' };
+function goto(page) {
+  closeNav();
+  if (state.page === page && page !== 'usage') { renderPage(); return; }
+  state.page = page;
+  syncNav();
+  const usage = page === 'usage';
+  $('pageUsage').hidden = !usage;
+  $('pageOther').hidden = usage;
+  window.scrollTo(0, 0);
+  if (usage) {
+    if (state.view) renderAll();
+    return;
+  }
+  $('pageTitle').textContent = PAGE_TITLES[page] || '';
+  $('pageRefresh').hidden = page === 'info';
+  renderPage();
+  if (page === 'plants' || page === 'billing' || page === 'account') ensureKp().catch(() => {});
+}
+
+function pageCtx() {
+  return {
+    state, APP_VERSION, PREVIEW,
+    names: state.settings.meterNames,
+    meterColor, podFor, ensureKp, setupKp, logout, goto, openSettings, toast, renderPage,
+    showUsage: (ids, period) => {
+      if (ids) { state.selected = normalizeSelection(ids, state.mps); saveSelection(); }
+      if (period) state.period = period;
+      if (!availableFlows().includes(state.flow)) state.flow = availableFlows()[0] || 'consumption';
+      goto('usage');
+      renderHeader();
+      renderControls();
+      refresh();
+    },
+    saveSettings: () => saveSettings(state.settings),
+  };
+}
+
+function renderPage() {
+  if (state.page === 'usage') return;
+  const body = $('pageBody');
+  body.querySelectorAll('.chart').forEach((c) => charts.dispose(c));
+  body.textContent = '';
+  const ctx = pageCtx();
+  const fn = { plants: pages.renderPlants, billing: pages.renderBilling, account: pages.renderAccount, info: pages.renderInfo }[state.page];
+  if (fn) fn(body, ctx);
+  fillIcons(body);
+}
+
+/* ================================================================ Auswahl der Zählpunkte */
+function saveSelection() {
+  try { localStorage.setItem('nb.selection', JSON.stringify(state.selected)); } catch { /* */ }
+}
+function loadSelection() {
+  try {
+    const raw = localStorage.getItem('nb.selection');
+    if (raw) return JSON.parse(raw);
+    const old = localStorage.getItem('nb.selected'); // Version 1.0
+    if (old) return old;
+  } catch { /* */ }
+  return 'all';
+}
 function selectedMps() {
-  return state.selected === 'all' ? state.mps : state.mps.filter((m) => m.id === state.selected);
+  return state.mps.filter((m) => state.selected.includes(m.id));
+}
+function viewMps() {
+  return selectedMps().filter((m) => m.flows[state.flow]);
 }
 function availableFlows() {
   const set = new Set();
   for (const mp of selectedMps()) Object.keys(mp.flows).forEach((f) => set.add(f));
-  return [...set];
+  return ['consumption', 'feedin'].filter((f) => set.has(f));
+}
+/** Farbe folgt dem Zählpunkt, nicht seiner Position in der Auswahl */
+function meterColor(mp) {
+  const T = charts.tokens();
+  const i = state.mps.findIndex((m) => m.id === mp.id);
+  return i >= 0 && i < T.s.length ? T.s[i] : T.older;
+}
+function setSelection(ids) {
+  state.selected = normalizeSelection(ids, state.mps);
+  saveSelection();
+  if (!availableFlows().includes(state.flow)) state.flow = availableFlows()[0] || 'consumption';
+  renderHeader();
+  renderChips();
+  refresh();
+}
+function toggleMeter(id) {
+  const on = state.selected.includes(id);
+  if (on && state.selected.length === 1) { toast('Mindestens ein Zählpunkt bleibt ausgewählt.'); return; }
+  setSelection(on ? state.selected.filter((x) => x !== id) : [...state.selected, id]);
 }
 
+/* ================================================================ Übersicht */
 function enterDashboard() {
   state.mps = meterPointsFrom(state.accounts);
-  const saved = localStorage.getItem('nb.selected');
-  state.selected = state.mps.length === 1 ? state.mps[0].id : (saved && (saved === 'all' || state.mps.some((m) => m.id === saved)) ? saved : 'all');
+  state.selected = normalizeSelection(loadSelection(), state.mps);
   if (!availableFlows().includes(state.flow)) state.flow = availableFlows()[0] || 'consumption';
-  $('boot').hidden = true;
+  hideBoot();
   $('login').hidden = true;
   $('dash').hidden = false;
+  buildNav();
+  goto('usage');
   renderHeader();
   renderControls();
   refresh();
   loadReadings();
+  ensureKp().catch(() => {}); // Zusatzinfos im Hintergrund
 }
 
 async function loadReadings() {
@@ -256,15 +436,26 @@ async function loadReadings() {
 function renderHeader() {
   const mps = selectedMps();
   const names = state.settings.meterNames;
-  if (state.selected === 'all' && state.mps.length > 1) {
-    $('meterName').textContent = 'Alle Zählpunkte';
-    $('meterSub').textContent = `${state.mps.length} Zählpunkte${state.demo ? ', Demo' : ''}`;
+  const demo = state.demo ? ', Demo' : '';
+  if (mps.length > 1) {
+    const all = mps.length === state.mps.length;
+    $('meterName').textContent = all ? 'Alle Zählpunkte' : `${mps.length} von ${state.mps.length} Zählpunkten`;
+    $('meterSub').textContent = all ? `${state.mps.length} Zählpunkte, zusammengezählt${demo}` : mps.map((m) => meterLabel(m, names, { compact: true })).join(', ');
   } else {
     const mp = mps[0];
-    $('meterName').textContent = mp ? meterLabel(mp, names) : 'Kein Zählpunkt';
-    $('meterSub').textContent = mp ? `${shortId(mp)}${mp.address && mp.address.city ? ', ' + mp.address.city : ''}${state.demo ? ', Demo' : ''}` : '';
+    if (!mp) { $('meterName').textContent = 'Kein Zählpunkt'; $('meterSub').textContent = ''; }
+    else {
+      const pod = podFor(mp.id);
+      const custom = !!names[mp.id];
+      $('meterName').textContent = meterLabel(mp, names, { compact: !custom });
+      const a = mp.address;
+      const where = pod && pod.address ? pod.address : a && a.street ? `${a.street} ${a.houseNumber || ''}, ${a.city || ''}`.trim() : '';
+      const parts = [custom ? compactId(mp.id) : null, where, pod && pod.meterNr ? `Zähler ${pod.meterNr}` : null].filter(Boolean);
+      $('meterSub').textContent = (parts.join(', ') || mp.id) + demo;
+    }
   }
   renderReading(false);
+  syncNav();
 }
 
 function renderReading(animate) {
@@ -309,6 +500,12 @@ function renderChips() {
   const f = state.filters;
   const active = filtersActive(f);
   c.append(h('button', { class: 'chip' + (active ? ' chip--on' : ''), type: 'button', onclick: openFilterSheet }, icon('filter'), active ? 'Filter' : 'Filtern'));
+  if (state.mps.length > 1 && state.selected.length < state.mps.length) {
+    c.append(h('button', {
+      class: 'chip chip--active', type: 'button', 'aria-label': 'Alle Zählpunkte anzeigen',
+      onclick: () => setSelection(state.mps.map((m) => m.id)),
+    }, `${state.selected.length} von ${state.mps.length} Zählpunkten`, icon('close')));
+  }
   if (f.weekdays.some((x) => !x)) {
     c.append(h('button', {
       class: 'chip chip--active', type: 'button', 'aria-label': 'Wochentag-Filter entfernen',
@@ -327,7 +524,6 @@ function weekdayLabel(w) {
   const on = w.map((x, i) => (x ? i : -1)).filter((i) => i >= 0);
   if (on.length === 5 && on.join() === '0,1,2,3,4') return 'Werktage';
   if (on.length === 2 && on.join() === '5,6') return 'Wochenende';
-  // zusammenhängende Bereiche zusammenfassen
   const parts = [];
   let start = null;
   for (let i = 0; i <= 7; i++) {
@@ -354,7 +550,7 @@ async function refresh({ force = false } = {}) {
       renderControls();
     }
     const view = await loadView(state.store, {
-      mps: selectedMps(),
+      mps: viewMps(),
       flow: state.flow,
       period: state.period,
       compareMode: state.settings.compareMode,
@@ -389,25 +585,20 @@ function showBanner(msg, retry) {
 }
 
 /* ================================================================ Darstellung */
-function seriesColor(i) {
-  const T = charts.tokens();
-  return T.s[i % T.s.length];
-}
-
 function derive() {
   const v = state.view;
   const f = state.filters;
   const names = state.settings.meterNames;
-  const per = v.perMp.map((x, i) => ({
+  const per = v.perMp.map((x) => ({
     mp: x.mp,
-    name: meterLabel(x.mp, names),
-    color: seriesColor(i),
+    name: meterLabel(x.mp, names, { compact: true }),
+    color: meterColor(x.mp),
     cur: applyFilters(x.cur.points, f, x.cur.fine),
     cmp: x.cmp ? applyFilters(x.cmp.points, f, x.cmp.fine) : null,
     peak: x.peak,
   }));
   const combined = per.length === 1 ? per[0].cur : mergeSum(per.map((x) => x.cur));
-  const combinedCmpRaw = v.comparePeriod && per.every((x) => x.cmp) ? (per.length === 1 ? per[0].cmp : mergeSum(per.map((x) => x.cmp))) : null;
+  const combinedCmpRaw = v.comparePeriod && per.length && per.every((x) => x.cmp) ? (per.length === 1 ? per[0].cmp : mergeSum(per.map((x) => x.cmp))) : null;
   const res = v.fine ? 'original' : v.res === 'original' ? 'daily' : v.res;
   const stats = computeStats(combined, res);
   const cut = combinedCmpRaw ? likeForLikeCut(v.period, v.comparePeriod, combined, v.fine) : null;
@@ -438,7 +629,7 @@ function renderHero(d) {
   const flowWord = state.flow === 'feedin' ? 'Einspeisung' : 'Verbrauch';
   const filtered = filtersActive(state.filters);
   $('heroLabel').textContent = `${flowWord}${filtered ? ' (gefiltert)' : ''}, ${periodTitle(v.period)}`;
-  $('heroValue').textContent = stats.total == null ? '–' : num(stats.total, stats.total >= 100 ? 0 : 1);
+  countUp($('heroValue'), stats.total, (x) => num(x, stats.total >= 100 ? 0 : 1));
 
   const delta = $('heroDelta');
   delta.textContent = '';
@@ -474,38 +665,104 @@ function renderHero(d) {
   }
 }
 
-function renderLegend(el, items) {
-  el.textContent = '';
-  if (items.length < 2) { el.hidden = true; return; }
-  el.hidden = false;
-  for (const it of items) {
-    el.append(h('span', { class: 'lg' }, h('span', { class: 'lg-key lg-key--' + (it.kind || 'bar'), style: `background:${it.color}` }), it.name));
+/* ---------- Diagrammart */
+const TYPES = [
+  { id: 'bar', label: 'Balken', icon: 'bars' },
+  { id: 'line', label: 'Linien', icon: 'line' },
+  { id: 'area', label: 'Fläche', icon: 'area' },
+  { id: 'pie', label: 'Kreis (Aufteilung)', icon: 'pie' },
+];
+
+function splitOptions(d) {
+  const { v, per, stats } = d;
+  const opts = [];
+  if (per.length > 1) opts.push({ id: 'meter', label: 'Zählpunkte' });
+  if (v.fine) opts.push({ id: 'daypart', label: 'Tageszeit' });
+  if ((v.fine || v.res === 'daily') && (stats.days || 0) >= 2) opts.push({ id: 'weekpart', label: 'Wochentage' });
+  return opts;
+}
+
+function chartTypeFor(d) {
+  const bucket = d.v.bucket;
+  let t = state.settings.chartTypes[bucket] || charts.autoChartType(bucket);
+  if (t === 'pie' && !splitOptions(d).length) t = charts.autoChartType(bucket);
+  return t;
+}
+
+function renderTypeSeg(d, current) {
+  const seg = $('typeSeg');
+  seg.textContent = '';
+  const canPie = splitOptions(d).length > 0;
+  for (const t of TYPES) {
+    if (t.id === 'pie' && !canPie) continue;
+    seg.append(h('button', {
+      type: 'button', class: current === t.id ? 'on' : '', 'aria-pressed': current === t.id ? 'true' : 'false', 'aria-label': t.label, title: t.label,
+      onclick: () => {
+        state.settings.chartTypes[d.v.bucket] = t.id;
+        saveSettings(state.settings);
+        renderMain(derive());
+      },
+    }, icon(t.icon)));
   }
+}
+
+function renderMainLegend(d, type, compareName) {
+  const el = $('mainLegend');
+  el.textContent = '';
+  const T = charts.tokens();
+  const names = state.settings.meterNames;
+  const kind = type === 'bar' ? 'bar' : type === 'pie' ? 'bar' : 'line';
+  const candidates = state.mps.filter((m) => m.flows[state.flow]);
+  if (candidates.length > 1) {
+    for (const mp of candidates) {
+      const on = state.selected.includes(mp.id);
+      el.append(h('button', {
+        type: 'button', class: 'lg lg--btn' + (on ? '' : ' is-off'), 'aria-pressed': on ? 'true' : 'false',
+        title: on ? 'Zählpunkt ausblenden' : 'Zählpunkt einblenden', onclick: () => toggleMeter(mp.id),
+      }, h('span', { class: 'lg-key lg-key--' + kind, style: `background:${meterColor(mp)}` }), meterLabel(mp, names, { compact: true })));
+    }
+  } else if (compareName && d.per[0]) {
+    el.append(h('span', { class: 'lg' }, h('span', { class: 'lg-key lg-key--' + kind, style: `background:${d.per[0].color}` }), d.per[0].name));
+  }
+  if (compareName) el.append(h('span', { class: 'lg' }, h('span', { class: 'lg-key lg-key--line lg-key--cmp', style: `background:${T.compare}` }), compareName));
+  el.hidden = !el.children.length;
 }
 
 function renderMain(d) {
   const { v, per, combinedCmpRaw } = d;
   const T = charts.tokens();
   const bucket = v.bucket;
-  const days = daysBetween(v.period.start, v.period.end);
-  const axis = bucketAxis(v.period, bucket);
-  const series = per.map((x) => ({ name: x.name, color: x.color, data: seriesOnAxis(x.cur, axis, bucket) }));
-  let compare = null;
-  if (combinedCmpRaw && v.comparePeriod) {
-    const cAxis = bucketAxis(v.comparePeriod, bucket);
-    const cSeries = seriesOnAxis(combinedCmpRaw, cAxis, bucket);
-    compare = {
-      name: periodShortName(v.comparePeriod),
-      axis: axis.map((_, i) => cAxis[i] || null),
-      data: axis.map((_, i) => (cSeries[i] ? cSeries[i].v : null)),
-    };
+  const type = chartTypeFor(d);
+  renderTypeSeg(d, type);
+  const split = $('splitBox');
+  split.textContent = '';
+  const chartEl = $('mainChart');
+
+  if (type === 'pie') {
+    renderMainLegend(d, type, null);
+    chartEl.classList.remove('chart--tall');
+    chartEl.classList.add('chart--donut');
+    renderSplit(d, chartEl, split);
+  } else {
+    chartEl.classList.remove('chart--donut');
+    split.hidden = true;
+    const days = daysBetween(v.period.start, v.period.end);
+    const axis = bucketAxis(v.period, bucket);
+    const series = per.map((x) => ({ name: x.name, color: x.color, data: seriesOnAxis(x.cur, axis, bucket) }));
+    let compare = null;
+    if (combinedCmpRaw && v.comparePeriod) {
+      const cAxis = bucketAxis(v.comparePeriod, bucket);
+      const cSeries = seriesOnAxis(combinedCmpRaw, cAxis, bucket);
+      compare = {
+        name: periodShortName(v.comparePeriod),
+        axis: axis.map((_, i) => cAxis[i] || null),
+        data: axis.map((_, i) => (cSeries[i] ? cSeries[i].v : null)),
+      };
+    }
+    renderMainLegend(d, type, compare ? compare.name : null);
+    chartEl.classList.toggle('chart--tall', bucket === 'quarter');
+    charts.render(chartEl, charts.mainOption(T, { bucket, axis, days, series, compare, type }));
   }
-  const legend = series.map((s) => ({ name: s.name, color: s.color, kind: bucket === 'quarter' ? 'line' : 'bar' }));
-  if (compare) legend.push({ name: compare.name, color: T.compare, kind: 'line' });
-  // eine Reihe + Vergleich: Legende trotzdem zeigen (2 Reihen)
-  renderLegend($('mainLegend'), legend);
-  $('mainChart').classList.toggle('chart--tall', bucket === 'quarter');
-  charts.render($('mainChart'), charts.mainOption(T, { bucket, axis, days, series, compare }));
 
   // Hinweise: Ersatzwerte, Filter, die nicht greifen
   const notes = [];
@@ -514,13 +771,71 @@ function renderMain(d) {
   if (estCount) {
     const unit = d.res === 'original' ? 'Viertelstunden' : d.res === 'monthly' ? 'Monate' : 'Tage';
     const parts = Object.entries(st).map(([k, n]) => `${STATUS_LABEL[k] || k}: ${num(n, 0)} ${unit}`).join(', ');
-    notes.push(`${parts}${bucket === 'day' || bucket === 'quarter' ? ' (blasser dargestellt)' : ''}.`);
+    notes.push(`${parts}${type === 'bar' && (bucket === 'day' || bucket === 'quarter') ? ' (blasser dargestellt)' : ''}.`);
   }
   if (hourFilterActive(state.filters) && !v.fine) notes.push('Der Tageszeit-Filter braucht Viertelstundenwerte und wirkt in dieser Ansicht nicht.');
   if (filtersActive(state.filters) && v.res === 'monthly') notes.push('In der Gesamtansicht liegen nur Monatswerte vor, Filter wirken hier nicht.');
   const note = $('mainNote');
   note.textContent = notes.join(' ');
   note.hidden = !notes.length;
+}
+
+/** Kreisdiagramm: Aufteilung nach Zählpunkt, Tageszeit oder Werktag/Wochenende */
+function renderSplit(d, chartEl, box) {
+  const T = charts.tokens();
+  const opts = splitOptions(d);
+  let by = state.settings.splitBy;
+  if (!opts.some((o) => o.id === by)) by = opts[0].id;
+  let items;
+  if (by === 'meter') {
+    items = splitByMeter(d.per.map((x) => ({ id: x.mp.id, name: x.name, points: x.cur }))).map((x) => ({ ...x, color: meterColor({ id: x.id }) }));
+  } else if (by === 'daypart') {
+    items = splitByDayPart(d.combined).map((x, i) => ({ ...x, color: T.s[i] }));
+  } else {
+    items = splitByWeekpart(d.combined).map((x, i) => ({ ...x, color: T.s[i] }));
+  }
+  items = items.filter((x) => x.value > 0);
+  box.hidden = false;
+  if (opts.length > 1) {
+    box.append(h('div', { class: 'seg seg--small seg--split', role: 'group', 'aria-label': 'Aufteilen nach' }, ...opts.map((o) => h('button', {
+      type: 'button', class: o.id === by ? 'on' : '', 'aria-pressed': o.id === by ? 'true' : 'false',
+      onclick: () => { state.settings.splitBy = o.id; saveSettings(state.settings); renderMain(derive()); },
+    }, o.label))));
+  }
+  if (!items.length) {
+    charts.dispose(chartEl);
+    chartEl.textContent = '';
+    box.append(h('p', { class: 'empty', text: 'Für diesen Zeitraum liegen noch keine Werte vor.' }));
+    return;
+  }
+  charts.render(chartEl, charts.donutOption(T, items));
+  const total = items.reduce((a, x) => a + x.value, 0);
+  const days = d.stats.days || 0;
+  box.append(h('table', { class: 'tbl tbl--split' },
+    h('thead', {}, h('tr', {}, h('th', { scope: 'col', text: { meter: 'Zählpunkt', daypart: 'Tageszeit', weekpart: 'Tage' }[by] }), h('th', { scope: 'col', class: 'num', text: 'kWh' }), h('th', { scope: 'col', class: 'num', text: 'Anteil' }))),
+    h('tbody', {}, ...items.map((x) => h('tr', {},
+      h('td', {}, h('span', { class: 'lg-key', style: `background:${x.color}` }), ' ', x.name),
+      h('td', { class: 'num', text: num(x.value, x.value >= 100 ? 0 : 1) }),
+      h('td', { class: 'num', text: pct(x.value / total) })))),
+  ));
+  if (by === 'weekpart' && days >= 7) {
+    const perDay = splitPerDay(d.combined);
+    if (perDay) box.append(h('p', { class: 'hint', text: `Pro Tag: Werktag ${kwh(perDay.weekday)}, Wochenendtag ${kwh(perDay.weekend)}. Werktage sind häufiger, darum ist ihr Anteil größer.` }));
+  }
+}
+
+function splitPerDay(points) {
+  const days = { wd: new Set(), we: new Set() };
+  let wd = 0, we = 0;
+  for (const p of points) {
+    if (p.v == null) continue;
+    const k = isoDate(p.t);
+    const isWe = (p.t.getDay() + 6) % 7 >= 5;
+    (isWe ? days.we : days.wd).add(k);
+    if (isWe) we += p.v; else wd += p.v;
+  }
+  if (!days.wd.size || !days.we.size) return null;
+  return { weekday: wd / days.wd.size, weekend: we / days.we.size };
 }
 
 function coverageText(days) {
@@ -565,7 +880,11 @@ function renderKpis(d) {
 
 function analysisPanel(title, sub, chartClass, legendItems) {
   const legend = h('div', { class: 'legend' });
-  renderLegend(legend, legendItems || []);
+  legend.textContent = '';
+  for (const it of legendItems || []) {
+    legend.append(h('span', { class: 'lg' }, h('span', { class: 'lg-key lg-key--' + (it.kind || 'bar'), style: `background:${it.color}` }), it.name));
+  }
+  legend.hidden = (legendItems || []).length < 2;
   const chart = h('div', { class: 'chart ' + (chartClass || '') });
   const panel = h('section', { class: 'panel' },
     h('div', { class: 'panel-head' }, h('h2', { text: title })),
@@ -584,14 +903,13 @@ function seqLegend(T, max) {
 function renderAnalysis(d) {
   const { v, combined } = d;
   const root = $('analysis');
-  // vorhandene Diagramme sauber entsorgen
   root.querySelectorAll('.chart').forEach((c) => charts.dispose(c));
   root.textContent = '';
   const T = charts.tokens();
   const days = daysBetween(v.period.start, v.period.end);
   const hasData = combined.some((p) => p.v != null);
   if (!hasData) return;
-  const covered = d.stats.days || 0; // Tage mit Messwerten
+  const covered = d.stats.days || 0;
 
   if (v.fine && days >= 3 && covered >= 2) {
     const cp = carpet(combined, v.period);
@@ -668,17 +986,16 @@ function renderTable(d) {
   const table = h('table', { class: 'tbl' },
     h('thead', {}, h('tr', {},
       h('th', { scope: 'col', text: tb === 'hour' ? 'Uhrzeit' : 'Zeitraum' }),
-      ...(multi ? per.map((x) => h('th', { scope: 'col', class: 'num', text: x.name })) : []),
-      h('th', { scope: 'col', class: 'num', text: 'kWh' }))),
+      ...(multi ? per.map((x) => h('th', { scope: 'col', class: 'num' }, h('span', { class: 'lg-key', style: `background:${x.color}` }), ' ', x.name)) : []),
+      h('th', { scope: 'col', class: 'num', text: multi ? 'Summe kWh' : 'kWh' }))),
     h('tbody', {}, ...rows.map((r) => h('tr', { class: r.v === max ? 'is-max' : '' },
       h('td', {}, label(r.t), r.s !== 'W' && (tb === 'hour' || tb === 'day') ? h('span', { class: 'tag', title: STATUS_LABEL[r.s], text: STATUS_LABEL[r.s] }) : null),
       ...(multi ? r.parts.map((p) => h('td', { class: 'num', text: p == null ? '–' : num(p, 2) })) : []),
       h('td', { class: 'num' }, h('span', { class: 'bar-cell', style: `--w:${Math.max(2, (r.v / max) * 100)}%` }), h('span', { text: num(r.v, 2) }))))));
   const n = rows.length;
-  if (n > 12) {
-    const det = h('details', { class: 'more' }, h('summary', {}, `Alle ${n} Zeilen anzeigen`), table);
-    wrap.append(det);
-  } else wrap.append(table);
+  const scroller = h('div', { class: 'tbl-scroll' }, table);
+  if (n > 12) wrap.append(h('details', { class: 'more' }, h('summary', {}, `Alle ${n} Zeilen anzeigen`), scroller));
+  else wrap.append(scroller);
 }
 
 function renderFoot(d) {
@@ -689,32 +1006,49 @@ function renderFoot(d) {
   if (stats.last) parts.push(`Letzter Messwert: ${dateTime(stats.last)} Uhr.`);
   parts.push(`Geladen um ${time(v.loadedAt)} Uhr${state.demo ? ' (Demo-Daten)' : ''}.`);
   f.append(h('p', { text: parts.join(' ') }));
-  f.append(h('p', { text: 'Netzblick ist eine inoffizielle App und zeigt die Daten aus dem Verbrauchsdatenportal von Netz Burgenland.' }));
+  f.append(h('p', { text: 'Netzblick ist eine inoffizielle App von geister-it und zeigt die Daten aus den Portalen von Netz Burgenland.' }));
 }
 
 /* ================================================================ Sheets */
-function openMeterSheet() {
+function meterOption(mp, on, onToggle, extra) {
   const names = state.settings.meterNames;
+  const pod = podFor(mp.id);
+  const a = mp.address;
+  const where = pod && pod.address ? pod.address : a ? `${a.street || ''} ${a.houseNumber || ''}, ${a.postalCode || ''} ${a.city || ''}`.trim() : '';
+  const sub = [names[mp.id] ? mp.id : null, where, pod && pod.meterNr ? `Zähler ${pod.meterNr}` : null, Object.keys(mp.flows).includes('feedin') ? 'mit Einspeisung' : null].filter(Boolean).join(', ');
+  return h('div', { class: 'option option--check' + (on ? ' on' : '') },
+    h('button', { type: 'button', class: 'option-main', role: 'checkbox', 'aria-checked': on ? 'true' : 'false', onclick: onToggle },
+      h('span', { class: 'check', style: `--c:${meterColor(mp)}` }, on ? icon('check') : null),
+      h('span', { class: 'option-text' }, h('b', { text: meterLabel(mp, names) }), sub ? h('small', { text: sub }) : null)),
+    extra || null);
+}
+
+function openMeterSheet() {
+  let sel = state.selected.slice();
+  const initial = sel.join();
   const list = h('div', { class: 'options' });
-  const opt = (id, title, sub) => h('button', {
-    class: 'option' + (state.selected === id ? ' on' : ''), type: 'button',
-    onclick: () => {
-      state.selected = id;
-      try { localStorage.setItem('nb.selected', id); } catch { /* */ }
-      if (!availableFlows().includes(state.flow)) state.flow = availableFlows()[0];
-      closeSheet();
-      renderHeader();
-      renderChips();
-      refresh();
-    },
-  }, h('span', { class: 'option-text' }, h('b', { text: title }), sub ? h('small', { text: sub }) : null), state.selected === id ? icon('check') : null);
-  if (state.mps.length > 1) list.append(opt('all', 'Alle Zählpunkte', 'Summe, nach Zählpunkt gestapelt'));
-  for (const mp of state.mps) {
-    const a = mp.address;
-    list.append(opt(mp.id, meterLabel(mp, names), `${mp.id}${a ? `, ${a.postalCode || ''} ${a.city || ''}` : ''}`));
-  }
-  list.append(h('p', { class: 'hint', text: 'Eigene Namen für Zählpunkte vergibst du in den Einstellungen.' }));
-  openSheet('Zählpunkt', list);
+  const draw = () => {
+    list.textContent = '';
+    if (state.mps.length > 1) {
+      list.append(h('div', { class: 'presets' },
+        h('button', { class: 'chip', type: 'button', onclick: () => { sel = state.mps.map((m) => m.id); draw(); } }, 'Alle auswählen'),
+        h('span', { class: 'hint', text: 'Mehrere Zählpunkte werden zusammengezählt und im Diagramm farbig unterschieden.' })));
+    }
+    for (const mp of state.mps) {
+      const on = sel.includes(mp.id);
+      list.append(meterOption(mp, on, () => {
+        if (on && sel.length === 1) { toast('Mindestens ein Zählpunkt bleibt ausgewählt.'); return; }
+        sel = on ? sel.filter((x) => x !== mp.id) : [...sel, mp.id];
+        draw();
+      }, state.mps.length > 1 ? h('button', { type: 'button', class: 'option-only', onclick: () => { sel = [mp.id]; closeSheet(); } }, 'nur dieser') : null));
+    }
+    list.append(h('p', { class: 'hint', text: 'Eigene Namen vergibst du in den Einstellungen. Ohne Namen zeigt Netzblick die Zählpunktnummer.' }));
+    fillIcons(list);
+  };
+  draw();
+  openSheet(state.mps.length > 1 ? 'Zählpunkte' : 'Zählpunkt', list, () => {
+    if (sel.join() !== initial) setSelection(sel);
+  });
 }
 
 function openCompareSheet() {
@@ -737,24 +1071,40 @@ function openCompareSheet() {
 
 function openFilterSheet() {
   const f = JSON.parse(JSON.stringify(state.filters));
+  let sel = state.selected.slice();
   const body = h('div', { class: 'filter' });
+  const names = state.settings.meterNames;
+
+  const meterBox = h('div', { class: 'meter-toggles' });
+  const drawMeters = () => {
+    meterBox.textContent = '';
+    for (const mp of state.mps) {
+      const on = sel.includes(mp.id);
+      meterBox.append(h('button', {
+        type: 'button', class: 'mtoggle' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false',
+        onclick: () => {
+          if (on && sel.length === 1) { toast('Mindestens ein Zählpunkt bleibt ausgewählt.'); return; }
+          sel = on ? sel.filter((x) => x !== mp.id) : [...sel, mp.id];
+          drawMeters();
+        },
+      }, h('span', { class: 'lg-key', style: `background:${meterColor(mp)}` }), meterLabel(mp, names, { compact: true })));
+    }
+  };
+  drawMeters();
 
   const dayBtns = WEEKDAYS_SHORT.map((wd, i) => h('button', {
     class: 'daybtn' + (f.weekdays[i] ? ' on' : ''), type: 'button', 'aria-pressed': f.weekdays[i] ? 'true' : 'false',
-    onclick: (e) => {
+    onclick: () => {
       f.weekdays[i] = !f.weekdays[i];
-      if (!f.weekdays.some(Boolean)) f.weekdays[i] = true; // mind. ein Tag
+      if (!f.weekdays.some(Boolean)) f.weekdays[i] = true;
       syncDays();
     },
   }, wd));
   const syncDays = () => dayBtns.forEach((b, i) => { b.classList.toggle('on', f.weekdays[i]); b.setAttribute('aria-pressed', f.weekdays[i] ? 'true' : 'false'); });
   const presetDays = (arr) => () => { f.weekdays = arr; syncDays(); };
 
-  const hourSel = (val, onChange, max) => {
-    const s = h('select', { class: 'select', onchange: (e) => onChange(Number(e.target.value)) },
-      ...Array.from({ length: 25 }, (_, i) => i).filter((i) => (max ? i >= 1 : i <= 23)).map((i) => h('option', { value: String(i), selected: i === val ? true : null }, `${i} Uhr`)));
-    return s;
-  };
+  const hourSel = (val, onChange, max) => h('select', { class: 'select', onchange: (e) => onChange(Number(e.target.value)) },
+    ...Array.from({ length: 25 }, (_, i) => i).filter((i) => (max ? i >= 1 : i <= 23)).map((i) => h('option', { value: String(i), selected: i === val ? true : null }, `${i} Uhr`)));
   let fromSel, toSel;
   const syncHours = () => { fromSel.value = String(f.hours[0]); toSel.value = String(f.hours[1]); };
   fromSel = hourSel(f.hours[0], (x) => { f.hours[0] = x; });
@@ -766,6 +1116,8 @@ function openFilterSheet() {
     : null;
 
   body.append(...[
+    state.mps.length > 1 ? h('h3', { text: 'Zählpunkte' }) : null,
+    state.mps.length > 1 ? meterBox : null,
     h('h3', { text: 'Wochentage' }),
     h('div', { class: 'days' }, ...dayBtns),
     h('div', { class: 'presets' },
@@ -781,7 +1133,15 @@ function openFilterSheet() {
       h('button', { class: 'chip', type: 'button', onclick: presetHours(0, 5) }, 'Grundlast 0–5')),
     fineHint,
     h('div', { class: 'sheet-actions' },
-      h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { state.filters = JSON.parse(JSON.stringify(DEFAULT_FILTERS)); closeSheet(); renderChips(); renderAll(); } }, 'Zurücksetzen'),
+      h('button', {
+        class: 'btn btn--ghost', type: 'button',
+        onclick: () => {
+          state.filters = JSON.parse(JSON.stringify(DEFAULT_FILTERS));
+          closeSheet();
+          if (state.selected.length !== state.mps.length) setSelection(state.mps.map((m) => m.id));
+          else { renderChips(); renderAll(); }
+        },
+      }, 'Zurücksetzen'),
       h('button', {
         class: 'btn btn--primary', type: 'button',
         onclick: () => {
@@ -789,12 +1149,18 @@ function openFilterSheet() {
           if (f.hours[0] === 0 && f.hours[1] === 24) f.hours = [0, 24];
           state.filters = f;
           closeSheet();
-          renderChips();
-          renderAll();
+          if (sel.join() !== state.selected.join()) setSelection(sel);
+          else { renderChips(); renderAll(); }
         },
       }, 'Filter anwenden')),
   ].filter(Boolean));
   openSheet('Filtern', body);
+}
+
+function lastBillingStart() {
+  const pods = selectedMps().map((m) => podFor(m.id)).filter((p) => p && p.lastBillingPeriod);
+  const ends = pods.map((p) => parseBillingPeriod(p.lastBillingPeriod)).filter(Boolean).map((x) => x.to.getTime());
+  return ends.length ? new Date(Math.min(...ends)) : null;
 }
 
 function openCustomRange() {
@@ -803,9 +1169,11 @@ function openCustomRange() {
   const to = h('input', { type: 'date', class: 'input', value: isoDate(addDays(p.end, -1)), max: isoDate(new Date()) });
   const quick = (label, fn) => h('button', { class: 'chip', type: 'button', onclick: () => { const [a, b] = fn(); from.value = isoDate(a); to.value = isoDate(b); } }, label);
   const today = startOfDay(new Date());
+  const billStart = lastBillingStart();
   const body = h('div', { class: 'filter' },
     h('div', { class: 'hours' }, h('label', {}, 'von', from), h('label', {}, 'bis', to)),
     h('div', { class: 'presets' },
+      billStart && billStart < today ? quick('Seit der letzten Abrechnung', () => [billStart, addDays(today, -1)]) : null,
       quick('Letzte 7 Tage', () => [addDays(today, -7), addDays(today, -1)]),
       quick('Letzte 30 Tage', () => [addDays(today, -30), addDays(today, -1)]),
       quick('Letzte 90 Tage', () => [addDays(today, -90), addDays(today, -1)]),
@@ -843,11 +1211,7 @@ function openSettings() {
   const s = state.settings;
   const priceIn = h('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.01', min: '0', placeholder: 'z. B. 28,5', value: s.pricePerKwh != null ? String(Math.round(s.pricePerKwh * 10000) / 100) : '' });
   const feeIn = h('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.01', min: '0', placeholder: 'z. B. 12', value: s.feePerMonth != null ? String(s.feePerMonth) : '' });
-  const nameInputs = state.mps.map((mp) => {
-    const a = mp.address;
-    const fallback = a && a.street ? `${a.street} ${a.houseNumber || ''}`.trim() : shortId(mp);
-    return { mp, el: h('input', { class: 'input', type: 'text', placeholder: fallback, value: s.meterNames[mp.id] || '', maxlength: '40' }) };
-  });
+  const nameInputs = state.mps.map((mp) => ({ mp, el: h('input', { class: 'input', type: 'text', placeholder: 'z. B. Haus, Wärmepumpe', value: s.meterNames[mp.id] || '', maxlength: '40' }) }));
   const themeBtns = [['system', 'Wie System'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([id, label]) => h('button', {
     type: 'button', class: s.theme === id ? 'on' : '', 'aria-pressed': s.theme === id ? 'true' : 'false',
     onclick: (e) => {
@@ -861,20 +1225,17 @@ function openSettings() {
     const x = parseFloat(String(v).replace(',', '.'));
     return isFinite(x) && x >= 0 ? x : null;
   };
-  const acc = state.accounts[0];
   const body = h('div', { class: 'settings' },
     h('h3', { text: 'Kosten' }),
     h('label', { class: 'field' }, h('span', { text: 'Strompreis in Cent pro kWh (brutto, Energie + Netz)' }), priceIn),
     h('label', { class: 'field' }, h('span', { text: 'Fixkosten in Euro pro Monat (Grund- und Netzpauschalen)' }), feeIn),
     h('p', { class: 'hint', text: 'Beides steht auf deiner Jahresabrechnung. Die Kosten in der App sind eine Schätzung.' }),
     h('h3', { text: 'Namen der Zählpunkte' }),
-    ...nameInputs.map(({ mp, el }) => h('label', { class: 'field' }, h('span', { text: mp.id }), el)),
+    h('p', { class: 'hint', text: 'Ohne eigenen Namen zeigt Netzblick die Zählpunktnummer aus dem Smart-Meter-Portal.' }),
+    ...nameInputs.map(({ mp, el }) => h('label', { class: 'field' }, h('span', { class: 'mono', text: mp.id }), el)),
     h('h3', { text: 'Darstellung' }),
     h('div', { class: 'seg seg--small' }, ...themeBtns),
-    h('h3', { text: 'Konto' }),
-    h('p', { class: 'hint', text: state.demo ? 'Demo-Modus mit erfundenen Werten.' : `Angemeldet als ${acc ? acc.displayName : ''}.` }),
     h('div', { class: 'sheet-actions' },
-      h('button', { class: 'btn btn--ghost', type: 'button', onclick: logout }, state.demo ? 'Demo beenden' : 'Abmelden'),
       h('button', {
         class: 'btn btn--primary', type: 'button',
         onclick: () => {
@@ -886,10 +1247,11 @@ function openSettings() {
           closeSheet();
           renderHeader();
           renderAll();
+          if (state.page !== 'usage') renderPage();
           toast('Einstellungen gespeichert');
         },
       }, 'Speichern')),
-    h('p', { class: 'fineprint', text: `Netzblick ${APP_VERSION}. Inoffizielle App, nicht von Netz Burgenland oder VIVAVIS. Die Daten kommen aus smartmeter.netzburgenland.at; Zugangsdaten bleiben auf diesem Gerät.` }));
+    h('p', { class: 'fineprint', text: `Netzblick ${APP_VERSION}. Inoffizielle App von geister-it, nicht von Netz Burgenland. Zugangsdaten bleiben verschlüsselt auf diesem Gerät.` }));
   openSheet('Einstellungen', body);
 }
 
@@ -920,7 +1282,6 @@ function setPeriodKind(kind) {
   if (kind === 'custom') { openCustomRange(); return; }
   const anchor = state.period.kind === 'total' || state.period.kind === 'custom' ? (kind === 'day' ? addDays(startOfDay(new Date()), -1) : new Date()) : state.period.anchor;
   let a = anchor;
-  // Tagesansicht: standardmäßig gestern (heute ist meist noch leer)
   if (kind === 'day' && state.period.kind !== 'day' && startOfDay(a) >= startOfDay(new Date())) a = addDays(startOfDay(new Date()), -1);
   state.period = makePeriod(kind, a, { firstDate: firstDataDate(state.mps, state.flow) || undefined });
   renderControls();
@@ -959,9 +1320,11 @@ function openPeriodPicker() {
 
 function bindDashboard() {
   fillIcons();
+  document.querySelectorAll('[data-menu]').forEach((b) => b.addEventListener('click', openNav));
+  $('navScrim').addEventListener('click', closeNav);
   $('meterBtn').addEventListener('click', openMeterSheet);
-  $('settingsBtn').addEventListener('click', openSettings);
   $('refreshBtn').addEventListener('click', () => { refresh({ force: true }); loadReadings(); });
+  $('pageRefresh').addEventListener('click', () => { ensureKp({ force: true }).catch(() => {}); renderPage(); });
   $('prevBtn').addEventListener('click', () => shift(-1));
   $('nextBtn').addEventListener('click', () => shift(1));
   $('periodTitle').addEventListener('click', openPeriodPicker);
@@ -980,9 +1343,9 @@ function bindDashboard() {
     renderControls();
     refresh();
   });
-  $('scrim').addEventListener('click', closeSheet);
-  $('sheetClose').addEventListener('click', closeSheet);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+  $('scrim').addEventListener('click', () => closeSheet());
+  $('sheetClose').addEventListener('click', () => closeSheet());
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!closeSheet()) closeNav(); } });
 
   // Wischen über Kopfbereich und Summe wechselt den Zeitraum
   let sx = null, sy = null;
@@ -996,29 +1359,42 @@ function bindDashboard() {
       if (Math.abs(dx) > 70 && Math.abs(dy) < 45) shift(dx < 0 ? 1 : -1);
     }, { passive: true });
   }
+  // Wischen vom linken Rand öffnet das Menü
+  let ex = null, ey = null;
+  document.addEventListener('touchstart', (e) => { const t = e.touches[0]; if (t.clientX < 24 && !$('dash').hidden) { ex = t.clientX; ey = t.clientY; } else ex = null; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (ex == null) return;
+    const t = e.changedTouches[0];
+    if (t.clientX - ex > 60 && Math.abs(t.clientY - ey) < 50) openNav();
+    ex = null;
+  }, { passive: true });
 
-  onBack(() => closeSheet());
+  onBack(() => closeSheet() || closeNav() || (state.page !== 'usage' && !$('dash').hidden ? (goto('usage'), true) : false));
   onResume(() => {
     if (state.view && Date.now() - state.view.loadedAt.getTime() > 20 * 60000) { refresh(); loadReadings(); }
   });
+  window.matchMedia('(min-width: 1024px) and (min-height: 560px)').addEventListener?.('change', () => closeNav());
 }
 
 /* ================================================================ Start */
 async function boot() {
   applyTheme();
   fillIcons();
+  startIntro();
   bindLogin();
   bindDashboard();
-  setCounter($('bootCounter'), 0, { digits: 5, animate: false });
 
-  const params = new URLSearchParams(location.search);
-  if (params.has('demo') || PREVIEW) {
-    if (params.get('period')) state.period = makePeriod(params.get('period'), params.get('date') ? new Date(params.get('date') + 'T00:00:00') : new Date());
-    if (params.get('theme')) state.settings.theme = params.get('theme');
-    if (params.get('price')) state.settings.pricePerKwh = Number(params.get('price'));
-    if (params.get('sel')) localStorage.setItem('nb.selected', params.get('sel'));
+  if (PARAMS.has('demo') || PREVIEW) {
+    if (PARAMS.get('period')) state.period = makePeriod(PARAMS.get('period'), PARAMS.get('date') ? new Date(PARAMS.get('date') + 'T00:00:00') : new Date());
+    if (PARAMS.get('theme')) state.settings.theme = PARAMS.get('theme');
+    if (PARAMS.get('price')) state.settings.pricePerKwh = Number(PARAMS.get('price'));
+    if (PARAMS.get('chart')) state.settings.chartTypes = { quarter: PARAMS.get('chart'), day: PARAMS.get('chart'), month: PARAMS.get('chart'), year: PARAMS.get('chart') };
+    if (PARAMS.get('split')) state.settings.splitBy = PARAMS.get('split');
+    if (PARAMS.get('sel')) localStorage.setItem('nb.selection', JSON.stringify(PARAMS.get('sel') === 'all' ? 'all' : PARAMS.get('sel').split(',')));
     applyTheme();
     await doLogin('demo', 'demo', { demo: true });
+    if (PARAMS.get('page')) goto(PARAMS.get('page'));
+    if (PARAMS.has('menu')) openNav();
     return;
   }
 

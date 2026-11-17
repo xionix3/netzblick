@@ -1,6 +1,7 @@
 // Demo-Modus: simuliert die Portal-API mit erfundenen, aber realistischen Daten.
 // Antworten haben exakt das Format der echten API, damit derselbe Code durchlaufen wird.
 import { API_BASE } from './api.js';
+import { KP_BASE } from './kundenportal.js';
 
 const Q = 15 * 60 * 1000;
 const Q15_START = new Date(2023, 5, 21);
@@ -168,17 +169,122 @@ function handleMaxPower(url) {
   return { status: 200, data: { value: best.v * 4, startTimestamp: new Date(best.t).toISOString(), endTimestamp: new Date(best.t + Q).toISOString(), status: 'W', legend: '1-0:1.8.0*H15' } };
 }
 
+/* ------------------------------------------------------------ Kundenportal (Demo) */
+
+const b64url = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+const DEMO_CUSTOMER = '1000000001';
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export const DEMO_JWT = `${b64url({ alg: 'none', typ: 'JWT' })}.${b64url({ 'custom:customerNr': DEMO_CUSTOMER, email: 'demo@example.at', exp: 4102444800 })}.demo`;
+
+const CONTRACTS = [
+  { nr: '200000000001', meter: METERS[0], description: 'Musterweg 12, 7000 Eisenstadt', external: false },
+  { nr: '200000000002', meter: METERS[1], description: 'Musterweg 12a, 7000 Eisenstadt', external: true },
+];
+
+// Abrechnungsjahre Oktober bis September, aus denselben erfundenen Messwerten berechnet
+let billedCache = null;
+function billedYears() {
+  if (billedCache) return billedCache;
+  billedCache = new Map();
+  const lastEnd = new Date(new Date().getFullYear() - (new Date().getMonth() >= 9 ? 0 : 1), 9, 1);
+  for (const c of CONTRACTS) {
+    const years = [];
+    for (let y = 0; y < 5; y++) {
+      const to = new Date(lastEnd.getFullYear() - y, 9, 1);
+      const from = new Date(to.getFullYear() - 1, 9, 1);
+      if (from < H24_START) break;
+      let sum = 0;
+      for (let t = from.getTime(); t < to.getTime(); t += Q * 4) sum += power(c.meter.kind, t);
+      years.push({ year: String(to.getFullYear()), from, to, kwh: Math.round(sum) });
+    }
+    billedCache.set(c.nr, years.reverse());
+  }
+  return billedCache;
+}
+const MONTH_NAMES = ['Jänner', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const periodText = (from, to) => `${MONTH_NAMES[from.getMonth()]} ${from.getFullYear()} bis ${MONTH_NAMES[(to.getMonth() + 11) % 12]} ${new Date(to.getTime() - 86400000).getFullYear()}`;
+
+function handleKp(method, path, data) {
+  if (method === 'POST' && path === '/papi/auth/signin') {
+    if (data && data.password === 'falsch') return { status: 401, data: { errorCode: 'NotAuthorizedException', message: 'Incorrect username or password.' } };
+    return { status: 200, data: { idToken: DEMO_JWT, accessToken: 'demo', refreshToken: 'demo', expireIn: 3600 } };
+  }
+  const base = `/api/profile/customer-nr/${DEMO_CUSTOMER}`;
+  const years = billedYears();
+  if (path === '/api/profile') {
+    return { status: 200, data: { customerNr: DEMO_CUSTOMER, firstName: 'Demo', lastName: 'Haushalt', email: 'demo@example.at', address: { strasse: 'Musterweg', hausnum1: '12', plz: '7000', ort: 'Eisenstadt' }, contact: { email: 'demo@example.at', electronicCorrespondence: true } } };
+  }
+  if (path === '/api/profile/link/customers') return { status: 200, data: { linkedCustomers: [] } };
+  if (path === base + '/pods') {
+    return { status: 200, data: CONTRACTS.map((c) => ({ extUI: c.meter.id, premiseAddress: c.description, utilityType: 'electricity', granularityCustomer: 'QH', electricityFeeder: false })) };
+  }
+  if (path === base + '/pods-data') {
+    return {
+      status: 200,
+      data: CONTRACTS.map((c, i) => {
+        const y = years.get(c.nr);
+        const last = y[y.length - 1];
+        return {
+          extUI: c.meter.id,
+          contractDateFrom: i === 0 ? '2016-04-01' : '2021-09-15',
+          details: 'AT000000/Musterstrom GmbH',
+          net: { serialNr: i === 0 ? '1KFM0200012345' : '1KFM0200054321', deviceType: 'IME', gridUsageLevel: '7', loadProfileType: i === 0 ? 'H0' : 'HA', lastBillingPeriod: periodText(last.from, last.to) },
+          approvals: { active: i === 0 ? [{ dataType: 'EnergyCommunity', energyCommunity: { share: '50', factor: '1', type: 'Erneuerbare-Energie-Gemeinschaft', direction: 'consumption' } }] : [] },
+          participationHistory: i === 0 ? [{ dateFrom: '2024-03-01' }] : [],
+        };
+      }),
+    };
+  }
+  if (path === base + '/consumption-premise') {
+    return {
+      status: 200,
+      data: {
+        premises: CONTRACTS.map((c) => ({
+          contractAccount: c.nr,
+          utilities: [{ utilityType: 'electricity', years: years.get(c.nr).map((y) => ({ year: y.year, totalDiff: String(y.kwh) })), periods: years.get(c.nr).map((y) => ({ zeitraum: periodText(y.from, y.to), diff: String(y.kwh) })) }],
+        })),
+      },
+    };
+  }
+  if (path === '/api/contracts') {
+    return { status: 200, data: CONTRACTS.map((c) => ({ nr: c.nr, description: c.description, isActive: true, electricity: true, invoiceServiceProvider: c.external ? 'Musterstrom GmbH' : 'Netz Burgenland', extInvoicingServProv: c.external, eBilling: true })) };
+  }
+  const m = path.match(/^\/api\/contracts\/(\d+)\/(bills|part-payment-plan)$/);
+  if (m) {
+    const c = CONTRACTS.find((x) => x.nr === m[1]);
+    if (!c) return { status: 404, data: { message: 'not found' } };
+    if (c.external) return { status: 400, data: { errorCode: 'ErrCodeExternalServiceProvider', message: 'Rechnung über externen Dienstleister' } };
+    if (m[2] === 'bills') {
+      return { status: 200, data: years.get(c.nr).slice(-3).map((y, i) => ({ billNr: `9100000${i + 1}`, dateFrom: ymd(y.from), dateTo: ymd(new Date(y.to - 86400000)), amount: Math.round((y.kwh * 0.118 + 162) * 100) / 100, amountCurr: 'EUR', electricity: true })) };
+    }
+    const start = new Date(new Date().getFullYear() - (new Date().getMonth() >= 9 ? 0 : 1), 9, 15);
+    return {
+      status: 200,
+      data: {
+        installment: Array.from({ length: 12 }, (_, i) => {
+          const due = new Date(start.getFullYear(), start.getMonth() + i, 15);
+          const paid = due < new Date();
+          return { dueDate: ymd(due), settlementDate: paid ? ymd(due) : null, amount: '185.00', amountOpen: paid ? '0.00' : '185.00', balancingStatus: paid ? 'ausgeglichen' : 'offen' };
+        }),
+        advancePayment: [],
+      },
+    };
+  }
+  return { status: 404, data: { message: 'not found' } };
+}
+
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Ersatz für http() im Demo-Modus */
 export async function demoHttp({ method = 'GET', url, data }) {
   await wait(120 + Math.random() * 260);
+  if (url.startsWith(KP_BASE)) return handleKp(method, url.slice(KP_BASE.length).split('?')[0], data);
   const path = url.replace(API_BASE, '').split('?')[0];
   if (method === 'POST' && path === 'api/account/login') {
     if (data && data.password === 'falsch') {
       return { status: 400, data: { data: null, success: false, message: JSON.stringify({ status: 401, errorCode: 'ErrCodeUserPasswordInvalid', message: 'failed email/password invalid' }), mustChangePassword: false } };
     }
-    return { status: 200, data: { success: true, message: null, mustChangePassword: false, data: { linkedAccounts: [ACCOUNT], cognitoToken: { idToken: 'demo', refreshToken: 'demo', expireIn: 3600 } } } };
+    return { status: 200, data: { success: true, message: null, mustChangePassword: false, data: { linkedAccounts: [ACCOUNT], cognitoToken: { idToken: DEMO_JWT, refreshToken: 'demo', expireIn: 3600 } } } };
   }
   if (/\/values\/(normal|basePrice)$/.test(path)) return handleValues(url);
   if (path.startsWith('api/maxPower/')) return handleMaxPower(url);

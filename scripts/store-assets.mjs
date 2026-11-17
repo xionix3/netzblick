@@ -60,20 +60,27 @@ await render(`<div style="width:1024px;height:500px;background:#142231;position:
   </div>
 </div>`, 1024, 500, 'feature-graphic.png');
 
-// Handy-Screenshots 1080 × 1920 (9:16) aus dem Demo-Modus
+// Handy-Screenshots 1080 × 1920 (9:16) und Tablet 1920 × 1080 (16:9) aus dem Demo-Modus
+const PHONE = { width: 360, height: 640, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
+const TABLET = { width: 1280, height: 720, deviceScaleFactor: 1.5, isMobile: false, hasTouch: true };
 const shots = [
-  ['?demo=1&period=month&price=0.29&sel=all', 'phone-1.png', null],
-  ['?demo=1&period=day&date=2026-10-07&sel=AT0090000000000000000000000012345', 'phone-2.png', null],
-  ['?demo=1&period=month&date=2026-10-01&sel=AT0090000000000000000000000012345', 'phone-3.png', '#analysis'],
-  ['?demo=1&period=year&date=2025-06-01&theme=dark&price=0.29', 'phone-4.png', null],
+  ['?demo=1&period=month&price=0.29&sel=all', 'phone-1.png', null, PHONE],
+  ['?demo=1&period=day&date=2026-10-07&sel=AT0090000000000000000000000012345', 'phone-2.png', null, PHONE],
+  ['?demo=1&period=month&date=2026-10-01&sel=AT0090000000000000000000000012345', 'phone-3.png', '#analysis', PHONE],
+  ['?demo=1&period=year&date=2025-06-01&theme=dark&price=0.29', 'phone-4.png', null, PHONE],
+  ['?demo=1&page=billing&price=0.29', 'phone-5.png', null, PHONE, 'Hochrechnung'],
+  ['?demo=1&period=month&date=2026-10-01&sel=all&chart=pie&split=daypart', 'phone-6.png', '#mainPanel', PHONE],
+  ['?demo=1&period=month&price=0.29&sel=all&chart=bar', 'tablet-1.png', null, TABLET],
+  ['?demo=1&page=plants', 'tablet-2.png', null, TABLET, 'Zählernummer'],
 ];
-for (const [q, file, scrollTo] of shots) {
+for (const [q, file, scrollTo, viewport, waitText] of shots) {
   const p = await browser.newPage();
   await p.emulateTimezone('Europe/Vienna');
   await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
-  await p.setViewport({ width: 360, height: 640, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  await p.setViewport(viewport);
   await p.goto(base + q, { waitUntil: 'networkidle0' });
   await p.waitForFunction(() => !document.body.classList.contains('is-loading') && document.querySelector('#heroValue')?.textContent.trim());
+  if (waitText) await p.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 15000 }, waitText);
   if (scrollTo) await p.evaluate((sel) => window.scrollTo(0, document.querySelector(sel).getBoundingClientRect().top + window.scrollY - 150), scrollTo);
   await new Promise((r) => setTimeout(r, 800));
   await p.screenshot({ path: resolve(out, file) });

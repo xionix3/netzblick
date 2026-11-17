@@ -1,4 +1,6 @@
-# Portal-API von Netz Burgenland
+# Portal-APIs von Netz Burgenland
+
+Netzblick nutzt zwei Schnittstellen: das **Smart-Meter-Portal** (Messwerte, ab hier) und das **Kundenportal** (Anlagen, Verträge, Abrechnung, [weiter unten](#kundenportal)).
 
 Diese Beschreibung wurde aus dem Web-Portal ermittelt (Stand November 2026) und mit einem echten Konto geprüft.
 Die Schnittstelle ist **inoffiziell und undokumentiert** und kann sich ohne Vorwarnung ändern.
@@ -126,8 +128,57 @@ Antwort:
 | `POST api/account/getUserAccounts`, `api/account/logout` | Kontoverwaltung |
 | `GET api/info/version` | Versionsnummer des Portals |
 
+## Kundenportal
+
+- **Portal:** https://portal.netzburgenland.at/ (eigene Web-App)
+- **API-Basis:** `https://api.portal.netzburgenland.at`. Pfade unter `/papi/` sind öffentlich, unter `/api/` braucht es eine Anmeldung.
+- **Anmeldung:** AWS Cognito, Benutzerpool `eu-central-1_JLqXhCtsi`. **Derselbe Pool und derselbe App-Client wie beim Smart-Meter-Portal**: Das `cognitoToken.idToken` aus dessen Login (siehe oben) funktioniert hier direkt. Netzblick braucht deshalb normalerweise nur eine Anmeldung.
+- **Header:** `Authorization: <idToken>`, **ohne** „Bearer“. Gültig etwa 60 Minuten; Netzblick holt nach HTTP 401 einmal ein frisches Token (über die Smart-Meter-Anmeldung oder die eigenen Zugangsdaten).
+- **Kundennummer:** steht im Token als Claim `custom:customerNr` und wird in vielen Pfaden gebraucht.
+
+Eigene Anmeldung, falls jemand im Kundenportal ein anderes Konto hat:
+
+```http
+POST /papi/auth/signin
+Content-Type: application/json
+
+{"email": "…", "password": "…"}
+```
+
+Antwort: `{"idToken": "…", "accessToken": "…", "refreshToken": "…", "expireIn": 3600}`.
+
+### Lesende Aufrufe
+
+| Aufruf | Inhalt (Auszug) |
+|---|---|
+| `GET /api/profile` | `customerNr`, `firstName`, `lastName`, `titlePrefix`, `address{strasse, hausnum1, plz, ort}`, `contact{email, electronicCorrespondence}` |
+| `GET /api/profile/customer-nr/{nr}/pods` | je Zählpunkt `extUI` (= Zählpunktnummer), `premiseAddress`, `utilityType`, `granularityCustomer` (`QH` = Viertelstunden), `electricityFeeder` |
+| `GET /api/profile/customer-nr/{nr}/pods-data?start=0&limit=50` | `contractDateFrom`, `details` („Lieferanten-ID/Name“), `net{serialNr, deviceType (IME = Smart Meter), gridUsageLevel, loadProfileType, lastBillingPeriod}`, `approvals.active[].energyCommunity{share, factor, type, direction}`, `participationHistory[]` |
+| `GET /api/profile/customer-nr/{nr}/consumption-premise` | `premises[]{contractAccount, utilities[]{utilityType, years[]{year, totalDiff}, periods[]{zeitraum, diff}}}`: abgerechnete Verbräuche in kWh |
+| `GET /api/contracts?customerNr={nr}` | Vertragskonten: `nr`, `description`, `isActive`, `electricity`, `invoiceServiceProvider`, `extInvoicingServProv`, `eBilling` |
+| `GET /api/contracts/{konto}/bills` | Rechnungen `billNr`, `dateFrom`, `dateTo`, `amount`, `amountCurr` |
+| `GET /api/contracts/{konto}/part-payment-plan?customerNr={nr}` | `installment[]` und `advancePayment[]` mit `dueDate`, `amount`, `amountOpen`, `settlementDate` |
+| `GET /api/profile/link/customers` | verknüpfte Kundennummern |
+
+- `lastBillingPeriod` ist Text, z. B. „Oktober 2025 bis September 2026“. Netzblick liest daraus Beginn und Ende.
+- Rechnet ein **externer Lieferant** ab, antworten `bills` und `part-payment-plan` mit Fehler `ErrCodeExternalServiceProvider`. Das ist kein Defekt; Netzblick zeigt dann einen Hinweis.
+- Das Postfach (`/api/inbox…`) antwortete beim Test mit HTTP 500, ein Endpunkt für Börsenpreise war nicht verfügbar. Beides nutzt Netzblick nicht.
+- Netzblick ruft **nur lesende** Endpunkte auf. Schreibende Aufrufe des Portals (Profil ändern, Zählerstand melden, Verknüpfungen) werden nicht verwendet.
+
+### Zusammenspiel beider Portale
+
+| Smart-Meter-Portal | Kundenportal | Nutzen in Netzblick |
+|---|---|---|
+| Zählpunktnummer (`meteringPointIdentifier`) | `extUI` | Verknüpfung beider Datenquellen |
+| Viertelstunden- und Tageswerte | `lastBillingPeriod` | laufendes Abrechnungsjahr, Hochrechnung, Zeitraum „seit der letzten Abrechnung“ |
+| gemessene Jahressumme | `consumption-premise` | gemessen gegen abgerechnet |
+| Hochrechnung × eigener Strompreis | Teilbeträge | Nachzahlung oder Guthaben (Schätzung) |
+| Adresse aus dem Zählpunkt | Zählernummer, Lieferant, Netzebene | Details in Zählpunktwahl und „Anlagen“ |
+
 ## Umsetzung in Netzblick
 
 - `src/api.js`: Anmeldung, Messreihen, Spitzenleistung, Fehlerbehandlung, automatische Neuanmeldung
+- `src/kundenportal.js`: Kundenportal-Client, Token-Auswertung, Normalisierung der Antworten
+- `src/billing.js`: laufendes Abrechnungsjahr aus beiden Quellen
 - `src/model.js`: Auswahl des feinsten passenden Registers, Tarif-Summen, Zwischenspeicher
 - `test/unit/fixtures.mjs`: Antwortbeispiele im Originalformat (anonymisiert)
