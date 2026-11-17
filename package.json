@@ -1,0 +1,26 @@
+{
+  "name": "netzblick",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Inoffizielle Android-App für die Verbrauchsdaten aus dem Smart-Meter-Portal von Netz Burgenland",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "sync": "npm run build && npx cap sync android",
+    "apk": "npm run sync && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3",
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-semi-condensed": "^5.3.0",
+    "echarts": "^6.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "esbuild": "^0.28.2",
+    "puppeteer-core": "^25.17.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "appId": "at.netzblick.app",
+  "appName": "Netzblick",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    },
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  }
+}
