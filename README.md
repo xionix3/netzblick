@@ -155,6 +155,7 @@ Jeder Push nach GitHub baut außerdem automatisch eine Debug-APK. Sie liegt unte
 | `error: invalid source release: 21` | *Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK* auf das mitgelieferte JDK 21 stellen. |
 | `SDK location not found` | Projekt einmal in Android Studio öffnen (legt `android/local.properties` an) oder `ANDROID_HOME` setzen. |
 | `Could not find … capacitor-android` / leere App | `npm install` und `npm run sync` im Hauptordner vergessen. |
+| `npm warn install-scripts … esbuild … blocked` (npm 12) | Ist ab Version 1.1.0 in `package.json` unter `allowScripts` freigegeben. Einmal `npm rebuild esbuild` ausführen. Wer vorher `npm install-scripts approve` benutzt hat: `git checkout -- package.json`. |
 | Anmeldung schlägt fehl, Passwort stimmt aber | Im [Web-Portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) anmelden. Verlangt das Portal ein neues Passwort, dort ändern. |
 | Heute fehlen Werte | Normal. Das Portal liefert Messwerte etwa einen Tag verzögert. |
 | „Anlagen“ oder „Abrechnung“ leer, Hinweis zum Kundenportal | Unter *Konto* den Zugang prüfen. Nutzt du im Kundenportal ein anderes Konto, dort „Eigene Zugangsdaten“ wählen. |
