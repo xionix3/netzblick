@@ -22,6 +22,8 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 - Der bisherige Gesamtpreis in den Einstellungen gilt weiter, bis ein Lieferantenpreis eingetragen ist.
 - Menü in Gruppen: Verbrauch, Strompreis, Abrechnung · Anlagen, Energiegemeinschaft · Störung, Kontakt · Konto, Einstellungen, Info.
 - `npm run build` und `npm run sync` installieren fehlende Pakete selbst (z. B. nach einem `git pull` mit neuer Abhängigkeit).
+- `aktualisieren.cmd`: unter Windows mit einem Doppelklick auf den neuesten Stand.
+- Projektbeschreibung neu, auf Deutsch (README.md) und Englisch (README.en.md), mit eigenen Bildern (`scripts/readme-images.mjs`).
 
 ## [1.1.1] – 2026-11-18
 

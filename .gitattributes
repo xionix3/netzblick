@@ -1,0 +1,2 @@
+# Windows-Skripte brauchen CRLF-Zeilenenden
+*.cmd text eol=crlf
