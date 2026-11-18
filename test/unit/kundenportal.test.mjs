@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   KundenportalApi, KP_BASE, tokenClaims, extractTokens, normalizePods, normalizeConsumption, normalizeContracts, normalizeBills,
-  normalizePartPayments, parseBillingPeriod,
+  normalizePartPayments, parseBillingPeriod, currentFactor,
 } from '../../src/kundenportal.js';
 import { demoHttp, DEMO_JWT } from '../../src/demo.js';
 import { PortalApi } from '../../src/api.js';
@@ -85,11 +85,21 @@ test('Kundenportal: externer Rechnungssteller ist kein Fehler', async () => {
   await assert.rejects(kp.bills('2'), { message: 'Serverfehler' });
 });
 
-test('Kundenportal: Zählpunkte zusammenführen (Adresse, Zähler, Energiegemeinschaft)', () => {
+test('Kundenportal: Zählpunkte zusammenführen (Adresse, Zähler, Tarifklasse, Energiegemeinschaften)', () => {
+  const ec = (id, type, from, partner) => ({ dataType: 'EnergyCommunityRegistration', energyCommunity: { id, direction: 'C', type, gcDisModel: 'D', share: 0, factor: 0 }, consent: { dateFrom: from, dateTo: '' }, request: { serviceProvider: partner, history: [{ status: 1, createdAt: '2026-11-10T19:53:19Z' }] } });
   const pods = normalizePods(
     [{ extUI: 'AT1', premiseAddress: 'Weg 1, 7000 Ort', utilityType: 'electricity', granularityCustomer: 'QH' }],
-    [{ extUI: 'AT1', contractDateFrom: '2020-01-01', details: 'AT0001/Strom AG', net: { serialNr: 'Z1', deviceType: 'IME', gridUsageLevel: '7', loadProfileType: 'H0', lastBillingPeriod: 'Jänner 2025 bis Dezember 2025' }, approvals: { active: [{ dataType: 'EnergyCommunity', energyCommunity: { share: '25', factor: '1' } }] }, participationHistory: [{ dateFrom: '2024-05-01' }, { dateFrom: '2023-02-01' }] },
-      { extUI: 'AT2', net: {} }],
+    [{
+      extUI: 'AT1', contractDateFrom: '2020-01-01', details: 'AT0001/Strom AG', tariffClass: 'N', gcDisModel: 'D',
+      net: { serialNr: 'Z1', deviceType: 'IME', gridUsageLevel: 7, loadProfileType: 'H0', lastBillingPeriod: 'Jänner 2025 bis Dezember 2025' },
+      approvals: { active: [ec('ATCC1', 'CC', '2026-11-11', 'CC101'), ec('AT00RC2', 'RC_R', '2026-11-13', 'RC102')], open: [ec('ATGC3', 'GC', '', 'GC103')], terminated: [] },
+      participationHistory: [
+        { dateFrom: '2026-11-11', dateTo: '2026-11-12', leadPod: 'ATCC1', ecFactor: 100 },
+        { dateFrom: '2026-11-13', dateTo: '', leadPod: 'ATCC1', ecFactor: 75 },
+        { dateFrom: '2026-11-13', dateTo: '', leadPod: 'AT00RC2', ecFactor: 25 },
+      ],
+    },
+    { extUI: 'AT2', tariffClass: 'U', net: {} }],
   );
   assert.equal(pods.length, 2);
   const [a, b] = pods;
@@ -97,10 +107,21 @@ test('Kundenportal: Zählpunkte zusammenführen (Adresse, Zähler, Energiegemein
   assert.equal(a.supplier, 'Strom AG');
   assert.equal(a.meterNr, 'Z1');
   assert.equal(a.gridLevel, 7);
+  assert.equal(a.tariffClass, 'N');
+  assert.equal(b.tariffClass, 'U');
   assert.match(a.deviceType, /Smart Meter/);
   assert.equal(a.granularity, 'Viertelstundenwerte');
-  assert.equal(a.energyCommunity.share, 25);
-  assert.equal(a.energyCommunity.since.toISOString().slice(0, 10), '2023-02-01');
+  assert.deepEqual(a.communities.map((c) => [c.id, c.type, c.status, c.model, c.direction, c.partner]), [
+    ['ATCC1', 'CC', 'aktiv', 'dynamisch', 'Bezug', 'CC101'],
+    ['AT00RC2', 'RC_R', 'aktiv', 'dynamisch', 'Bezug', 'RC102'],
+    ['ATGC3', 'GC', 'beantragt', 'dynamisch', 'Bezug', 'GC103'],
+  ]);
+  assert.equal(a.communities[0].since.toISOString().slice(0, 10), '2026-11-11');
+  assert.equal(a.energyCommunity.id, 'ATCC1');
+  assert.equal(currentFactor(a, 'ATCC1', new Date(2026, 10, 18)), 75);
+  assert.equal(currentFactor(a, 'AT00RC2', new Date(2026, 10, 18)), 25);
+  assert.equal(currentFactor(a, 'ATCC1', new Date(2026, 10, 11, 12)), 100);
+  assert.equal(b.communities.length, 0);
   assert.equal(b.energyCommunity, null);
 });
 

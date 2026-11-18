@@ -105,7 +105,7 @@ const expect = (cond, msg) => (cond ? null : msg);
 
 /* ---------- Szenarien ---------- */
 await scenario('Monat, alle Zählpunkte (gestapelt)', {
-  query: '&period=month&price=0.29&sel=all',
+  query: '&period=month&price=14.9&sel=all',
   shot: 'monat',
   checks: (s) => [
     expect(s.canvases >= 4, `zu wenige Diagramme (${s.canvases})`),
@@ -125,7 +125,7 @@ await scenario('Tag, ein Zählpunkt, mit Zählerstand', {
 });
 await scenario('Woche', { query: '&period=week&date=2026-10-05', checks: (s) => [expect(s.title.startsWith('KW 41'), `falscher Titel: ${s.title}`)] });
 await scenario('Jahr im Dunkelmodus mit Kalender', {
-  query: '&period=year&date=2025-06-01&theme=dark&price=0.29',
+  query: '&period=year&date=2025-06-01&theme=dark&price=14.9',
   theme: 'dark',
   shot: 'jahr-dunkel',
   checks: (s) => [expect(/Tage im Jahr/.test(s.text), 'Jahreskalender fehlt'), expect(s.tableRows === 12, `12 Monatszeilen erwartet, ${s.tableRows}`)],
@@ -231,6 +231,46 @@ await scenario('Diagrammart: Linien und Kreis', {
     expect(await page.$eval('#typeSeg button[aria-label="Kreis (Aufteilung)"]', (b) => b.classList.contains('on')), 'Kreis nicht aktiv'),
   ],
 });
+await scenario('Kosten: Lieferant, Netz Burgenland, Abgaben und Erinnerung', {
+  query: '&period=month&sel=all&price=14.9&remind=' + new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10),
+  shot: 'kosten',
+  checks: async (s, page) => [
+    expect(/Netz Burgenland/.test(s.text) && /Erneuerbaren-Förderbeitrag/.test(s.text), 'Kostenaufstellung fehlt'),
+    expect(/Kosten ca\./.test(s.text), 'Kosten im Kopf fehlen'),
+    expect(/Neukundenrabatt bei Musterstrom GmbH endet in 10 Tagen/.test(s.text), 'Erinnerungshinweis fehlt'),
+    expect(await page.$eval('#costPanel', (el) => el.querySelectorAll('.stackbar span').length === 3), 'Anteilsbalken fehlt'),
+  ],
+});
+await scenario('Seite Strompreis mit Netzpreisen und Jahreskosten', {
+  query: '&page=tariff&price=14.9',
+  actions: async (page) => { await waitText(page, /€ im Jahr/, 15000); },
+  checks: (s) => [
+    expect(/Sommer-Niedertarif/.test(s.text), 'Niedertarif fehlt'),
+    expect(/10,15 ct/.test(s.text), 'Netznutzung brutto 10,15 ct fehlt'),
+    expect(/Erinnerung setzen/.test(s.text), 'Erinnerung fehlt'),
+    expect(/Steuern und Abgaben 2026/.test(s.text), 'Abgaben fehlen'),
+  ],
+});
+await scenario('Seite Energiegemeinschaft mit Teilnahmefaktoren', {
+  query: '&page=community',
+  shot: 'energiegemeinschaft',
+  actions: async (page) => { await waitText(page, /Teilnahmefaktor im Verlauf/); },
+  checks: (s) => [
+    expect(/Bürgerenergiegemeinschaft/.test(s.text) && /Erneuerbare-Energie-Gemeinschaft \(regional\)/.test(s.text), 'Gemeinschaften fehlen'),
+    expect(/60 %/.test(s.text) && /40 %/.test(s.text), 'Teilnahmefaktoren fehlen'),
+    expect(/dynamisch/.test(s.text), 'Aufteilung fehlt'),
+  ],
+});
+await scenario('Seiten Störung und Kontakt', {
+  query: '&page=outage',
+  shot: 'stoerung',
+  actions: async (page) => { await openMenuItem(page, 'contact'); },
+  checks: async (s, page) => [
+    expect(/0800 888 9001/.test(s.text) && /Servicezentren/.test(s.text), 'Kontakt fehlt'),
+    expect(/Güssing/.test(s.text), 'Servicezentrum fehlt'),
+    expect(await page.$$eval('.callcard', (l) => l.length >= 1), 'Anruf-Karte fehlt'),
+  ],
+});
 await scenario('Seite Anlagen mit Daten aus dem Kundenportal', {
   query: '&page=plants',
   shot: 'anlagen',
@@ -238,7 +278,7 @@ await scenario('Seite Anlagen mit Daten aus dem Kundenportal', {
   checks: (s) => [expect(/1KFM0200012345/.test(s.text), 'Zählernummer fehlt'), expect(/Energiegemeinschaft/.test(s.text), 'Energiegemeinschaft fehlt'), expect(/Musterstrom/.test(s.text), 'Lieferant fehlt')],
 });
 await scenario('Seite Abrechnung: laufendes Jahr und Hochrechnung', {
-  query: '&page=billing&price=0.29',
+  query: '&page=billing&price=14.9',
   shot: 'abrechnung',
   actions: async (page) => { await waitText(page, /Hochrechnung/, 15000); },
   checks: (s) => [

@@ -3,18 +3,26 @@ import { addDays, startOfDay, daysBetween } from './time.js';
 
 const sumOf = (pts) => pts.reduce((a, p) => a + (p.v || 0), 0);
 
-/** Laufendes Abrechnungsjahr aus den Smart-Meter-Tageswerten, hochgerechnet mit dem Verlauf des Vorjahres */
+/**
+ * Laufendes Abrechnungsjahr aus den Smart-Meter-Tageswerten.
+ * Hochgerechnet mit dem Verlauf der 12 Monate davor (Winter zählt mehr als Sommer).
+ * Die letzte Abrechnung kann kürzer als ein Jahr sein (Zwischenabrechnung); ihre Summe steht in lastSum.
+ */
 export async function billingYearStatus(store, mp, lastPeriod, now = new Date()) {
   const curStart = lastPeriod.to;
-  const curEnd = new Date(curStart.getFullYear() + 1, curStart.getMonth(), 1);
+  const curEnd = new Date(curStart.getFullYear() + 1, curStart.getMonth(), curStart.getDate());
+  const prevFrom = new Date(curStart.getFullYear() - 1, curStart.getMonth(), curStart.getDate());
   const today = startOfDay(now);
   if (curStart >= today) return null;
-  const [cur, prev] = await Promise.all([
+  const [cur, prev, last] = await Promise.all([
     store.load(mp, 'consumption', curStart, curEnd < today ? curEnd : addDays(today, 1), 'daily'),
+    store.load(mp, 'consumption', prevFrom, curStart, 'daily'),
     store.load(mp, 'consumption', lastPeriod.from, lastPeriod.to, 'daily'),
   ]);
+  const lastDays = daysBetween(lastPeriod.from, lastPeriod.to);
+  const lastSum = sumOf(last.points) || null;
   const curPts = cur.points.filter((p) => p.v != null);
-  if (!curPts.length) return { curStart, curEnd, sum: null };
+  if (!curPts.length) return { curStart, curEnd, sum: null, lastSum, lastDays };
   const lastT = curPts[curPts.length - 1].t;
   const upto = addDays(startOfDay(lastT), 1); // erster Tag ohne Werte
   const sum = sumOf(curPts);
@@ -22,9 +30,10 @@ export async function billingYearStatus(store, mp, lastPeriod, now = new Date())
   const prevTotal = sumOf(prev.points);
   const prevCut = new Date(upto.getFullYear() - 1, upto.getMonth(), upto.getDate());
   const prevSame = sumOf(prev.points.filter((p) => p.t < prevCut));
+  const prevComplete = prev.points.some((p) => p.v != null && p.t < addDays(prevFrom, 7));
   let projection = null, method = null;
   if (covered >= 14) {
-    if (prevTotal > 0 && prevSame > 0 && prev.points.some((p) => p.v != null && p.t < addDays(lastPeriod.from, 7))) {
+    if (prevTotal > 0 && prevSame > 0 && prevComplete) {
       projection = sum * (prevTotal / prevSame);
       method = 'vorjahr';
     } else {
@@ -32,7 +41,7 @@ export async function billingYearStatus(store, mp, lastPeriod, now = new Date())
       method = 'linear';
     }
   }
-  return { curStart, curEnd, upto, covered, sum, prevTotal: prevTotal || null, prevSame: prevSame || null, projection, method };
+  return { curStart, curEnd, upto, covered, sum, prevTotal: prevComplete && prevTotal ? prevTotal : null, prevSame: prevSame || null, projection, method, lastSum, lastDays };
 }
 
 /** Vertragskonto zu einem Zählpunkt finden (Adresse, sonst eindeutig) */

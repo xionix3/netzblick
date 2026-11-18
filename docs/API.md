@@ -160,7 +160,27 @@ Antwort: `{"idToken": "…", "accessToken": "…", "refreshToken": "…", "expir
 | `GET /api/contracts/{konto}/part-payment-plan?customerNr={nr}` | `installment[]` und `advancePayment[]` mit `dueDate`, `amount`, `amountOpen`, `settlementDate` |
 | `GET /api/profile/link/customers` | verknüpfte Kundennummern |
 
-- `lastBillingPeriod` ist Text, z. B. „Oktober 2025 bis September 2026“. Netzblick liest daraus Beginn und Ende.
+- `lastBillingPeriod` ist Text, z. B. „Oktober 2025 bis September 2026“. Netzblick liest daraus Beginn und Ende. Nach einer Zwischenabrechnung kann es auch „Oktober 2026 bis Oktober 2026“ sein.
+- `tariffClass` je Zählpunkt: `N` = Netzebene 7 ohne Leistungsmessung (Haushalt), `U` = unterbrechbar (z. B. Wärmepumpe). Bestimmt die Netzpreise.
+
+### Energiegemeinschaften
+
+In `pods-data` stehen die Teilnahmen unter `approvals.active`, `approvals.open` (beantragt) und `approvals.terminated` als Freigaben mit `dataType: "EnergyCommunityRegistration"`:
+
+| Feld | Bedeutung |
+|---|---|
+| `energyCommunity.id` | Gemeinschafts-ID (33 Zeichen, z. B. `AT…RC…` oder `ATCC…`) |
+| `energyCommunity.type` | `CC` Bürgerenergiegemeinschaft, `RC_R` / `RC_L` Erneuerbare-Energie-Gemeinschaft regional / lokal, `GC` gemeinschaftliche Erzeugungsanlage |
+| `energyCommunity.direction` | `C` Bezug, `G` Einspeisung |
+| `energyCommunity.gcDisModel` | `D` dynamische, `S` statische Aufteilung; bei statisch `share`/`factor` |
+| `consent.dateFrom` / `dateTo` | Beginn und Ende der Datenfreigabe |
+| `request.serviceProvider` | Marktpartner-ID der Gemeinschaft, `request.history[].createdAt` Zeitpunkt des Antrags |
+
+Auf Ebene des Zählpunkts liefert `participationHistory[]` den Verlauf: `dateFrom`, `dateTo`, `leadPod` (Gemeinschafts-ID) und `ecFactor` (Teilnahmefaktor in Prozent). Ein Zählpunkt kann gleichzeitig an mehreren Gemeinschaften teilnehmen, die Faktoren ergeben zusammen 100. Strommengen aus der Gemeinschaft (Eigendeckung) liefern weder Kundenportal noch Smart-Meter-Portal.
+
+### Netzpreise
+
+Die Netzpreise stehen nicht in den Portalen, sondern im Preisblatt Strom im Downloadcenter von Netz Burgenland (PDF, netto). Netzblick hinterlegt sie mit Steuern und Abgaben in `src/netzdaten.js` und rechnet daraus in `src/costs.js`.
 - Rechnet ein **externer Lieferant** ab, antworten `bills` und `part-payment-plan` mit Fehler `ErrCodeExternalServiceProvider`. Das ist kein Defekt; Netzblick zeigt dann einen Hinweis.
 - Das Postfach (`/api/inbox…`) antwortete beim Test mit HTTP 500, ein Endpunkt für Börsenpreise war nicht verfügbar. Beides nutzt Netzblick nicht.
 - Netzblick ruft **nur lesende** Endpunkte auf. Schreibende Aufrufe des Portals (Profil ändern, Zählerstand melden, Verknüpfungen) werden nicht verwendet.

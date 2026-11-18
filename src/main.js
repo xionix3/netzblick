@@ -7,15 +7,17 @@ import {
   monthsByYear, dailyTotals, STATUS_LABEL, splitByDayPart, splitByWeekpart, splitByMeter, normalizeSelection,
 } from './model.js';
 import { makePeriod, shiftPeriod, periodTitle, periodShortName, daysBetween, addDays, startOfDay } from './time.js';
-import { num, kwh, kw, watt, euro, pct, dateLong, dateTime, dateShort, time, isoDate, WEEKDAYS_SHORT, MONTHS_LONG } from './format.js';
+import { num, kwh, kw, watt, euro, pct, dateLong, dateTime, dateShort, dateNum, time, isoDate, WEEKDAYS_SHORT, MONTHS_LONG } from './format.js';
 import * as charts from './charts.js';
 import { icons } from './icons.js';
-import { http, secure, loadSettings, saveSettings, shareCsv, onBack, onResume, setSystemBars } from './platform.js';
+import { http, secure, loadSettings, saveSettings, shareCsv, onBack, onResume, setSystemBars, openExternal } from './platform.js';
 import { demoHttp } from './demo.js';
 import { cacheClear } from './cache.js';
 import { $, h, icon, fillIcons, reduceMotion, setCounter, countUp, openSheet, closeSheet, toast, brandMark, spinBrand } from './ui.js';
 import * as pages from './pages.js';
 import { parseBillingPeriod } from './kundenportal.js';
+import { meterCost, sumCosts, supplierFor, tariffClassOf, projectCost } from './costs.js';
+import { STAND, TARIFF_CALCULATOR } from './netzdaten.js';
 
 // Web-Vorschau (ohne native Schicht): nur Demo-Daten möglich, da der Browser die Portal-API blockiert
 const PREVIEW = (document.querySelector('meta[name="netzblick-mode"]') || {}).content === 'demo-preview';
@@ -256,8 +258,15 @@ function podFor(id) {
 /* ================================================================ Menü */
 const NAV = [
   { id: 'usage', label: 'Verbrauch', icon: 'chart' },
-  { id: 'plants', label: 'Anlagen', icon: 'plant' },
+  { id: 'tariff', label: 'Strompreis', icon: 'euro' },
   { id: 'billing', label: 'Abrechnung', icon: 'receipt' },
+  { sep: true },
+  { id: 'plants', label: 'Anlagen', icon: 'plant' },
+  { id: 'community', label: 'Energiegemeinschaft', icon: 'community' },
+  { sep: true },
+  { id: 'outage', label: 'Störung', icon: 'bolt' },
+  { id: 'contact', label: 'Kontakt', icon: 'phone' },
+  { sep: true },
   { id: 'account', label: 'Konto', icon: 'user' },
   { id: 'settings', label: 'Einstellungen', icon: 'settings', sheet: true },
   { id: 'info', label: 'Info', icon: 'info' },
@@ -272,7 +281,7 @@ function buildNav() {
   nav.append(
     h('div', { class: 'nav-brand' }, navMark,
       h('div', { class: 'nav-brand-text' }, h('span', { class: 'nav-name', text: 'Netzblick' }), h('span', { class: 'nav-by', text: 'von geister-it' }))),
-    h('ul', { class: 'nav-list', role: 'list' }, ...NAV.map((it) => h('li', {},
+    h('ul', { class: 'nav-list', role: 'list' }, ...NAV.map((it) => it.sep ? h('li', { class: 'nav-sep', 'aria-hidden': 'true' }) : h('li', {},
       h('button', {
         type: 'button', class: 'nav-item', 'data-nav': it.id,
         onclick: () => { if (it.sheet) { closeNav(); openSettings(); } else goto(it.id); },
@@ -315,7 +324,7 @@ function closeNav() {
   return true;
 }
 
-const PAGE_TITLES = { plants: 'Anlagen', billing: 'Abrechnung', account: 'Konto', info: 'Info' };
+const PAGE_TITLES = { plants: 'Anlagen', billing: 'Abrechnung', account: 'Konto', info: 'Info', tariff: 'Strompreis', community: 'Energiegemeinschaft', outage: 'Störung', contact: 'Kontakt' };
 function goto(page) {
   closeNav();
   if (state.page === page && page !== 'usage') { renderPage(); return; }
@@ -330,9 +339,9 @@ function goto(page) {
     return;
   }
   $('pageTitle').textContent = PAGE_TITLES[page] || '';
-  $('pageRefresh').hidden = page === 'info';
+  $('pageRefresh').hidden = ['info', 'outage', 'contact'].includes(page);
   renderPage();
-  if (page === 'plants' || page === 'billing' || page === 'account') ensureKp().catch(() => {});
+  if (['plants', 'billing', 'account', 'community', 'tariff'].includes(page)) ensureKp().catch(() => {});
 }
 
 function pageCtx() {
@@ -350,6 +359,8 @@ function pageCtx() {
       refresh();
     },
     saveSettings: () => saveSettings(state.settings),
+    costOptions,
+    refreshUsage: () => { if (state.view) renderAll(); },
   };
 }
 
@@ -359,7 +370,7 @@ function renderPage() {
   body.querySelectorAll('.chart').forEach((c) => charts.dispose(c));
   body.textContent = '';
   const ctx = pageCtx();
-  const fn = { plants: pages.renderPlants, billing: pages.renderBilling, account: pages.renderAccount, info: pages.renderInfo }[state.page];
+  const fn = { plants: pages.renderPlants, billing: pages.renderBilling, account: pages.renderAccount, info: pages.renderInfo, tariff: pages.renderTariff, community: pages.renderCommunity, outage: pages.renderOutage, contact: pages.renderContact }[state.page];
   if (fn) fn(body, ctx);
   fillIcons(body);
 }
@@ -432,10 +443,11 @@ function showWhatsNew() {
   const major = APP_VERSION.split('.').slice(0, 2).join('.');
   try { if (localStorage.getItem('nb.seenVersion') === major) return; localStorage.setItem('nb.seenVersion', major); } catch { return; }
   const items = [
-    ['menu', 'Menü über ☰ oben links oder vom linken Rand wischen: Anlagen, Abrechnung, Konto, Info und Abmelden.'],
-    ['meter', 'Mehrere Zählpunkte: oben auf den Namen tippen und ankreuzen, oder im Diagramm die Legende antippen.'],
-    ['pie', 'Diagrammart wählen: Balken, Linien, Fläche oder Kreis, über die Symbole rechts über dem Diagramm.'],
-    ['receipt', 'Daten aus dem Kundenportal: Seiten „Anlagen“ und „Abrechnung“. Andere Zugangsdaten trägst du unter „Konto“ ein.'],
+    ['euro', 'Strompreis: Preis deines Lieferanten eintragen. Netzkosten, Steuern und Abgaben rechnet Netzblick selbst, samt Sommer-Niedertarif.'],
+    ['bell', 'Erinnerung, bevor Neukundenrabatt oder Vertragsbindung enden, damit du rechtzeitig wechseln kannst.'],
+    ['community', 'Energiegemeinschaft: alle Teilnahmen mit Teilnahmefaktor, Aufteilung und Verlauf.'],
+    ['bolt', 'Störung und Kontakt: Störungsdienst, Servicezentren und Kundentelefon direkt anrufen.'],
+    ['menu', 'Alles im Menü über ☰ oben links.'],
   ];
   const body = h('div', { class: 'whatsnew' },
     h('ul', { class: 'whatsnew-list', role: 'list' }, ...items.map(([ic, text]) => h('li', {}, icon(ic), h('span', { text })))),
@@ -624,7 +636,9 @@ function derive() {
   const cut = combinedCmpRaw ? likeForLikeCut(v.period, v.comparePeriod, combined, v.fine) : null;
   const cmpForDelta = combinedCmpRaw ? (cut ? combinedCmpRaw.filter((p) => p.t < cut) : combinedCmpRaw) : null;
   const cmpStats = cmpForDelta ? computeStats(cmpForDelta, res) : null;
-  return { v, per, combined, combinedCmpRaw, res, stats, cut, cmpStats };
+  const d = { v, per, combined, combinedCmpRaw, res, stats, cut, cmpStats };
+  d.costs = periodCosts(d);
+  return d;
 }
 
 function renderAll() {
@@ -633,15 +647,49 @@ function renderAll() {
   renderHero(d);
   renderMain(d);
   renderKpis(d);
+  renderCosts(d);
   renderAnalysis(d);
   renderTable(d);
   renderFoot(d);
 }
 
-function costOf(kwhValue, days) {
+/* ---------- Kosten: Lieferant (eingegeben) + Netz Burgenland + Steuern und Abgaben */
+const hasSupplierPrice = () => state.mps.some((m) => supplierFor(state.settings, m.id));
+/** Version 1.0/1.1: ein Gesamtpreis inkl. Netz; gilt, bis ein Lieferantenpreis eingetragen ist */
+const legacyActive = () => state.settings.pricePerKwh != null && !hasSupplierPrice();
+function legacyCost(kwhValue, days) {
   const s = state.settings;
   if (s.pricePerKwh == null || kwhValue == null) return null;
   return kwhValue * s.pricePerKwh + (s.feePerMonth || 0) * (days / 30.437);
+}
+
+function costOptions(mp) {
+  const pod = podFor(mp.id);
+  return {
+    tariffClass: tariffClassOf(pod),
+    household: !pod || !pod.loadProfileCode || pod.loadProfileCode === 'H0',
+    supplier: supplierFor(state.settings, mp.id),
+    meterType: state.settings.meterType || 'three',
+  };
+}
+
+function periodCosts(d) {
+  if (state.flow !== 'consumption' || d.stats.total == null) return null;
+  const filtered = filtersActive(state.filters);
+  if (legacyActive()) {
+    const days = filtered ? 0 : d.stats.days || 0;
+    return { legacy: true, total: legacyCost(d.stats.total, days), coveredDays: days };
+  }
+  let from = null, to = null;
+  if (!filtered && d.stats.last) {
+    from = d.v.period.start;
+    const lastDay = addDays(startOfDay(d.stats.last), 1);
+    to = lastDay < d.v.period.end ? lastDay : d.v.period.end;
+  }
+  const c = sumCosts(d.per.map((x) => meterCost(x.cur, { fine: d.v.fine, from, to, ...costOptions(x.mp) })));
+  c.coveredDays = from && to ? daysBetween(from, to) : 0;
+  c.filtered = filtered;
+  return c;
 }
 
 function renderHero(d) {
@@ -672,17 +720,110 @@ function renderHero(d) {
   extra.textContent = '';
   const fc = filtered ? null : forecast(v.period, stats);
   if (fc) extra.append(h('div', { class: 'pill' }, h('span', { text: 'Hochrechnung' }), h('b', { text: kwh(fc) })));
-  const days = stats.days || 0;
-  const cost = costOf(stats.total, filtered ? 0 : days);
-  if (cost != null) {
-    extra.append(h('div', { class: 'pill' }, h('span', { text: filtered ? 'Energiekosten' : 'Kosten ca.' }), h('b', { text: euro(cost) })));
-    if (fc) {
-      const fcCost = costOf(fc, daysBetween(v.period.start, v.period.end));
-      extra.append(h('div', { class: 'pill' }, h('span', { text: 'Kosten hochgerechnet' }), h('b', { text: euro(fcCost) })));
+  const c = d.costs;
+  const periodDays = daysBetween(v.period.start, v.period.end);
+  const toTariff = () => goto('tariff');
+  if (c && c.legacy) {
+    if (c.total != null) extra.append(h('div', { class: 'pill' }, h('span', { text: filtered ? 'Energiekosten' : 'Kosten ca.' }), h('b', { text: euro(c.total) })));
+    if (fc && c.total != null) extra.append(h('div', { class: 'pill' }, h('span', { text: 'Kosten hochgerechnet' }), h('b', { text: euro(legacyCost(fc, periodDays)) })));
+    extra.append(h('button', { class: 'pill pill--link', type: 'button', onclick: toTariff }, 'Neu: Netzkosten rechnet Netzblick selbst. Preis deines Lieferanten eintragen'));
+  } else if (c) {
+    const value = c.total != null ? c.total : c.withoutSupplier;
+    extra.append(h('div', { class: 'pill' }, h('span', { text: c.total != null ? (filtered ? 'Kosten der Auswahl' : 'Kosten ca.') : 'Netz und Abgaben' }), h('b', { text: euro(value) })));
+    if (fc && c.coveredDays) {
+      const p = projectCost(c, { kwh: fc, days: periodDays, coveredDays: c.coveredDays });
+      if (p != null) extra.append(h('div', { class: 'pill' }, h('span', { text: c.total != null ? 'Kosten hochgerechnet' : 'Netz und Abgaben hochgerechnet' }), h('b', { text: euro(p) })));
     }
-  } else if (state.flow === 'consumption') {
-    extra.append(h('button', { class: 'pill pill--link', type: 'button', onclick: openSettings }, 'Strompreis eintragen, um Kosten zu sehen'));
+    if (c.total == null) extra.append(h('button', { class: 'pill pill--link', type: 'button', onclick: toTariff }, 'Preis deines Lieferanten eintragen, um alle Kosten zu sehen'));
   }
+  renderReminderNotice();
+}
+
+/** Hinweis, wenn Rabatt oder Bindung beim Lieferanten bald endet */
+function contractDue(now = new Date()) {
+  const ct = state.settings.contract;
+  if (!ct || !ct.end) return null;
+  const end = new Date(ct.end + 'T00:00:00');
+  if (isNaN(end)) return null;
+  const from = addDays(end, -(ct.days || 30));
+  const today = startOfDay(now);
+  if (today < from || today > addDays(end, 30)) return null;
+  return { end, kind: ct.kind || 'rabatt', supplier: ct.supplier || '', daysLeft: Math.round((end - today) / 86400000) };
+}
+
+function renderReminderNotice() {
+  const box = $('heroNotice');
+  box.textContent = '';
+  const due = contractDue();
+  if (!due) { box.hidden = true; return; }
+  const what = due.kind === 'bindung' ? 'Deine Vertragsbindung' : 'Dein Neukundenrabatt';
+  const who = due.supplier ? ` bei ${due.supplier}` : '';
+  const when = due.daysLeft > 1 ? `endet in ${due.daysLeft} Tagen (${dateNum(due.end)})` : due.daysLeft === 1 ? 'endet morgen' : due.daysLeft === 0 ? 'endet heute' : `ist am ${dateNum(due.end)} ausgelaufen`;
+  box.hidden = false;
+  box.append(h('div', { class: 'notice' }, icon('bell'),
+    h('div', { class: 'notice-text' }, h('b', { text: `${what}${who} ${when}.` }), h('span', { text: 'Jetzt ist ein guter Zeitpunkt, Tarife zu vergleichen.' })),
+    h('div', { class: 'notice-actions' },
+      h('button', { class: 'btn btn--small', type: 'button', onclick: () => openExternal(TARIFF_CALCULATOR) }, 'Tarife vergleichen'),
+      h('button', { class: 'btn btn--small btn--quiet', type: 'button', onclick: () => goto('tariff') }, 'Ändern'))));
+  fillIcons(box);
+}
+
+/* ---------- Kostenaufstellung */
+function renderCosts(d) {
+  const panel = $('costPanel');
+  const c = d.costs;
+  panel.textContent = '';
+  if (!c || c.legacy || !c.kwh) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const T = charts.tokens();
+  const vat = 1.2;
+  const energy = c.supplier ? c.supplier.total : null;
+  const grid = c.gridGross;
+  const levies = c.leviesGross;
+  const total = (energy || 0) + grid + levies;
+  const parts = [
+    energy != null ? { name: 'Energie (Lieferant)', value: energy, color: T.s[0] } : null,
+    { name: 'Netz Burgenland', value: grid, color: T.s[1] },
+    { name: 'Steuern und Abgaben', value: levies, color: T.s[2] },
+  ].filter(Boolean);
+  const years = [...c.years].sort().join(', ');
+  const row = (label, value, sub, cls) => h('tr', { class: cls || '' }, h('td', {}, label, sub ? h('small', { text: sub }) : null), h('td', { class: 'num', text: value == null ? '–' : euro(value) }));
+  const head = (label, value, color) => h('tr', { class: 'cost-group' }, h('th', { scope: 'row' }, h('span', { class: 'lg-key', style: `background:${color}` }), ' ', label), h('td', { class: 'num', text: value == null ? '–' : euro(value) }));
+  const sup = c.supplier ? supplierFor(state.settings, (d.per[0] || {}).mp?.id) : null;
+  const rows = [];
+  if (c.supplier) {
+    rows.push(head('Energie (Lieferant)', energy, T.s[0]));
+    rows.push(row('Arbeitspreis', c.supplier.energy, d.per.length === 1 && sup ? `${num(c.kwh, 0)} kWh × ${num(sup.ap, 2)} ct` : `${num(c.kwh, 0)} kWh`));
+    if (c.supplier.base) rows.push(row('Grundpreis', c.supplier.base, null));
+  }
+  rows.push(head('Netz Burgenland', grid, T.s[1]));
+  rows.push(row('Netznutzung (Arbeit)', c.grid.usage * vat, c.snapKwh > 0 ? `davon ${num(c.snapKwh, 0)} kWh im Sommer-Niedertarif, ${euro(c.snapSaving)} günstiger` : null));
+  if (c.grid.base) rows.push(row('Netznutzung (Pauschale)', c.grid.base * vat, null));
+  if (c.grid.metering) rows.push(row('Messentgelt', c.grid.metering * vat, null));
+  if (c.grid.loss) rows.push(row('Netzverlust', c.grid.loss * vat, null));
+  rows.push(head('Steuern und Abgaben', levies, T.s[2]));
+  rows.push(row('Elektrizitätsabgabe', c.levies.eAbgabe * vat, null));
+  if (c.levies.pauschale) rows.push(row('Erneuerbaren-Förderpauschale', c.levies.pauschale * vat, null));
+  rows.push(row('Erneuerbaren-Förderbeitrag', c.levies.beitrag * vat, null));
+  rows.push(h('tr', { class: 'cost-total' }, h('th', { scope: 'row', text: c.supplier ? 'Summe' : 'Summe ohne Energie' }), h('td', { class: 'num', text: euro(total) })));
+
+  const notes = [`Alle Beträge inklusive 20 % USt (${euro(c.vat)} auf Netz und Abgaben). Netzpreise laut Preisblatt von Netz Burgenland ${years}, Stand ${STAND}.`];
+  if (c.filtered) notes.push('Mit Filter nur die mengenabhängigen Kosten, ohne Pauschalen.');
+  if (c.snapUnknown) notes.push('Den Sommer-Niedertarif (April bis September, 10–16 Uhr) kann Netzblick nur mit Viertelstundenwerten rechnen; hier gilt der normale Arbeitspreis.');
+  if (c.approx) notes.push('Für Zeiträume ohne eigenes Preisblatt verwendet Netzblick die nächstgelegenen bekannten Preise.');
+  if (state.kpData && state.kpData.pods.some((p) => p.communities && p.communities.some((x) => x.status === 'aktiv'))) notes.push('Strom aus deiner Energiegemeinschaft rechnet die Gemeinschaft ab. Die Portale liefern den Anteil nicht, darum zählt hier aller Strom als Netzbezug.');
+
+  panel.append(...[
+    h('div', { class: 'panel-head' }, h('h2', { text: 'Kosten' }), h('button', { class: 'btn btn--small', type: 'button', onclick: () => goto('tariff') }, icon('euro'), 'Strompreis')),
+    h('p', { class: 'panel-sub', text: `Schätzung für ${periodTitle(d.v.period)}${filtersActive(state.filters) ? ', gefiltert' : ''}` }),
+    h('div', { class: 'stackbar', role: 'img', 'aria-label': parts.map((p) => `${p.name} ${pct(p.value / total)}`).join(', ') },
+      ...parts.map((p) => h('span', { style: `flex:${Math.max(p.value, 0.0001)};background:${p.color}` }))),
+    h('div', { class: 'stackbar-legend' }, ...parts.map((p) => h('span', { class: 'lg' }, h('span', { class: 'lg-key', style: `background:${p.color}` }), `${p.name} ${pct(p.value / total)}`))),
+    h('table', { class: 'tbl tbl--costs' }, h('tbody', {}, ...rows)),
+    !c.supplier ? h('button', { class: 'pill pill--link', type: 'button', onclick: () => goto('tariff') }, 'Preis deines Lieferanten eintragen, dann rechnet Netzblick auch die Energie mit') : null,
+    h('p', { class: 'note', text: notes.join(' ') }),
+  ].filter(Boolean));
+  fillIcons(panel);
 }
 
 /* ---------- Diagrammart */
@@ -890,10 +1031,11 @@ function renderKpis(d) {
     el.append(kpi('Grundlast', stats.baseLoad == null ? '–' : watt(stats.baseLoad), 'läuft fast immer (10-%-Wert)'));
     el.append(kpi('Nachts 22–6 Uhr', stats.nightShare == null ? '–' : pct(stats.nightShare), 'Anteil am Verbrauch'));
   }
-  const filtered = filtersActive(state.filters);
-  const cost = costOf(stats.total, filtered ? 0 : stats.days || 0);
-  if (cost != null && stats.avgPerDay != null) {
-    el.append(kpi('Kosten pro Tag', euro(costOf(stats.avgPerDay, filtered ? 0 : 1)), `bei ${num(state.settings.pricePerKwh * 100, 2)} ct/kWh`));
+  const c = d.costs;
+  if (c && c.legacy && c.total != null && stats.avgPerDay != null && !filtersActive(state.filters)) {
+    el.append(kpi('Kosten pro Tag', euro(legacyCost(stats.avgPerDay, 1)), `bei ${num(state.settings.pricePerKwh * 100, 2)} ct/kWh`));
+  } else if (c && !c.legacy && c.total != null && c.coveredDays >= 1) {
+    el.append(kpi('Kosten pro Tag', euro(c.total / c.coveredDays), 'Energie, Netz und Abgaben'));
   }
   if (v.fine && stats.avgPower != null) el.append(kpi('Ø Leistung', kw(stats.avgPower), 'über den Zeitraum'));
 }
@@ -1229,8 +1371,6 @@ function openYearPicker() {
 
 function openSettings() {
   const s = state.settings;
-  const priceIn = h('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.01', min: '0', placeholder: 'z. B. 28,5', value: s.pricePerKwh != null ? String(Math.round(s.pricePerKwh * 10000) / 100) : '' });
-  const feeIn = h('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.01', min: '0', placeholder: 'z. B. 12', value: s.feePerMonth != null ? String(s.feePerMonth) : '' });
   const nameInputs = state.mps.map((mp) => ({ mp, el: h('input', { class: 'input', type: 'text', placeholder: 'z. B. Haus, Wärmepumpe', value: s.meterNames[mp.id] || '', maxlength: '40' }) }));
   const themeBtns = [['system', 'Wie System'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([id, label]) => h('button', {
     type: 'button', class: s.theme === id ? 'on' : '', 'aria-pressed': s.theme === id ? 'true' : 'false',
@@ -1241,15 +1381,10 @@ function openSettings() {
       applyTheme();
     },
   }, label));
-  const parseNum = (v) => {
-    const x = parseFloat(String(v).replace(',', '.'));
-    return isFinite(x) && x >= 0 ? x : null;
-  };
   const body = h('div', { class: 'settings' },
     h('h3', { text: 'Kosten' }),
-    h('label', { class: 'field' }, h('span', { text: 'Strompreis in Cent pro kWh (brutto, Energie + Netz)' }), priceIn),
-    h('label', { class: 'field' }, h('span', { text: 'Fixkosten in Euro pro Monat (Grund- und Netzpauschalen)' }), feeIn),
-    h('p', { class: 'hint', text: 'Beides steht auf deiner Jahresabrechnung. Die Kosten in der App sind eine Schätzung.' }),
+    h('p', { class: 'hint', text: 'Preis deines Lieferanten und die Erinnerung an Rabatt oder Bindung findest du auf der Seite „Strompreis“. Netzkosten, Steuern und Abgaben rechnet Netzblick selbst.' }),
+    h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { closeSheet(); goto('tariff'); } }, icon('euro'), 'Strompreis öffnen'),
     h('h3', { text: 'Namen der Zählpunkte' }),
     h('p', { class: 'hint', text: 'Ohne eigenen Namen zeigt Netzblick die Zählpunktnummer aus dem Smart-Meter-Portal.' }),
     ...nameInputs.map(({ mp, el }) => h('label', { class: 'field' }, h('span', { class: 'mono', text: mp.id }), el)),
@@ -1259,9 +1394,6 @@ function openSettings() {
       h('button', {
         class: 'btn btn--primary', type: 'button',
         onclick: () => {
-          const ct = parseNum(priceIn.value);
-          s.pricePerKwh = ct == null ? null : ct / 100;
-          s.feePerMonth = parseNum(feeIn.value);
           nameInputs.forEach(({ mp, el }) => { const n = el.value.trim(); if (n) s.meterNames[mp.id] = n; else delete s.meterNames[mp.id]; });
           saveSettings(s);
           closeSheet();
@@ -1407,7 +1539,8 @@ async function boot() {
   if (PARAMS.has('demo') || PREVIEW) {
     if (PARAMS.get('period')) state.period = makePeriod(PARAMS.get('period'), PARAMS.get('date') ? new Date(PARAMS.get('date') + 'T00:00:00') : new Date());
     if (PARAMS.get('theme')) state.settings.theme = PARAMS.get('theme');
-    if (PARAMS.get('price')) state.settings.pricePerKwh = Number(PARAMS.get('price'));
+    if (PARAMS.get('price')) { const pr = Number(PARAMS.get('price')); state.settings.supplier = { all: { ap: pr < 2 ? pr * 100 : pr, gp: Number(PARAMS.get('fee') || 3.9) }, meters: {} }; }
+    if (PARAMS.get('remind')) state.settings.contract = { supplier: 'Musterstrom GmbH', kind: 'rabatt', end: PARAMS.get('remind'), days: 30 };
     if (PARAMS.get('chart')) state.settings.chartTypes = { quarter: PARAMS.get('chart'), day: PARAMS.get('chart'), month: PARAMS.get('chart'), year: PARAMS.get('chart') };
     if (PARAMS.get('split')) state.settings.splitBy = PARAMS.get('split');
     if (PARAMS.get('sel')) localStorage.setItem('nb.selection', JSON.stringify(PARAMS.get('sel') === 'all' ? 'all' : PARAMS.get('sel').split(',')));

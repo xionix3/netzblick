@@ -3,10 +3,14 @@ import { h, icon, toast, row, brandMark, spinBrand, fillIcons } from './ui.js';
 import { meterLabel, firstDataDate } from './model.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { billingYearStatus, consumptionFor } from './billing.js';
+import { yearCost, meterCost, sumCosts, supplierFor } from './costs.js';
+import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, ecTypeLabel } from './netzdaten.js';
+import { currentFactor } from './kundenportal.js';
+import { reminderIcs, reminderTime } from './reminder.js';
 import { makePeriod, addDays, startOfDay, daysBetween } from './time.js';
 import { num, kwh, euro, pct, dateNum, dateLong, time, MONTHS_LONG } from './format.js';
 import * as charts from './charts.js';
-import { secure } from './platform.js';
+import { secure, saveSettings, scheduleReminder, cancelReminder, reminderPending, shareFile, openExternal, isNative } from './platform.js';
 import { cacheClear } from './cache.js';
 import { ApiError } from './api.js';
 
@@ -73,7 +77,6 @@ export function renderPlants(body, ctx) {
     const first = mp ? firstDataDate([mp], 'consumption') : null;
     const a = mp && mp.address;
     const address = pod && pod.address ? pod.address : a && a.street ? `${a.street} ${a.houseNumber || ''}, ${a.postalCode || ''} ${a.city || ''}`.replace(/\s+/g, ' ').trim() : null;
-    const ec = pod && pod.energyCommunity;
 
     const card = h('section', { class: 'panel card' },
       h('div', { class: 'card-head' },
@@ -89,12 +92,15 @@ export function renderPlants(body, ctx) {
         reading ? row('Zählerstand', `${num(reading.reading, 1)} kWh, ${dateNum(reading.t)} ${time(reading.t)} Uhr`) : null,
         mp ? row('Messwerte', [q15 ? `Viertelstunden seit ${dateNum(q15.start)}` : null, first ? `Tageswerte seit ${dateNum(first)}` : null].filter(Boolean).join(', ') || null) : row('Smart-Meter-Portal', 'Nicht im Smart-Meter-Portal freigeschaltet'),
         mp ? row('Richtung', flows.includes('feedin') ? 'Bezug und Einspeisung' : 'Bezug') : null,
+        pod && pod.tariffClass ? row('Netztarif', String(pod.tariffClass).toUpperCase() === 'U' ? 'unterbrechbar (z. B. Wärmepumpe)' : 'Haushalt, ohne Leistungsmessung') : null,
         pod && pod.gridLevel != null ? row('Netzebene', `${pod.gridLevel}${GRID_LEVELS[pod.gridLevel] ? ` (${GRID_LEVELS[pod.gridLevel]})` : ''}`) : null,
         row('Lastprofil', pod && pod.loadProfile),
         row('Lieferant', pod && pod.supplier),
         pod && pod.contractFrom && !isNaN(pod.contractFrom) ? row('Vertrag seit', dateNum(pod.contractFrom)) : null,
         row('Letzte Abrechnung', pod && pod.lastBillingPeriod),
-        ec ? row('Energiegemeinschaft', [ec.type || 'Teilnahme', ec.share != null ? `Anteil ${num(ec.share, 0)} %` : null, ec.since && !isNaN(ec.since) ? `seit ${dateNum(ec.since)}` : null].filter(Boolean).join(', ')) : null,
+        pod && pod.communities && pod.communities.length ? row('Energiegemeinschaft', h('span', { class: 'ec-inline' },
+          ...pod.communities.map((c) => h('span', {}, `${ecTypeLabel(c.type)}${c.status !== 'aktiv' ? ` (${c.status})` : ''}${currentFactor(pod, c.id) != null ? `, ${num(currentFactor(pod, c.id), 0)} %` : ''}`)),
+          h('button', { class: 'link-btn', type: 'button', onclick: () => ctx.goto('community') }, 'Details'))) : null,
       ));
     grid.append(card);
   }
@@ -126,35 +132,37 @@ export function renderBilling(body, ctx) {
     billingYearStatus(state.store, mp, last).then((st) => {
       box.textContent = '';
       if (!st || st.sum == null) { box.append(h('p', { class: 'empty', text: 'Für das laufende Abrechnungsjahr liegen noch keine Messwerte vor.' })); return; }
-      const price = state.settings.pricePerKwh;
-      const fee = state.settings.feePerMonth || 0;
       const endLabel = dateLong(addDays(st.curEnd, -1));
-      const compareBase = st.prevTotal || billedKwh;
+      const fullLast = st.lastDays >= 300; // keine Zwischenabrechnung
+      const compareBase = st.prevTotal || (fullLast ? billedKwh : null);
       const change = st.projection && compareBase ? (st.projection - compareBase) / compareBase : null;
       box.append(
         h('div', { class: 'big-figure' }, h('span', { class: 'big-value', text: num(st.sum, 0) }), h('span', { class: 'big-unit', text: 'kWh' })),
         h('p', { class: 'big-label', text: `verbraucht seit ${dateNum(st.curStart)}, Messwerte bis ${dateNum(addDays(st.upto, -1))}` }),
         dl(
           row('Hochrechnung', st.projection ? `${kwh(st.projection)} bis ${endLabel}` : `ab 14 Tagen mit Messwerten (jetzt ${st.covered})`),
-          st.projection ? row('Rechenweg', st.method === 'vorjahr' ? 'mit dem Verlauf des letzten Abrechnungsjahres (Winter zählt mehr als Sommer)' : 'gleichmäßig weitergerechnet (kein Vorjahr zum Vergleich)') : null,
-          change != null ? row('Gegenüber letztem Jahr', `${change >= 0 ? '+' : '−'}${pct(Math.abs(change), 1)}${change > 0.02 ? ', mehr als zuletzt' : change < -0.02 ? ', weniger als zuletzt' : ', etwa gleich'}`) : null,
-          row('Letztes Jahr gemessen', st.prevTotal ? kwh(st.prevTotal) : null),
-          row('Letztes Jahr abgerechnet', billedKwh != null ? kwh(billedKwh) : null),
+          st.projection ? row('Rechenweg', st.method === 'vorjahr' ? 'mit dem Verlauf der 12 Monate davor (Winter zählt mehr als Sommer)' : 'gleichmäßig weitergerechnet (kein Vorjahr zum Vergleich)') : null,
+          change != null ? row('Gegenüber den 12 Monaten davor', `${change >= 0 ? '+' : '−'}${pct(Math.abs(change), 1)}${change > 0.02 ? ', mehr als zuletzt' : change < -0.02 ? ', weniger als zuletzt' : ', etwa gleich'}`) : null,
+          row('12 Monate davor gemessen', st.prevTotal ? kwh(st.prevTotal) : null),
+          row(fullLast ? 'Letzte Abrechnung gemessen' : `Letzte Abrechnung (${num(st.lastDays, 0)} Tage) gemessen`, st.lastSum ? kwh(st.lastSum) : null),
+          row('Letzte Abrechnung abgerechnet', billedLast ? kwh(billedLast.kwh) : null),
         ),
       );
       // Kosten gegen Teilbeträge
-      if (price != null && st.projection) {
-        const cost = st.projection * price + fee * 12;
+      const opts = ctx.costOptions(mp);
+      const legacy = state.settings.pricePerKwh != null && !opts.supplier;
+      if (st.projection) {
+        const yc = yearCost(st.projection, { year: st.curStart.getFullYear(), ...opts });
+        const cost = legacy ? st.projection * state.settings.pricePerKwh + (state.settings.feePerMonth || 0) * 12 : yc.total != null ? yc.total : yc.withoutSupplier;
         const plan = billingEntry && billingEntry.partPayments && !billingEntry.partPayments.external ? billingEntry.partPayments.installments : [];
         const inYear = plan.filter((x) => x.due && x.due >= st.curStart && x.due < st.curEnd);
         const paid = inYear.reduce((a, x) => a + (x.amount || 0), 0);
         box.append(dl(
-          row('Kosten hochgerechnet', `${euro(cost)} bei ${num(price * 100, 2)} ct/kWh${fee ? ` und ${euro(fee)} im Monat` : ''}`),
-          inYear.length ? row('Teilbeträge im Jahr', `${euro(paid)} (${inYear.length} × ${euro(inYear[0].amount)})`) : null,
-          inYear.length ? row(cost > paid ? 'Nachzahlung ca.' : 'Guthaben ca.', euro(Math.abs(cost - paid))) : null,
+          row(yc.total != null || legacy ? 'Kosten hochgerechnet' : 'Netz und Abgaben hochgerechnet', `${euro(cost)} für 12 Monate${legacy ? '' : ', mit Netzpreisen von Netz Burgenland, ohne Sommer-Niedertarif'}`),
+          inYear.length && (yc.total != null || legacy) ? row('Teilbeträge im Jahr', `${euro(paid)} (${inYear.length} × ${euro(inYear[0].amount)})`) : null,
+          inYear.length && (yc.total != null || legacy) ? row(cost > paid ? 'Nachzahlung ca.' : 'Guthaben ca.', euro(Math.abs(cost - paid))) : null,
         ));
-      } else if (price == null) {
-        box.append(h('button', { class: 'pill pill--link', type: 'button', onclick: ctx.openSettings }, 'Strompreis eintragen, um die Kosten hochzurechnen'));
+        if (yc.total == null && !legacy) box.append(h('button', { class: 'pill pill--link', type: 'button', onclick: () => ctx.goto('tariff') }, 'Preis deines Lieferanten eintragen, um alle Kosten hochzurechnen'));
       }
       const yesterday = addDays(startOfDay(new Date()), -1);
       box.append(h('div', { class: 'sheet-actions' }, h('button', {
@@ -345,4 +353,324 @@ export function renderInfo(body, ctx) {
     )),
     h('p', { class: 'fineprint fineprint--page', text: '© 2026 Patrick Schlögl (geister-it). Netzblick steht unter der MIT-Lizenz.' }),
   );
+}
+
+/* ================================================================ Strompreis und Erinnerung */
+const parseInput = (el) => {
+  const x = parseFloat(String(el.value).replace(',', '.'));
+  return isFinite(x) && x >= 0 ? x : null;
+};
+const ct = (x, d = 2) => `${num(x, d)} ct`;
+const latestYear = (table) => {
+  const now = new Date().getFullYear();
+  if (table[now]) return now;
+  return Math.max(...Object.keys(table).map(Number));
+};
+
+export function renderTariff(body, ctx) {
+  const { state, names } = ctx;
+  const s = state.settings;
+  s.supplier = s.supplier || { all: {}, meters: {} };
+  s.supplier.all = s.supplier.all || {};
+  s.supplier.meters = s.supplier.meters || {};
+  const pods = state.kpData ? state.kpData.pods : [];
+  const kpSupplier = (pods.find((p) => p.supplier) || {}).supplier || '';
+  body.append(h('p', { class: 'page-lead', text: 'Deine Stromrechnung hat drei Teile: Energie vom Lieferanten, Netzkosten von Netz Burgenland sowie Steuern und Abgaben. Den Energiepreis trägst du ein, den Rest rechnet Netzblick nach den offiziellen Preisen.' }));
+
+  /* ---- 1) Lieferant */
+  const numIn = (val, ph) => h('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.01', min: '0', placeholder: ph, value: val != null ? String(val) : '' });
+  const contract = s.contract || {};
+  const nameIn = h('input', { class: 'input', type: 'text', maxlength: '60', placeholder: kpSupplier || 'Name deines Lieferanten', value: contract.supplier || kpSupplier });
+  const apIn = numIn(s.supplier.all.ap, 'z. B. 14,9');
+  const gpIn = numIn(s.supplier.all.gp, 'z. B. 3,9');
+  const perMeter = state.mps.length > 1 ? state.mps.map((mp) => {
+    const m = s.supplier.meters[mp.id] || {};
+    return { mp, ap: numIn(m.ap, 'wie oben'), gp: numIn(m.gp, 'wie oben') };
+  }) : [];
+  let meterType = s.meterType || 'three';
+  const typeBtns = [['three', 'Drehstrom'], ['single', 'Wechselstrom']].map(([id, label]) => h('button', {
+    type: 'button', class: meterType === id ? 'on' : '', 'aria-pressed': meterType === id ? 'true' : 'false',
+    onclick: (e) => { meterType = id; typeBtns.forEach((b) => { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); },
+  }, label));
+  const saveSupplier = () => {
+    const all = { ap: parseInput(apIn), gp: parseInput(gpIn) };
+    const meters = {};
+    for (const x of perMeter) {
+      const a = parseInput(x.ap), g = parseInput(x.gp);
+      if (a != null || g != null) meters[x.mp.id] = { ...(a != null ? { ap: a } : {}), ...(g != null ? { gp: g } : {}) };
+    }
+    s.supplier = { all, meters };
+    s.contract = { ...(s.contract || {}), supplier: nameIn.value.trim() };
+    s.meterType = meterType;
+    if (all.ap != null || Object.keys(meters).length) { delete s.pricePerKwh; delete s.feePerMonth; }
+    ctx.saveSettings();
+    toast('Strompreis gespeichert');
+    ctx.refreshUsage();
+    ctx.renderPage();
+  };
+  body.append(section('Dein Stromlieferant', 'Preise brutto, so wie sie im Vertrag oder auf dem Preisblatt deines Lieferanten stehen. Nur der Energiepreis, ohne Netzkosten.',
+    s.pricePerKwh != null ? h('p', { class: 'note note--warn', text: `Bisher war ein Gesamtpreis von ${num(s.pricePerKwh * 100, 2)} ct/kWh eingetragen. Netzblick rechnet die Netzkosten jetzt selbst; trag hier nur noch den Preis deines Lieferanten ein.` }) : null,
+    h('div', { class: 'form form--inline' },
+      h('label', { class: 'field' }, h('span', { text: 'Lieferant' }), nameIn),
+      h('div', { class: 'field-row' },
+        h('label', { class: 'field' }, h('span', { text: 'Arbeitspreis (Cent pro kWh)' }), apIn),
+        h('label', { class: 'field' }, h('span', { text: 'Grundpreis (Euro pro Monat)' }), gpIn)),
+      perMeter.length ? h('details', { class: 'more more--inline' }, h('summary', {}, 'Eigene Preise je Zählpunkt, z. B. für eine Wärmepumpe'),
+        ...perMeter.map((x) => h('div', { class: 'field-group' },
+          h('p', { class: 'field-title' }, h('span', { class: 'lg-key', style: `background:${ctx.meterColor(x.mp)}` }), ' ', meterLabel(x.mp, names, { compact: !names[x.mp.id] })),
+          h('div', { class: 'field-row' },
+            h('label', { class: 'field' }, h('span', { text: 'Arbeitspreis (ct/kWh)' }), x.ap),
+            h('label', { class: 'field' }, h('span', { text: 'Grundpreis (€/Monat)' }), x.gp))))) : null,
+      h('div', { class: 'field' }, h('span', { text: 'Zähler (für das Messentgelt)' }), h('div', { class: 'seg seg--small' }, ...typeBtns)),
+      h('p', { class: 'hint', text: `Messentgelt laut Netz Burgenland: Drehstrom ${euro(METERING.three * (1 + VAT))}, Wechselstrom ${euro(METERING.single * (1 + VAT))} pro Monat (brutto). Im Zweifel Drehstrom.` }),
+      h('button', { class: 'btn btn--primary', type: 'button', onclick: saveSupplier }, 'Speichern'))));
+
+  /* ---- 2) Erinnerung */
+  let kind = contract.kind || 'rabatt';
+  const kindBtns = [['rabatt', 'Neukundenrabatt'], ['bindung', 'Vertragsbindung']].map(([id, label]) => h('button', {
+    type: 'button', class: kind === id ? 'on' : '', 'aria-pressed': kind === id ? 'true' : 'false',
+    onclick: (e) => { kind = id; kindBtns.forEach((b) => { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); },
+  }, label));
+  const endIn = h('input', { class: 'input', type: 'date', value: contract.end || '' });
+  const daysSel = h('select', { class: 'select' }, ...[7, 14, 30, 60, 90].map((d) => h('option', { value: String(d), selected: (contract.days || 30) === d ? true : null }, `${d} Tage vorher`)));
+  const status = h('p', { class: 'status-line' });
+  const showStatus = async () => {
+    const c = state.settings.contract || {};
+    if (!c.end) { status.textContent = 'Keine Erinnerung eingestellt.'; return; }
+    const pending = await reminderPending();
+    const at = c.at ? new Date(c.at) : null;
+    if (pending && at) status.textContent = `Benachrichtigung am ${dateNum(at)} um ${time(at)} Uhr. Ab dann steht auch ein Hinweis in der Übersicht.`;
+    else if (at && at < new Date()) status.textContent = `Die Erinnerung war am ${dateNum(at)}. Der Hinweis steht bis 30 Tage nach dem ${dateNum(new Date(c.end + 'T00:00:00'))} in der Übersicht.`;
+    else status.textContent = `Hinweis in der Übersicht ab ${c.days || 30} Tage vor dem ${dateNum(new Date(c.end + 'T00:00:00'))}.`;
+  };
+  const what = () => (kind === 'bindung' ? 'Vertragsbindung' : 'Neukundenrabatt');
+  const texts = (end) => {
+    const sup = nameIn.value.trim();
+    return {
+      title: `Strom: ${what()}${sup ? ` bei ${sup}` : ''} endet am ${dateNum(end)}`,
+      text: `Jetzt Tarife vergleichen und rechtzeitig wechseln oder kündigen: ${TARIFF_CALCULATOR}`,
+    };
+  };
+  const setReminder = async () => {
+    const days = Number(daysSel.value);
+    const t = endIn.value ? reminderTime(endIn.value, days) : null;
+    if (!t) { toast(endIn.value ? 'Das Datum liegt in der Vergangenheit.' : 'Bitte das Datum eintragen.'); return; }
+    const { title, text } = texts(t.end);
+    const res = await scheduleReminder({ at: t.at, title, body: text.replace(/: https.*/, '.') }).catch(() => 'error');
+    state.settings.contract = { supplier: nameIn.value.trim(), kind, end: endIn.value, days, at: res === 'ok' ? t.at.toISOString() : null };
+    ctx.saveSettings();
+    ctx.refreshUsage();
+    if (res === 'ok') toast(`Erinnerung am ${dateNum(t.at)} um 9 Uhr`);
+    else if (res === 'denied') toast('Benachrichtigungen sind für Netzblick aus. Erlaube sie in den Android-Einstellungen oder nutze den Kalender.');
+    else if (res === 'unsupported') toast('Gespeichert. Benachrichtigungen gibt es nur in der App, der Hinweis erscheint in der Übersicht.');
+    else toast('Erinnerung konnte nicht gesetzt werden. Der Hinweis erscheint trotzdem in der Übersicht.');
+    showStatus();
+  };
+  const addCalendar = async () => {
+    const days = Number(daysSel.value);
+    const t = endIn.value ? reminderTime(endIn.value, days) : null;
+    if (!t) { toast('Bitte ein Datum in der Zukunft eintragen.'); return; }
+    const { title, text } = texts(t.end);
+    await shareFile('netzblick-erinnerung.ics', reminderIcs({ at: t.at, end: t.end, title, text }), 'text/calendar;charset=utf-8', 'In den Kalender').catch((e) => toast('Nicht möglich: ' + (e.message || e)));
+  };
+  const removeReminder = async () => {
+    await cancelReminder();
+    state.settings.contract = { supplier: nameIn.value.trim() };
+    ctx.saveSettings();
+    ctx.refreshUsage();
+    endIn.value = '';
+    toast('Erinnerung entfernt');
+    showStatus();
+  };
+  body.append(section('Erinnerung vor dem Wechsel', 'Viele Lieferanten geben Neukunden ein Jahr Rabatt oder binden dich für eine Zeit. Netzblick erinnert dich rechtzeitig, damit du vergleichen und wechseln kannst.',
+    h('div', { class: 'form form--inline' },
+      h('div', { class: 'seg seg--small' }, ...kindBtns),
+      h('div', { class: 'field-row' },
+        h('label', { class: 'field' }, h('span', { text: 'Endet am' }), endIn),
+        h('label', { class: 'field' }, h('span', { text: 'Erinnern' }), daysSel)),
+      status,
+      h('div', { class: 'btn-row' },
+        h('button', { class: 'btn btn--primary', type: 'button', onclick: setReminder }, icon('bell'), 'Erinnerung setzen'),
+        h('button', { class: 'btn btn--ghost', type: 'button', onclick: addCalendar }, icon('calendar'), 'In den Kalender'),
+        contract.end ? h('button', { class: 'btn btn--quiet', type: 'button', onclick: removeReminder }, 'Entfernen') : null),
+      h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(TARIFF_CALCULATOR) }, icon('external'), 'Tarife vergleichen: Tarifkalkulator der E-Control'))));
+  showStatus();
+
+  /* ---- 3) Ein Jahr aus deinen Messwerten */
+  const yearBox = h('div', {}, h('p', { class: 'hint', text: 'Rechne …' }));
+  body.append(section('Was dich ein Jahr kostet', 'Deine gemessenen Tageswerte der letzten 12 Monate mit den aktuellen Preisen.', yearBox));
+  (async () => {
+    const today = startOfDay(new Date());
+    const from = addDays(today, -365);
+    const list = [];
+    for (const mp of state.mps.filter((m) => m.flows.consumption)) {
+      const r = await state.store.load(mp, 'consumption', from, today, 'daily');
+      const pts = r.points.filter((p) => p.v != null);
+      if (!pts.length) continue;
+      list.push(meterCost(pts.map((p) => ({ ...p, t: new Date(today.getFullYear(), p.t.getMonth(), p.t.getDate()) })), { fine: false, from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), ...ctx.costOptions(mp) }));
+    }
+    yearBox.textContent = '';
+    if (!list.length) { yearBox.append(h('p', { class: 'empty', text: 'Noch keine Messwerte.' })); return; }
+    const c = sumCosts(list);
+    const total = c.total != null ? c.total : c.withoutSupplier;
+    yearBox.append(
+      h('div', { class: 'big-figure' }, h('span', { class: 'big-value', text: euro(total).replace(/\s?€/, '') }), h('span', { class: 'big-unit', text: c.total != null ? '€ im Jahr' : '€ im Jahr für Netz und Abgaben' })),
+      h('p', { class: 'big-label', text: `${kwh(c.kwh)} in 12 Monaten, rund ${euro(total / 12)} im Monat` }),
+      dl(
+        c.supplier ? row('Energie (Lieferant)', euro(c.supplier.total)) : row('Energie (Lieferant)', 'Preis oben eintragen'),
+        row('Netz Burgenland', euro(c.gridGross)),
+        row('Steuern und Abgaben', euro(c.leviesGross)),
+        row('Durchschnitt je kWh', c.total != null && c.kwh ? ct((c.total / c.kwh) * 100, 1) : null)),
+      h('p', { class: 'note', text: `Mit den Preisen von ${latestYear(GRID)}, brutto. Aus Tageswerten, daher ohne Sommer-Niedertarif; die Übersicht rechnet ihn mit Viertelstundenwerten genau.` }));
+  })().catch(() => { yearBox.textContent = ''; yearBox.append(h('p', { class: 'empty', text: 'Messwerte konnten nicht geladen werden.' })); });
+
+  /* ---- 4) Netzpreise */
+  const gy = latestYear(GRID);
+  const g = GRID[gy];
+  const both = (a, b, fmt) => [fmt(a), fmt(b)];
+  const gross = (x) => x * (1 + VAT);
+  const priceRow = (label, vals, sub) => h('tr', {}, h('th', { scope: 'row' }, label, sub ? h('small', { text: sub }) : null), ...vals.map((v) => h('td', { class: 'num', text: v })));
+  const assign = state.mps.map((mp) => {
+    const pod = pods.find((p) => p.id === mp.id);
+    return `${meterLabel(mp, names, { compact: true })}: ${pod && String(pod.tariffClass).toUpperCase() === 'U' ? 'unterbrechbar' : 'Haushalt'}`;
+  });
+  body.append(section(`Netzpreise Netz Burgenland ${gy}`, 'Netzebene 7, brutto inklusive 20 % USt. Welcher Tarif gilt, kommt aus dem Kundenportal.',
+    h('div', { class: 'tbl-scroll' }, h('table', { class: 'tbl tbl--prices' },
+      h('thead', {}, h('tr', {}, h('th', { scope: 'col' }), h('th', { scope: 'col', class: 'num', text: 'Haushalt' }), h('th', { scope: 'col', class: 'num', text: 'Unterbrechbar' }))),
+      h('tbody', {},
+        priceRow('Netznutzung je kWh', both(g.nm.ap, g.u.ap, (x) => ct(gross(x)))),
+        g.nm.snap != null ? priceRow('Sommer-Niedertarif je kWh', both(g.nm.snap, g.u.snap, (x) => ct(gross(x))), '1. April bis 30. September, 10–16 Uhr') : null,
+        priceRow('Netznutzung Pauschale', both(g.nm.lp, g.u.lp, (x) => (x ? `${euro(gross(x))} / Jahr` : '–'))),
+        priceRow('Netzverlust je kWh', both(g.nm.loss, g.u.loss, (x) => ct(gross(x)))),
+        priceRow('Messentgelt', [`${euro(gross(METERING.three))} / Monat`, `${euro(gross(METERING.three))} / Monat`], `Drehstrom; Wechselstrom ${euro(gross(METERING.single))}`)))),
+    assign.length && pods.length ? h('p', { class: 'hint', text: `Deine Zählpunkte: ${assign.join(', ')}.` }) : null));
+
+  /* ---- 5) Steuern und Abgaben */
+  const ly = latestYear(LEVIES);
+  const l = LEVIES[ly];
+  body.append(section(`Steuern und Abgaben ${ly}`, 'Bundesweit gleich, brutto inklusive 20 % USt.',
+    dl(
+      row('Elektrizitätsabgabe', `${ct(gross(l.eAbgabe.household), 3)} je kWh für Haushalte, sonst ${ct(gross(l.eAbgabe.other), 3)}`),
+      row('Erneuerbaren-Förderpauschale', `${euro(gross(l.pauschale))} pro Jahr und Zählpunkt`),
+      row('Erneuerbaren-Förderbeitrag', `${euro(gross(l.beitrag.nm.year))} pro Jahr und ${ct(gross(l.beitrag.nm.ap + l.beitrag.nm.loss), 3)} je kWh (Haushalt); unterbrechbar ${ct(gross(l.beitrag.u.ap + l.beitrag.u.loss), 3)} je kWh`),
+      row('Umsatzsteuer', '20 % auf Netz und Abgaben; im Preis deines Lieferanten schon enthalten')),
+    h('p', { class: 'note', text: `Stand ${STAND}. Neue Preisblätter gelten meist ab 1. Jänner.` }),
+    h('ul', { class: 'plain-list' }, ...PRICE_SOURCES.map((src) => h('li', {}, h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(src.url) }, src.label))))));
+}
+
+/* ================================================================ Energiegemeinschaft */
+export function renderCommunity(body, ctx) {
+  const { state, names } = ctx;
+  body.append(h('p', { class: 'page-lead', text: 'Deine Teilnahmen an Energiegemeinschaften, wie sie im Kundenportal von Netz Burgenland stehen.' }));
+  const notice = kpNotice(ctx);
+  if (notice) body.append(notice);
+  const kp = state.kpData;
+  if (!kp) return;
+  const groups = new Map();
+  for (const pod of kp.pods) {
+    for (const c of pod.communities || []) {
+      if (!groups.has(c.id)) groups.set(c.id, { c, members: [] });
+      groups.get(c.id).members.push({ pod, c });
+    }
+  }
+  if (!groups.size) {
+    body.append(section('Keine Energiegemeinschaft', null,
+      h('p', { class: 'panel-text', text: 'Deine Zählpunkte nehmen laut Kundenportal an keiner Energiegemeinschaft teil.' }),
+      h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(CONTACT.topics.find((t) => /Bürgerenergie/.test(t.label)).url) }, icon('external'), 'Bürgerenergie bei Netz Burgenland')));
+    return;
+  }
+  const labelFor = (id) => {
+    const mp = state.mps.find((m) => m.id === id);
+    return mp ? meterLabel(mp, names, { compact: true }) : `…${id.slice(-8)}`;
+  };
+  const colorFor = (id) => { const mp = state.mps.find((m) => m.id === id); return mp ? ctx.meterColor(mp) : 'var(--older)'; };
+  const statusOrder = { aktiv: 0, beantragt: 1, beendet: 2 };
+  const sorted = [...groups.values()].sort((a, b) => statusOrder[a.c.status] - statusOrder[b.c.status]);
+  const cards = h('div', { class: 'cards' });
+  body.append(cards);
+  for (const { c, members } of sorted) {
+    cards.append(h('section', { class: 'panel card' },
+      h('div', { class: 'card-head' }, icon('community'), h('h2', { text: ecTypeLabel(c.type) }), h('span', { class: `badge badge--${c.status}`, text: c.status })),
+      dl(
+        stack(row('Gemeinschafts-ID', h('span', { class: 'idline' }, h('span', { class: 'mono', text: c.id }), h('button', { class: 'icon-btn icon-btn--small', type: 'button', 'aria-label': 'Gemeinschafts-ID kopieren', onclick: () => copy(c.id) }, icon('copy'))))),
+        row('Marktpartner', c.partner ? h('span', { class: 'mono', text: c.partner }) : null),
+        row('Richtung', c.direction),
+        row('Aufteilung', c.model === 'dynamisch' ? 'dynamisch, nach dem Verbrauch der Mitglieder' : c.model === 'statisch' ? `statisch${c.share ? `, fester Anteil ${num(c.share, 0)} %` : ''}` : c.model),
+        c.status === 'beantragt' && c.requested ? row('Beantragt am', dateNum(c.requested)) : null,
+        row(c.status === 'beendet' ? 'Teilnahme' : 'Teilnahme seit', c.since ? `${dateNum(c.since)}${c.until ? ` bis ${dateNum(c.until)}` : ''}` : null),
+        row('Zählpunkte', h('span', { class: 'member-list' }, ...members.map(({ pod }) => {
+          const f = currentFactor(pod, c.id);
+          return h('span', { class: 'member' }, h('span', { class: 'lg-key', style: `background:${colorFor(pod.id)}` }), ` ${labelFor(pod.id)}${f != null ? `: ${num(f, 0)} %` : ''}`);
+        })))),
+    ));
+  }
+  // Verlauf der Teilnahmefaktoren
+  const short = (id) => { const g = groups.get(id); return g ? `${ecTypeLabel(g.c.type).replace(/ \(.*\)/, '')} …${id.slice(-6)}` : `…${id.slice(-6)}`; };
+  const hist = kp.pods.filter((p) => p.participation && p.participation.length);
+  if (hist.length) {
+    body.append(section('Teilnahmefaktor im Verlauf', 'Ein Zählpunkt kann an mehreren Gemeinschaften teilnehmen. Der Teilnahmefaktor sagt, welcher Anteil auf welche Gemeinschaft entfällt.',
+      ...hist.map((pod) => h('div', { class: 'tbl-scroll' },
+        h('p', { class: 'field-title' }, h('span', { class: 'lg-key', style: `background:${colorFor(pod.id)}` }), ' ', labelFor(pod.id)),
+        h('table', { class: 'tbl' },
+          h('thead', {}, h('tr', {}, h('th', { scope: 'col', text: 'Zeitraum' }), h('th', { scope: 'col', text: 'Gemeinschaft' }), h('th', { scope: 'col', class: 'num', text: 'Faktor' }))),
+          h('tbody', {}, ...pod.participation.map((x) => h('tr', {},
+            h('td', { text: `${dateNum(x.from)} bis ${x.to ? dateNum(x.to) : 'heute'}` }),
+            h('td', { text: short(x.community) }),
+            h('td', { class: 'num', text: x.factor != null ? `${num(x.factor, 0)} %` : '–' })))))))));
+  }
+  body.append(section('Gut zu wissen', null,
+    h('ul', { class: 'plain-list' },
+      h('li', { text: 'Den Strom aus der Gemeinschaft rechnet die Gemeinschaft selbst ab, nicht dein Lieferant.' }),
+      h('li', { text: 'Wie viel Strom du aus der Gemeinschaft bekommst, liefern die Portale von Netz Burgenland nicht. Netzblick rechnet die Netzkosten deshalb so, als käme aller Strom aus dem Netz.' }),
+      h('li', { text: 'Teilnahmen beantragst und beendest du über die Gemeinschaft; im Kundenportal stimmst du der Datenfreigabe zu.' })),
+    h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(CONTACT.topics.find((t) => /Bürgerenergie/.test(t.label)).url) }, icon('external'), 'Bürgerenergie bei Netz Burgenland')));
+}
+
+/* ================================================================ Störung */
+const telLink = (tel) => `tel:${tel}`;
+const mapLink = (addr) => (isNative ? `geo:0,0?q=${encodeURIComponent(addr)}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`);
+
+function callCard(entry, primary) {
+  return h('button', { class: 'callcard' + (primary ? ' callcard--primary' : ''), type: 'button', onclick: () => openExternal(telLink(entry.tel)) },
+    icon('phone'),
+    h('span', { class: 'callcard-text' }, h('span', { class: 'callcard-label', text: entry.label }), h('span', { class: 'callcard-number', text: entry.number }), entry.note || entry.hours ? h('small', { text: entry.note || entry.hours }) : null),
+    h('span', { class: 'callcard-go', text: 'Anrufen' }));
+}
+
+export function renderOutage(body) {
+  body.append(h('p', { class: 'page-lead', text: 'Kein Strom? Hier erreichst du Netz Burgenland direkt.' }));
+  body.append(h('div', { class: 'callcards' }, callCard(OUTAGE.hotline, true), callCard(OUTAGE.emergency, false)));
+  body.append(section('Bevor du anrufst', null,
+    h('ul', { class: 'plain-list' },
+      h('li', { text: 'Ist nur dein Haus ohne Strom? Dann prüfe zuerst Sicherungen und FI-Schutzschalter.' }),
+      h('li', { text: 'Ruf zuerst deinen Elektriker an. Ist er nicht erreichbar, schickt der Störungsdienst einen Betrieb aus dem TOP-NETZ-Partner-Netz.' }),
+      h('li', { text: 'Liegt der Fehler in deiner eigenen Anlage und nicht im Netz, zahlst du den Einsatz des Elektrikers.' }))));
+  body.append(section('Störungskarte', 'Aktuelle (rot) und geplante (blau) Unterbrechungen im Hoch- und Mittelspannungsnetz. Störungen im Niederspannungsnetz, also in der Straße, zeigt die Karte nicht. Sie wird nicht automatisch aktualisiert.',
+    h('div', { class: 'btn-row' },
+      h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => openExternal(OUTAGE.map) }, icon('pin'), 'Störungskarte öffnen'),
+      h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => openExternal(OUTAGE.report) }, icon('external'), 'Störung online melden'),
+      h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => openExternal(OUTAGE.safety) }, icon('external'), 'Sicherheitshinweise'))));
+  body.append(h('p', { class: 'fineprint fineprint--page', text: `Angaben von netzburgenland.at, Stand ${STAND}. Netzblick ist eine inoffizielle App.` }));
+}
+
+/* ================================================================ Kontakt */
+export function renderContact(body) {
+  const C = CONTACT;
+  body.append(h('p', { class: 'page-lead', text: 'Fragen zu Anschluss, Zähler, Smart Meter oder Rechnung des Netzbetreibers.' }));
+  body.append(h('div', { class: 'callcards' }, callCard(C.phone, true)));
+  body.append(section(C.company, null,
+    dl(
+      row('Adresse', h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(mapLink(C.address)) }, icon('pin'), C.address)),
+      row('E-Mail', h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(`mailto:${C.email}`) }, icon('mail'), C.email)),
+      row('Kontaktformular', h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(C.form) }, icon('external'), 'Online schreiben (laut Netz Burgenland der schnellste Weg)')))));
+  body.append(section('Servicezentren', `${C.centers.hours}, Telefon ${C.centers.phone.number}`,
+    h('ul', { class: 'center-list', role: 'list' }, ...C.centers.list.map((x) => h('li', {},
+      h('div', { class: 'center-text' }, h('b', { text: x.name }), h('span', { text: x.address })),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': `${x.name} auf der Karte`, onclick: () => openExternal(mapLink(x.address)) }, icon('pin'))))),
+    h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => openExternal(telLink(C.centers.phone.tel)) }, icon('phone'), `${C.centers.phone.number} anrufen`)));
+  body.append(section('Themen', null,
+    h('ul', { class: 'plain-list plain-list--links' }, ...C.topics.map((t) => h('li', {}, h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(t.url) }, icon('external'), t.label))))));
+  body.append(section('Fragen zur App', 'Netzblick ist nicht von Netz Burgenland. Für Fragen und Fehler in der App:',
+    h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal('mailto:patrick-schloegl@gmx.at') }, icon('mail'), 'patrick-schloegl@gmx.at')));
+  body.append(h('p', { class: 'fineprint fineprint--page', text: `Angaben von netzburgenland.at, Stand ${STAND}.` }));
 }

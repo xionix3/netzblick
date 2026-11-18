@@ -16,6 +16,18 @@ const daily = (from, to, until) => {
 const storeWith = (until, { noPrev = false } = {}) => ({
   load: async (mp, flow, from, to) => ({ points: noPrev && from < new Date(2025, 9, 1) ? [] : daily(from, to, until), fine: false }),
 });
+
+test('Abrechnungsjahr: nach einer Zwischenabrechnung zählt trotzdem das ganze Vorjahr', async () => {
+  const short = { from: new Date(2025, 9, 1), to: new Date(2025, 10, 1) }; // „Oktober 2025 bis Oktober 2025“
+  const st = await billingYearStatus(storeWith(new Date(2025, 11, 31)), {}, short, new Date(2026, 0, 1));
+  assert.equal(st.curStart.getTime(), new Date(2025, 10, 1).getTime());
+  assert.equal(st.lastDays, 31);
+  assert.equal(st.lastSum, 31 * 20);
+  assert.equal(st.method, 'vorjahr');
+  const year = daily(new Date(2024, 10, 1), new Date(2025, 10, 1), new Date(2030, 0, 1)).reduce((a, p) => a + p.v, 0);
+  assert.equal(st.prevTotal, year); // 1.11.2024–31.10.2025, nicht nur der Oktober der Zwischenabrechnung
+  assert.equal(year, 182 * 20 + 183 * 10);
+});
 const last = { from: new Date(2024, 9, 1), to: new Date(2025, 9, 1) };
 
 test('Abrechnungsjahr: Summe und Hochrechnung mit dem Verlauf des Vorjahres', async () => {
@@ -47,4 +59,26 @@ test('Abrechnung: Vertragskonto passend zum Zählpunkt finden', () => {
   assert.equal(consumptionFor(kp, { address: 'Musterweg 12, 7000 Eisenstadt' }).contractAccount, '1');
   assert.equal(consumptionFor({ consumption: [kp.consumption[0]] }, { address: 'ganz woanders' }).contractAccount, '1');
   assert.equal(consumptionFor(kp, null), null);
+});
+
+/* ------------------------------------------------------------ Erinnerung */
+import { reminderTime, reminderIcs } from '../../src/reminder.js';
+
+test('Erinnerung: 30 Tage vorher um 9 Uhr, sonst morgen, nie nach dem Ende', () => {
+  const now = new Date(2026, 10, 18, 12, 0);
+  const a = reminderTime('2027-03-31', 30, now);
+  assert.equal(a.at.getTime(), new Date(2027, 2, 1, 9, 0).getTime());
+  const b = reminderTime('2026-12-01', 30, now); // 1.11. liegt zurück → morgen
+  assert.equal(b.at.getTime(), new Date(2026, 10, 19, 9, 0).getTime());
+  assert.equal(reminderTime('2026-11-01', 30, now), null);
+  assert.equal(reminderTime('kaputt', 30, now), null);
+});
+
+test('Erinnerung: Kalenderdatei mit ganztägigem Termin und Alarm', () => {
+  const ics = reminderIcs({ at: new Date(2027, 2, 1, 9), end: new Date(2027, 2, 31), title: 'Strom: Rabatt endet; bitte, wechseln', text: 'Vergleichen' });
+  assert.match(ics, /^BEGIN:VCALENDAR\r\n/);
+  assert.match(ics, /DTSTART;VALUE=DATE:20270301\r\n/);
+  assert.match(ics, /DTEND;VALUE=DATE:20270302\r\n/);
+  assert.match(ics, /SUMMARY:Strom: Rabatt endet\; bitte\\, wechseln\r\n/);
+  assert.match(ics, /BEGIN:VALARM[\s\S]*END:VALARM/);
 });

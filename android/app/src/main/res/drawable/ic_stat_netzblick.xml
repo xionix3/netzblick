@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Benachrichtigungssymbol: drei Rollen des Zählwerks (einfarbig, Android färbt es ein) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M2,5h5.5v14H2z M9.25,5h5.5v14h-5.5z M16.5,5H22v14h-5.5z M3.75,9h2v6h-2z M11,9h2v6h-2z M18.25,9h2v6h-2z" />
+</vector>

@@ -52,7 +52,10 @@ Anmeldung.
 | **Zeiträume** | Tag, Woche, Monat, Jahr, Gesamt und frei wählbarer Zeitraum. Wechseln mit Pfeilen, Wischen oder Tippen aufs Datum. |
 | **Zählerstand** | Aktueller Stand des Bezugszählers (OBIS 1.8.0) im Stil eines Rollenzählwerks. |
 | **Vergleich** | Mit der Vorperiode oder dem Vorjahr. Bei laufenden Zeiträumen fair bis zum gleichen Zeitpunkt. |
-| **Hochrechnung und Kosten** | Prognose für den laufenden Zeitraum. Kosten nach deinem eigenen Strompreis. |
+| **Hochrechnung und Kosten** | Prognose für den laufenden Zeitraum. Kosten aus drei Teilen: Energiepreis deines Lieferanten (eingegeben), Netzkosten von Netz Burgenland laut Preisblatt (samt Sommer-Niedertarif aus den Viertelstundenwerten), Steuern und Abgaben. |
+| **Erinnerung** | Benachrichtigung und Hinweis, bevor Neukundenrabatt oder Vertragsbindung enden; Kalendereintrag; Link zum Tarifkalkulator der E-Control. |
+| **Energiegemeinschaft** | Alle Teilnahmen laut Kundenportal: Art, Gemeinschafts-ID, Marktpartner, Richtung, Aufteilung, Status, Teilnahmefaktor je Zählpunkt und Verlauf. |
+| **Störung und Kontakt** | Störungsdienst, Stromnotruf, Kundentelefon und Servicezentren direkt anrufen, Störungskarte, Online-Meldung, Kontaktformular. |
 | **Diagramme** | Leistungskurve in 15-Minuten-Schritten (Tag, Woche), Balken je Tag, Monat oder Jahr. Vergleich als graue Linie. |
 | **Analysen** | Lastgang-Teppich (wann am Tag Strom gebraucht wird), typischer Tagesverlauf (Werktag und Wochenende), Verbrauch je Wochentag, Jahreskalender, Jahre im Vergleich. |
 | **Filter** | Nur bestimmte Wochentage (z. B. Werktage) und/oder Uhrzeiten (z. B. 22–6 Uhr). Wirken auf alle Zahlen und Diagramme. |
@@ -87,8 +90,10 @@ Zum Ausprobieren ohne Zugang gibt es auf der Anmeldeseite **„Demo mit Beispiel
 - **Filtern:** Chip „Filtern“. Aktive Filter erscheinen als dunkle Chips und lassen sich mit ✕ einzeln entfernen.
 - **Details:** In Diagramme tippen zeigt die Werte an dieser Stelle.
 - **Werte:** Unten die Tabelle. „CSV teilen“ exportiert die geladenen Rohwerte (gefiltert).
-- **Einstellungen** (im Menü): Strompreis, Fixkosten, Namen der Zählpunkte, Hell/Dunkel.
-- **Abrechnung:** zeigt, wie viel seit der letzten Jahresabrechnung verbraucht wurde und worauf es hinausläuft. Mit eingetragenem Strompreis auch, ob die Teilbeträge reichen.
+- **Strompreis** (im Menü): Arbeitspreis und Grundpreis deines Lieferanten (brutto), auf Wunsch je Zählpunkt. Darunter die Erinnerung an Rabatt- oder Bindungsende, die Jahreskosten aus deinen Messwerten und die Netzpreise von Netz Burgenland.
+- **Einstellungen** (im Menü): Namen der Zählpunkte, Hell/Dunkel.
+- **Abrechnung:** zeigt, wie viel seit der letzten Jahresabrechnung verbraucht wurde und worauf es hinausläuft. Mit eingetragenem Lieferantenpreis auch, ob die Teilbeträge reichen.
+- **Energiegemeinschaft, Störung, Kontakt:** eigene Seiten im Menü; Telefonnummern lassen sich direkt anrufen.
 - **Konto:** Status beider Portale. Hier wählst du, ob das Kundenportal die Smart-Meter-Anmeldung nutzt, eigene Zugangsdaten bekommt oder aus ist.
 
 ## Kennzahlen erklärt
@@ -103,7 +108,7 @@ Zum Ausprobieren ohne Zugang gibt es auf der Anmeldeseite **„Demo mit Beispiel
 | **Grundlast** | 10-%-Wert der Viertelstundenleistung: was praktisch immer läuft (Kühlschrank, Router, Standby). Ein guter Ansatzpunkt zum Sparen. |
 | **Nachts 22–6 Uhr** | Anteil des Verbrauchs zwischen 22 und 6 Uhr. |
 | **Ø Leistung** | Durchschnittliche Leistung über den Zeitraum. |
-| **Kosten** | kWh × Arbeitspreis + Fixkosten anteilig (1 Monat = 30,44 Tage). Eine Schätzung, maßgeblich ist deine Rechnung. |
+| **Kosten** | Lieferant: kWh × Arbeitspreis + Grundpreis anteilig (brutto, wie eingegeben). Netz Burgenland (Netzebene 7, netto + 20 % USt): kWh × Netznutzung, in Viertelstunden von 1.4.–30.9. zwischen 10 und 16 Uhr zum Sommer-Niedertarif, dazu Pauschale pro Jahr und Messentgelt pro Monat anteilig. Abgaben: Elektrizitätsabgabe je kWh, Erneuerbaren-Förderpauschale pro Jahr, Erneuerbaren-Förderbeitrag pro Jahr und je kWh. Haushalt oder unterbrechbar kommt aus dem Kundenportal. Eine Schätzung, maßgeblich ist deine Rechnung. Preise stehen in `src/netzdaten.js`. |
 | **Hochrechnung Abrechnungsjahr** | Verbrauch seit Ende der letzten Abrechnung × (ganzes letztes Abrechnungsjahr ÷ dieselbe Zeitspanne im letzten Jahr). So zählt der Winter mehr als der Sommer. Ohne Vorjahreswerte gleichmäßig weitergerechnet; erst ab 14 Tagen. |
 
 **Datenquellen:** Das Portal liefert Viertelstundenwerte (Register 1.8.0, ab Mitte 2023) und Tageswerte je Tarif (1.8.1/1.8.2, seit Einbau des Smart Meters). Netzblick nimmt automatisch die feinsten verfügbaren Daten. Messwerte kommen in der Regel mit etwa einem Tag Verzögerung.
@@ -116,7 +121,7 @@ Zum Ausprobieren ohne Zugang gibt es auf der Anmeldeseite **„Demo mit Beispiel
 - Vom Kundenportal werden nur Daten **gelesen**. Netzblick ändert dort nichts.
 - **Zugangsdaten** werden nur gespeichert, wenn „Angemeldet bleiben“ aktiv ist, und dann mit AES-256-GCM verschlüsselt. Der Schlüssel liegt im Android Keystore und verlässt das Gerät nicht.
 - **Messwerte** werden für die Offline-Anzeige auf dem Gerät zwischengespeichert. „Abmelden“ löscht Zugangsdaten und Zwischenspeicher.
-- Android-Backups sind deaktiviert, damit nichts davon in Cloud-Sicherungen landet. Einzige Berechtigung: Internet.
+- Android-Backups sind deaktiviert, damit nichts davon in Cloud-Sicherungen landet. Berechtigungen: Internet, Benachrichtigungen (nur für die Erinnerung) und Neustart-Empfang, damit eine geplante Erinnerung einen Neustart übersteht.
 
 Ausführlich in der [Datenschutzerklärung](DATENSCHUTZ.md).
 

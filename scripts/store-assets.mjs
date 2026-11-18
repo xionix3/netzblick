@@ -64,13 +64,13 @@ await render(`<div style="width:1024px;height:500px;background:#142231;position:
 const PHONE = { width: 360, height: 640, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
 const TABLET = { width: 1280, height: 720, deviceScaleFactor: 1.5, isMobile: false, hasTouch: true };
 const shots = [
-  ['?demo=1&period=month&price=0.29&sel=all', 'phone-1.png', null, PHONE],
+  ['?demo=1&period=month&price=14.9&sel=all', 'phone-1.png', null, PHONE],
   ['?demo=1&period=day&date=2026-10-07&sel=AT0090000000000000000000000012345', 'phone-2.png', null, PHONE],
   ['?demo=1&period=month&date=2026-10-01&sel=AT0090000000000000000000000012345', 'phone-3.png', '#analysis', PHONE],
-  ['?demo=1&period=year&date=2025-06-01&theme=dark&price=0.29', 'phone-4.png', null, PHONE],
-  ['?demo=1&page=billing&price=0.29', 'phone-5.png', null, PHONE, 'Hochrechnung'],
+  ['?demo=1&period=year&date=2025-06-01&theme=dark&price=14.9', 'phone-4.png', null, PHONE],
+  ['?demo=1&page=billing&price=14.9', 'phone-5.png', null, PHONE, 'Hochrechnung'],
   ['?demo=1&period=month&date=2026-10-01&sel=all&chart=pie&split=daypart', 'phone-6.png', '#mainPanel', PHONE],
-  ['?demo=1&period=month&price=0.29&sel=all&chart=bar', 'tablet-1.png', null, TABLET],
+  ['?demo=1&period=month&price=14.9&sel=all&chart=bar', 'tablet-1.png', null, TABLET],
   ['?demo=1&page=plants', 'tablet-2.png', null, TABLET, 'Zählernummer'],
 ];
 for (const [q, file, scrollTo, viewport, waitText] of shots) {
