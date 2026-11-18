@@ -1,4 +1,4 @@
-package at.netzblick.app;
+package at.xionix.netzblick;
 
 import android.os.Bundle;
 

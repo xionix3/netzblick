@@ -53,6 +53,7 @@ const STEPS = [
       { note: `Lade aus dem GitHub-Release ${version} die Datei ${AAB} herunter: ${RELEASE}` },
       { note: 'Die Grafiken liegen im Repository unter docs/store/ (auf GitHub: Datei öffnen, dann „Download raw file“).' },
       { file: 'App-Bundle', value: AAB },
+      { pick: 'Paketname im App-Bundle', value: 'at.xionix.netzblick (ab Version 1.7.1, passend zu deiner Play Console)' },
       { file: 'App-Symbol (512 × 512)', value: 'docs/store/icon-512.png' },
       { file: 'Vorstellungsgrafik (1024 × 500)', value: 'docs/store/feature-graphic.png' },
       { file: 'Screenshots Smartphone (8 Stück)', value: 'docs/store/phone-1.png … phone-8.png' },

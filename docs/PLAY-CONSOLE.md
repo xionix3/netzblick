@@ -1,17 +1,19 @@
 # Play Console ausfüllen, zum Kopieren
 
-Erzeugt mit `node scripts/play-console.mjs` für Version 1.7.0. Hintergründe und Begründungen stehen in [PLAY-STORE.md](PLAY-STORE.md).
+Erzeugt mit `node scripts/play-console.mjs` für Version 1.7.1. Hintergründe und Begründungen stehen in [PLAY-STORE.md](PLAY-STORE.md).
 Auf GitHub hat jeder Kasten rechts oben einen Knopf zum Kopieren.
 
 ## 1. Dateien bereitlegen
 
 *Wo:* auf deinem Rechner
 
-Lade aus dem GitHub-Release 1.7.0 die Datei netzblick-1.7.0.aab herunter: https://github.com/xionix3/netzblick/releases/tag/v1.7.0
+Lade aus dem GitHub-Release 1.7.1 die Datei netzblick-1.7.1.aab herunter: https://github.com/xionix3/netzblick/releases/tag/v1.7.1
 
 Die Grafiken liegen im Repository unter docs/store/ (auf GitHub: Datei öffnen, dann „Download raw file“).
 
-- 📎 **App-Bundle:** `netzblick-1.7.0.aab`
+- 📎 **App-Bundle:** `netzblick-1.7.1.aab`
+
+- **Paketname im App-Bundle:** at.xionix.netzblick (ab Version 1.7.1, passend zu deiner Play Console)
 
 - 📎 **App-Symbol (512 × 512):** `docs/store/icon-512.png`
 
@@ -244,9 +246,9 @@ patrick-schloegl@gmx.at
 
 - **App-Signatur (beim ersten Mal):** Play App Signing annehmen (von Google erstellter Schlüssel)
 
-- 📎 **App-Bundle:** `netzblick-1.7.0.aab`
+- 📎 **App-Bundle:** `netzblick-1.7.1.aab`
 
-Den Release-Namen schlägt die Console selbst vor: 10700 (1.7.0). So lassen.
+Den Release-Namen schlägt die Console selbst vor: 10701 (1.7.1). So lassen.
 
 **Versionshinweise** (242 von 500 Zeichen)
 

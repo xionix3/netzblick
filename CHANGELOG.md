@@ -5,6 +5,11 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.7.1] – 2026-11-18
+
+### Geändert
+- **Paketname jetzt `at.xionix.netzblick`** (vorher `at.netzblick.app`), passend zur App in der Play Console. Wer Netzblick als APK von GitHub installiert hat, bekommt damit eine neue App: die alte bitte deinstallieren und sich in der neuen einmal neu anmelden.
+
 ## [1.7.0] – 2026-11-18
 
 ### Neu
