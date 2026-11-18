@@ -1,5 +1,5 @@
 // Erzeugt die Grafiken für den Google-Play-Eintrag nach docs/store/:
-//   icon-512.png, feature-graphic.png (1024×500), phone-1…4.png (1080×1920, Demo-Daten)
+//   icon-512.png, feature-graphic.png (1024×500), phone-1…8.png (1080×1920), tablet-1…2.png (1920×1080), Demo-Daten
 // Aufruf: npm run build && node scripts/store-assets.mjs   (CHROME_PATH bei Bedarf setzen)
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -63,15 +63,18 @@ await render(`<div style="width:1024px;height:500px;background:#142231;position:
 // Handy-Screenshots 1080 × 1920 (9:16) und Tablet 1920 × 1080 (16:9) aus dem Demo-Modus
 const PHONE = { width: 360, height: 640, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
 const TABLET = { width: 1280, height: 720, deviceScaleFactor: 1.5, isMobile: false, hasTouch: true };
+const M = 'AT0090000000000000000000000012345';
 const shots = [
   ['?demo=1&period=month&price=14.9&sel=all', 'phone-1.png', null, PHONE],
-  ['?demo=1&period=day&date=2026-10-07&sel=AT0090000000000000000000000012345', 'phone-2.png', null, PHONE],
-  ['?demo=1&period=month&date=2026-10-01&sel=AT0090000000000000000000000012345', 'phone-3.png', '#analysis', PHONE],
-  ['?demo=1&period=year&date=2025-06-01&theme=dark&price=14.9', 'phone-4.png', null, PHONE],
-  ['?demo=1&page=billing&price=14.9', 'phone-5.png', null, PHONE, 'Hochrechnung'],
-  ['?demo=1&period=month&date=2026-10-01&sel=all&chart=pie&split=daypart', 'phone-6.png', '#mainPanel', PHONE],
+  [`?demo=1&period=month&date=2026-07-01&sel=${M}`, 'phone-2.png', '#powerPanel', PHONE, 'Höchste Viertelstunde'],
+  ['?demo=1&page=costs&price=14.9', 'phone-3.png', '.costs-out > .kpis--page', PHONE, 'Alle Monate'],
+  ['?demo=1&page=tariff&dyn=awattar', 'phone-4.png', 'section.panel:has(.chart--spot)', PHONE, 'Günstigste 2 Stunden'],
+  ['?demo=1&page=power', 'phone-5.png', null, PHONE, 'im Jahr fürs Netz'],
+  ['?demo=1&page=billing&price=14.9', 'phone-6.png', null, PHONE, 'Hochrechnung'],
+  [`?demo=1&period=month&date=2026-10-01&sel=${M}`, 'phone-7.png', '#analysis', PHONE],
+  ['?demo=1&period=year&date=2025-06-01&theme=dark&price=14.9', 'phone-8.png', null, PHONE],
   ['?demo=1&period=month&price=14.9&sel=all&chart=bar', 'tablet-1.png', null, TABLET],
-  ['?demo=1&page=plants', 'tablet-2.png', null, TABLET, 'Zählernummer'],
+  ['?demo=1&page=costs&price=14.9', 'tablet-2.png', null, TABLET, 'Alle Monate'],
 ];
 for (const [q, file, scrollTo, viewport, waitText] of shots) {
   const p = await browser.newPage();
@@ -80,8 +83,8 @@ for (const [q, file, scrollTo, viewport, waitText] of shots) {
   await p.setViewport(viewport);
   await p.goto(base + q, { waitUntil: 'networkidle0' });
   await p.waitForFunction(() => !document.body.classList.contains('is-loading') && document.querySelector('#heroValue')?.textContent.trim());
-  if (waitText) await p.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 15000 }, waitText);
-  if (scrollTo) await p.evaluate((sel) => window.scrollTo(0, document.querySelector(sel).getBoundingClientRect().top + window.scrollY - 150), scrollTo);
+  if (waitText) await p.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 30000 }, waitText);
+  if (scrollTo) await p.evaluate((sel) => { const el = document.querySelector(sel); const m = parseFloat(getComputedStyle(el).scrollMarginTop) || (el.closest('#pageBody') ? 6 : 150); window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - m); }, scrollTo);
   await new Promise((r) => setTimeout(r, 800));
   await p.screenshot({ path: resolve(out, file) });
   await p.close();

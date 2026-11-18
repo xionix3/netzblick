@@ -23,7 +23,7 @@ Mit 12 Testern ist das private Konto der schnellste Weg. Das Organisationskonto 
 
 ## Ablauf
 
-1. **Entwicklerkonto** in der [Play Console](https://play.google.com/console) anlegen: einmalig 25 US-Dollar, Identitätsprüfung mit Ausweis (bzw. D-U-N-S beim Firmenkonto).
+1. **Entwicklerkonto** in der [Play Console](https://play.google.com/console) anlegen: einmalig 25 US-Dollar. Identitätsprüfung: amtlicher Lichtbildausweis, Name und Adresse wie im Ausweis, E-Mail-Adresse und Telefonnummer (beide mit Code bestätigt). Beim Firmenkonto zusätzlich die D-U-N-S-Nummer. Die Prüfung dauert meist ein bis zwei Tage.
 2. **App anlegen:** Name, Standardsprache Deutsch (de-AT), App (nicht Spiel), kostenlos.
 3. **App-Inhalte ausfüllen** (siehe unten): Datenschutzerklärung, App-Zugriff, Werbung, Einstufung, Zielgruppe, Datensicherheit.
 4. **Store-Eintrag:** Texte und Grafiken unten.
@@ -43,7 +43,8 @@ Mit 12 Testern ist das private Konto der schnellste Weg. Das Organisationskonto 
 | Ziel-API: neue Apps und Updates müssen seit 31. 8. 2026 **Android 16 (API 36)** ansprechen | ✅ `targetSdkVersion = 36` |
 | Format **Android App Bundle (AAB)** | ✅ wird bei jedem Release gebaut |
 | Play App Signing | ✅ in der Console aktivieren (Standard), Release-Schlüssel als Upload-Schlüssel |
-| Versionsnummer steigt mit jedem Upload | ✅ `versionCode` wird aus dem Tag berechnet (v1.2.3 → 10203) |
+| Versionsnummer steigt mit jedem Upload | ✅ `versionCode` aus der Version in `package.json` (1.5.0 → 10500); jede neue Version erzeugt automatisch ein Release mit AAB |
+| 16-KB-Speicherseiten (Pflicht bei Ziel-API 35+) | ✅ keine eigenen nativen Bibliotheken |
 | Berechtigungen | ✅ Internet, Benachrichtigungen (Erinnerung, wird zur Laufzeit erfragt), Neustart-Empfang (geplante Erinnerung behalten). Keine exakten Alarme. |
 
 ## App-Inhalte (Play Console → Richtlinien → App-Inhalte)
@@ -51,9 +52,10 @@ Mit 12 Testern ist das private Konto der schnellste Weg. Das Organisationskonto 
 ### Datenschutzerklärung
 Benötigt wird eine **öffentlich erreichbare URL**. Der Text steht fertig in [DATENSCHUTZ.md](../DATENSCHUTZ.md).
 Solange das Repository privat ist, ist die Datei nicht öffentlich. Möglichkeiten:
-- Repository öffentlich machen und den Link auf `DATENSCHUTZ.md` verwenden
+- **Einfachster Weg:** auf [gist.github.com](https://gist.github.com) einen öffentlichen Gist `Netzblick-Datenschutz.md` mit dem Inhalt von `DATENSCHUTZ.md` anlegen und dessen Link eintragen. Bei Änderungen den Gist mit aktualisieren.
+- Repository öffentlich machen und den Link auf `DATENSCHUTZ.md` verwenden (es enthält keine Geheimnisse; Schlüssel liegen nur in den GitHub-Secrets).
+- den Text auf der Website von geister-it ablegen
 - GitHub Pages (für private Repositories nur mit bezahltem Plan)
-- den Text auf der Website von geister-it oder in einem öffentlichen Gist ablegen
 
 ### App-Zugriff
 Die App braucht ein Konto beim Portal von Netz Burgenland. Für die Prüfer gibt es den Demo-Modus. Vorschlag für das Formular:
@@ -131,7 +133,7 @@ Hinweis: Netzblick ist eine inoffizielle App und steht in keiner Verbindung zu N
 |---|---|---|
 | `icon-512.png` | App-Symbol | 512 × 512 PNG |
 | `feature-graphic.png` | Vorstellungsgrafik | 1024 × 500 PNG |
-| `phone-1.png` … `phone-6.png` | Screenshots Smartphone | 1080 × 1920 (9:16), Demo-Daten |
+| `phone-1.png` … `phone-8.png` | Screenshots Smartphone (Übersicht, Leistung, Kosten, dynamischer Tarif, Leistung ab 2027, Abrechnung, Lastgang, Dunkelmodus) | 1080 × 1920 (9:16), Demo-Daten |
 | `tablet-1.png`, `tablet-2.png` | Screenshots Tablet 7 und 10 Zoll (dieselben Bilder für beide) | 1920 × 1080 (16:9), Demo-Daten |
 
 Neu erzeugen nach Änderungen an der Oberfläche: `npm run build`, dann `node scripts/store-assets.mjs`.
