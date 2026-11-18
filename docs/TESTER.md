@@ -19,6 +19,8 @@ kannst du dich auch mit deinem Portal-Zugang anmelden und deine eigenen Werte se
 2. Du bekommst von mir einen **Link**. Öffne ihn **am Handy** und tippe auf **„Tester werden“** (bzw. „Become a tester“).
 3. Tippe danach auf **„Bei Google Play herunterladen“** und installiere Netzblick wie jede andere App.
    Falls der Play Store „nicht gefunden“ meldet: ein paar Minuten warten und den Link erneut öffnen.
+   Hast du Netzblick schon einmal direkt als APK (z. B. von GitHub) installiert, **deinstalliere es vorher**.
+   Sonst kann der Play Store die App nicht installieren, weil Google sie mit einem eigenen Schlüssel signiert.
 4. **14 Tage lang installiert lassen** und die App ab und zu öffnen, z. B. alle paar Tage kurz.
    Bitte in dieser Zeit **nicht** wieder auf „Test beenden“ tippen.
 
