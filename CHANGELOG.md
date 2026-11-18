@@ -5,6 +5,20 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.4.0] – 2026-11-18
+
+### Neu
+- **Seite „Kosten“** im Menü, für die letzten 12 Monate oder ein Kalenderjahr:
+  - Summe mit Anteilen von Energie, Netz und Abgaben; Kosten je kWh, pro Monat und pro Tag; was der Niedertarif gespart hat
+  - Diagramm Monat für Monat, gestapelt nach Energie, Netz Burgenland, Steuern und Abgaben
+  - Kosten je Zählpunkt mit eigenem Netztarif (z. B. unterbrechbare Wärmepumpe)
+  - vollständige Aufstellung und Tabelle aller Monate, als CSV teilbar (jeder Zählpunkt einzeln)
+  - gerechnet Monat für Monat aus Viertelstundenwerten, die Niedertarife also genau
+- Übersicht: Schaltfläche „Alle Kosten“ in der Kostenaufstellung.
+
+### Geändert
+- Kostenaufstellung von Übersicht und Seite „Kosten“ aus einem gemeinsamen Baustein (`src/costview.js`).
+
 ## [1.3.1] – 2026-11-18
 
 ### Geändert

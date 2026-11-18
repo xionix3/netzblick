@@ -305,6 +305,44 @@ await scenario('Seite Leistung: Monatsspitzen und Vergleich 2026/2027', {
     expect(await page.$$eval('.chart--peaks canvas', (l) => l.length === 1), 'Diagramm fehlt'),
   ],
 });
+await scenario('Seite Kosten: Monate, Zählpunkte, Aufstellung, Jahr wählen', {
+  query: '&page=costs&price=14.9',
+  shot: 'kosten-seite',
+  actions: async (page) => { await waitText(page, /Alle Monate/, 30000); },
+  checks: async (s, page) => {
+    const first = await page.evaluate(() => ({
+      chips: [...document.querySelectorAll('.chip-row .chip')].map((b) => b.textContent),
+      active: document.querySelector('.chip-row .chip--active')?.textContent,
+      chart: document.querySelectorAll('.chart--costs canvas').length,
+      meters: document.querySelectorAll('.meter-cost').length,
+      months: document.querySelectorAll('.tbl--months tbody tr').length,
+    }));
+    await page.evaluate(() => [...document.querySelectorAll('.chip-row .chip')].find((b) => b.textContent === '2026').click());
+    await waitText(page, /Kosten 2026 bisher/, 30000);
+    await waitText(page, /Alle Monate/, 30000);
+    const year = await page.evaluate(() => document.querySelectorAll('.tbl--months tbody tr').length);
+    return [
+      expect(first.active === 'Letzte 12 Monate' && first.chips.includes('2026') && first.chips.includes('2025'), `Zeitraum-Auswahl falsch: ${first.chips.join(',')}`),
+      expect(first.chart === 1, 'Monatsdiagramm fehlt'),
+      expect(first.meters === 2, 'Kosten je Zählpunkt fehlen'),
+      expect(first.months === 13, `12 Monate plus Summe erwartet, sind ${first.months}`),
+      expect(/Gerechnet aus Viertelstundenwerten/.test(s.text) && /Sommer-Niedertarif/.test(s.text), 'Niedertarif nicht genau gerechnet'),
+      expect(/Energie \(Lieferant\)/.test(s.text) && /Erneuerbaren-Förderbeitrag/.test(s.text), 'Aufstellung unvollständig'),
+      expect(/unterbrechbar/.test(s.text), 'Tarifklasse je Zählpunkt fehlt'),
+      expect(year >= 11 && year <= 13, `Jahr 2026: ${year} Zeilen`),
+    ];
+  },
+});
+await scenario('Übersicht: „Alle Kosten“ öffnet die Seite Kosten', {
+  query: '&period=month&date=2026-10-01&price=14.9',
+  actions: async (page) => {
+    await page.evaluate(() => [...document.querySelectorAll('#costPanel button')].find((b) => /Alle Kosten/.test(b.textContent)).click());
+    await waitText(page, /Monat für Monat/, 30000);
+  },
+  checks: async (s, page) => [
+    expect(await page.$eval('#pageTitle', (e) => e.textContent === 'Kosten'), 'Seite Kosten nicht geöffnet'),
+  ],
+});
 await scenario('Seite Energiegemeinschaft mit Teilnahmefaktoren', {
   query: '&page=community',
   shot: 'energiegemeinschaft',

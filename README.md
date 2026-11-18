@@ -42,17 +42,18 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
   </tr>
   <tr>
     <td align="center"><img src="docs/readme/kosten.png" width="200" alt="Kostenaufstellung nach Energie, Netz und Abgaben" /><br /><sub><b>Kosten</b><br />Energie, Netz, Abgaben</sub></td>
+    <td align="center"><img src="docs/readme/kosten-seite.png" width="200" alt="Seite Kosten mit Monatsdiagramm" /><br /><sub><b>Kosten im Jahr</b><br />Monat für Monat, je Zählpunkt</sub></td>
     <td align="center"><img src="docs/readme/aufteilung.png" width="200" alt="Kreisdiagramm: Verbrauch nach Tageszeit" /><br /><sub><b>Aufteilung</b><br />nach Zähler, Tageszeit, Wochentag</sub></td>
     <td align="center"><img src="docs/readme/analyse.png" width="200" alt="Lastgang-Teppich und typischer Tagesverlauf" /><br /><sub><b>Analysen</b><br />Lastgang und Tagesverlauf</sub></td>
-    <td align="center"><img src="docs/readme/strompreis.png" width="200" alt="Strompreis des Lieferanten und Erinnerung" /><br /><sub><b>Strompreis</b><br />Lieferant und Erinnerung</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/readme/strompreis.png" width="200" alt="Strompreis des Lieferanten und Erinnerung" /><br /><sub><b>Strompreis</b><br />Lieferant und Erinnerung</sub></td>
     <td align="center"><img src="docs/readme/abrechnung.png" width="200" alt="Laufendes Abrechnungsjahr mit Hochrechnung" /><br /><sub><b>Abrechnung</b><br />Hochrechnung und Teilbeträge</sub></td>
     <td align="center"><img src="docs/readme/energiegemeinschaft.png" width="200" alt="Energiegemeinschaften mit Teilnahmefaktor" /><br /><sub><b>Energiegemeinschaft</b><br />Teilnahmen und Faktoren</sub></td>
     <td align="center"><img src="docs/readme/anlagen.png" width="200" alt="Anlagen mit Zählernummer und Lieferant" /><br /><sub><b>Anlagen</b><br />Zähler, Netztarif, Lieferant</sub></td>
-    <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Störungsdienst und Stromnotruf zum Anrufen" /><br /><sub><b>Störung</b><br />direkt anrufen</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Störungsdienst und Stromnotruf zum Anrufen" /><br /><sub><b>Störung</b><br />direkt anrufen</sub></td>
     <td align="center"><img src="docs/readme/jahr-dunkel.png" width="200" alt="Jahresansicht im Dunkelmodus" /><br /><sub><b>Dunkelmodus</b><br />Jahr im Vergleich</sub></td>
     <td align="center"><img src="docs/readme/menue.png" width="200" alt="Menü mit allen Seiten" /><br /><sub><b>Menü</b><br />alles mit einem Tipp</sub></td>
     <td align="center"><img src="docs/readme/kontakt.png" width="200" alt="Kontakt mit Servicezentren" /><br /><sub><b>Kontakt</b><br />Telefon, E-Mail, Servicezentren</sub></td>
@@ -93,6 +94,7 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
 | **Netzkosten** | Rechnet Netzblick selbst nach dem Preisblatt von Netz Burgenland, samt Sommer-Niedertarif (1. April bis 30. September, 10–16 Uhr) aus den Viertelstundenwerten. Ab 2027 mit Leistungspreis aus der Monatsspitze und Winter-Niedertarif (ab Oktober 2027, 23–5 Uhr). Haushalt oder unterbrechbar kommt aus dem Kundenportal. |
 | **Steuern und Abgaben** | Elektrizitätsabgabe, Erneuerbaren-Förderpauschale und -Förderbeitrag, 20 % USt. |
 | **Kostenaufstellung** | In der Übersicht mit Anteilen; Kosten pro Tag und Hochrechnung auf den Zeitraum. „Was dich ein Jahr kostet“ aus den letzten 12 Monaten. |
+| **Seite „Kosten“** | Letzte 12 Monate oder ein Jahr: Summe und Anteile, Kosten je kWh, pro Monat und pro Tag, Diagramm Monat für Monat (Energie, Netz, Abgaben), Kosten je Zählpunkt, vollständige Aufstellung, Tabelle aller Monate als CSV. Gerechnet aus Viertelstundenwerten, die Niedertarife also genau. |
 | **Erinnerung** | Benachrichtigung und Hinweis, bevor Neukundenrabatt oder Vertragsbindung enden; Kalendereintrag; Link zum Tarifkalkulator der E-Control. |
 | **Abrechnung** | Laufendes Abrechnungsjahr mit Hochrechnung, gemessen gegen abgerechnet, Kosten gegen Teilbeträge, abgerechnete Jahresverbräuche, Rechnungen. |
 
@@ -121,7 +123,7 @@ Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at]
 ## Bedienung
 
 - **Menü:** ☰ oben links oder vom linken Rand wischen. Auf dem Tablet steht es fest am Rand.
-  Verbrauch, Leistung, Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Einstellungen, Info, Abmelden.
+  Verbrauch, Leistung, Kosten, Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Einstellungen, Info, Abmelden.
 - **Zeitraum:** Leiste oben. Das Kalendersymbol öffnet einen eigenen Zeitraum mit Schnellwahl.
 - **Blättern:** Pfeile neben dem Datum oder auf der Summe wischen. Ein Tipp aufs Datum öffnet die Datumsauswahl.
 - **Zählpunkte:** Tipp auf den Namen oben (mehrere ankreuzen oder „nur dieser“), oder in der Diagrammlegende antippen.
@@ -222,12 +224,13 @@ netzblick/
 │   ├── kundenportal.js  Kundenportal: Profil, Zählpunkte, Energiegemeinschaften, Verträge, Abrechnung
 │   ├── model.js         Laden, Zwischenspeichern, Filtern, Kennzahlen, Aufteilung
 │   ├── costs.js         Kostenmodell: Lieferant, Netz, Abgaben, Niedertarife, Leistungspreis ab 2027
+│   ├── costview.js      Kostenaufstellung für Übersicht und Seite „Kosten“
 │   ├── netzdaten.js     Netzpreise, Abgaben, Störungs- und Kontaktdaten (mit Quellen)
 │   ├── billing.js       Laufendes Abrechnungsjahr und Hochrechnung
 │   ├── reminder.js      Erinnerung: Zeitpunkt und Kalenderdatei
 │   ├── charts.js        Diagramme (Apache ECharts)
 │   ├── main.js          Start, Anmeldung, Menü, Verbrauchsansicht
-│   ├── pages.js         Seiten Leistung, Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Info
+│   ├── pages.js         Seiten Leistung, Kosten, Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Info
 │   ├── ui.js            DOM-Helfer, Bottom-Sheet, Rollenzählwerk, Markenzeichen
 │   ├── platform.js      Native Brücke: HTTP ohne CORS, sicherer Speicher, Teilen, Benachrichtigungen
 │   ├── demo.js          Demo-Daten im Format der echten APIs
@@ -275,8 +278,8 @@ flowchart LR
 
 Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 
-1. **Unit-Tests** (`test/unit/`, 81 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Leistungspreis 2027 mit Monatsspitzen und Winter-Niedertarif, Erinnerung und Kalenderdatei, Versionsnummern.
-2. **Oberflächentest** (`test/e2e/smoke.mjs`, 24 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsdiagramm mit 10-kW-Linie, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
+1. **Unit-Tests** (`test/unit/`, 82 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Leistungspreis 2027 mit Monatsspitzen und Winter-Niedertarif, Erinnerung und Kalenderdatei, Versionsnummern.
+2. **Oberflächentest** (`test/e2e/smoke.mjs`, 26 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsdiagramm mit 10-kW-Linie, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
 3. **Android-Build**: baut die Debug-APK.
 
 ## Releases und Play Store

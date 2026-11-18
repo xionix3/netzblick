@@ -207,3 +207,17 @@ test('Kosten 2027: Jahreshochrechnung mit gleicher Monatsspitze', () => {
   near(s.grid.power, 12 * 5 * 3.4 + 12 * (34 + 5.1));
   assert.equal(s.peakKw, 11);
 });
+
+test('Seite Kosten: Monat für Monat ergibt dieselbe Jahressumme wie das ganze Jahr auf einmal', () => {
+  const opts = { supplier: { ap: 14.9, gp: 3 }, household: true };
+  for (const y of [2026, 2027]) {
+    const months = Array.from({ length: 12 }, (_, m) => monthQuarters(y, m, 0.3 + (m % 4) * 0.2, { index: 1500 + m, kw: 4 + m }));
+    const all = months.flat();
+    const whole = meterCost(all, { fine: true, from: new Date(y, 0, 1), to: new Date(y + 1, 0, 1), ...opts });
+    const parts = sumCosts(months.map((pts, m) => meterCost(pts, { fine: true, from: new Date(y, m, 1), to: new Date(y, m + 1, 1), ...opts })));
+    near(parts.total, whole.total, 1e-6);
+    near(parts.snapSaving, whole.snapSaving, 1e-9);
+    near(parts.grid.power, whole.grid.power, 1e-9);
+    near(parts.supplier.base, 36, 1e-9); // 12 × 3 €
+  }
+});

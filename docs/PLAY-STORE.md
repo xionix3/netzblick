@@ -101,6 +101,7 @@ Melde dich mit deinem gewohnten Portal-Zugang an und sieh sofort:
 • deinen Verbrauch für Tag, Woche, Monat, Jahr oder einen eigenen Zeitraum
 • den Vergleich zur Vorperiode oder zum Vorjahr – fair bis zum gleichen Zeitpunkt
 • eine Hochrechnung und die Kosten: Energie deines Lieferanten, Netzkosten von Netz Burgenland und Abgaben
+• alle Kosten Monat für Monat und je Zählpunkt, für die letzten 12 Monate oder ein ganzes Jahr
 • eine Erinnerung, bevor Neukundenrabatt oder Vertragsbindung enden
 • deine Energiegemeinschaften mit Teilnahmefaktor
 • Störungsdienst und Kontakt zum direkten Anrufen

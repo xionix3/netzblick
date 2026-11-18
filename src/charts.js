@@ -335,6 +335,51 @@ export function powerOption(T, cfg) {
 }
 
 /**
+ * Kosten je Monat, gestapelt nach Energie, Netz, Steuern und Abgaben (brutto).
+ * cfg: {axis:[Date], parts:[{name, color, data:[€|null]}], kwh:[kWh|null]}
+ */
+export function costMonthsOption(T, cfg) {
+  const { axis, parts, kwh } = cfg;
+  const last = parts.length - 1;
+  const totals = axis.map((_, i) => parts.reduce((a, p) => (p.data[i] == null ? a : a + p.data[i]), 0));
+  return {
+    animationDuration: 450,
+    animationEasing: 'cubicOut',
+    textStyle: { fontFamily: T.font },
+    grid: { left: 6, right: 10, top: 26, bottom: 6, containLabel: true },
+    tooltip: baseTooltip(T, {
+      axisPointer: { type: 'shadow', shadowStyle: { color: T.line, opacity: 0.5 } },
+      formatter: (params) => {
+        const i = params[0].dataIndex;
+        if (kwh[i] == null) return `<div class="tt-title">${esc(`${MONTHS_LONG[axis[i].getMonth()]} ${axis[i].getFullYear()}`)}</div><div class="tt-sub">noch keine Werte</div>`;
+        let html = `<div class="tt-title">${esc(`${MONTHS_LONG[axis[i].getMonth()]} ${axis[i].getFullYear()}`)}</div>`;
+        for (let k = parts.length - 1; k >= 0; k--) html += row(parts[k].color, `${num(parts[k].data[i], 2)} €`, parts[k].name);
+        html += `<div class="tt-sub"><b>${num(totals[i], 2)} €</b> für ${num(kwh[i], 0)} kWh${kwh[i] > 0 ? `, ${num((totals[i] / kwh[i]) * 100, 1)} ct/kWh` : ''}</div>`;
+        return html;
+      },
+    }),
+    xAxis: {
+      type: 'category',
+      data: axis.map((d) => d.getTime()),
+      axisLine: { lineStyle: { color: T.axis } },
+      axisTick: { show: false },
+      axisLabel: { color: T.muted, fontFamily: T.font, fontSize: 11, hideOverlap: true, ...axisLabelFor('month', axis, 400) },
+    },
+    yAxis: yAxis(T, '€'),
+    series: parts.map((p, k) => ({
+      name: p.name,
+      type: 'bar',
+      stack: 'kosten',
+      barMaxWidth: 26,
+      barCategoryGap: '34%',
+      data: p.data,
+      itemStyle: { color: p.color, borderColor: T.surface, borderWidth: 1, borderRadius: k === last ? [4, 4, 0, 0] : 0 },
+      emphasis: { focus: 'series' },
+    })),
+  };
+}
+
+/**
  * Kreisdiagramm (Ring) für eine Aufteilung. items: [{name, value, color}]
  * Beschriftung außen nur mit Prozent; Namen stehen in der Tabelle darunter.
  */

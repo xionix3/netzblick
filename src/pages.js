@@ -8,7 +8,8 @@ import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, O
 import { currentFactor } from './kundenportal.js';
 import { reminderIcs, reminderTime } from './reminder.js';
 import { makePeriod, addDays, startOfDay, daysBetween } from './time.js';
-import { num, kwh, kw, euro, pct, dateNum, dateLong, time, MONTHS_LONG } from './format.js';
+import { num, kwh, kw, euro, pct, dateNum, dateLong, time, MONTHS_LONG, MONTHS_SHORT } from './format.js';
+import { costParts, costTotal, costTable, costNotes } from './costview.js';
 import * as charts from './charts.js';
 import { secure, saveSettings, scheduleReminder, cancelReminder, reminderPending, shareFile, openExternal, isNative } from './platform.js';
 import { cacheClear } from './cache.js';
@@ -564,6 +565,217 @@ export function renderTariff(body, ctx) {
       row('Umsatzsteuer', '20 % auf Netz und Abgaben; im Preis deines Lieferanten schon enthalten')),
     h('p', { class: 'note', text: `Stand ${STAND}. Neue Preisblätter gelten meist ab 1. Jänner.` }),
     h('ul', { class: 'plain-list' }, ...PRICE_SOURCES.map((src) => h('li', {}, h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(src.url) }, src.label))))));
+}
+
+/* ================================================================ Kosten */
+/**
+ * Kosten Monat für Monat und je Zählpunkt, aus Viertelstundenwerten (Niedertarife genau).
+ * Zeitraum: letzte 12 abgeschlossene Monate oder ein Kalenderjahr.
+ */
+export function renderCostsPage(body, ctx) {
+  const { state, names } = ctx;
+  const mps = state.mps.filter((m) => m.flows.consumption);
+  if (!mps.length) { body.append(h('p', { class: 'empty', text: 'Keine Zählpunkte mit Verbrauch.' })); return; }
+  const now = new Date();
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const tomorrow = addDays(startOfDay(now), 1);
+  const first = firstDataDate(mps, 'consumption') || new Date(now.getFullYear(), 0, 1);
+  const years = [];
+  for (let y = now.getFullYear(); y >= first.getFullYear(); y--) years.push(y);
+  let range = state.costsRange && (state.costsRange === '12m' || years.includes(Number(state.costsRange))) ? state.costsRange : '12m';
+
+  const rangeOf = (id) => {
+    if (id === '12m') {
+      const from = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 12, 1);
+      const last = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 1, 1);
+      return { from, to: thisMonth, label: 'der letzten 12 Monate', sub: `${MONTHS_SHORT[from.getMonth()]} ${from.getFullYear()} bis ${MONTHS_SHORT[last.getMonth()]} ${last.getFullYear()}`, running: false };
+    }
+    const y = Number(id);
+    const from = new Date(y, 0, 1);
+    const end = new Date(y + 1, 0, 1);
+    const running = end > now;
+    return { from: from < new Date(first.getFullYear(), first.getMonth(), 1) ? new Date(first.getFullYear(), first.getMonth(), 1) : from, to: running ? tomorrow : end, yearStart: from, label: `${y}${running ? ' bisher' : ''}`, sub: running ? `1. Jänner bis heute` : 'ganzes Jahr', running };
+  };
+
+  const pick = h('div', { class: 'chip-row', role: 'group', 'aria-label': 'Zeitraum' });
+  const out = h('div', { class: 'costs-out' });
+  body.append(pick, out);
+  const renderPick = () => {
+    pick.textContent = '';
+    for (const id of ['12m', ...years.map(String)]) {
+      const on = id === range;
+      pick.append(h('button', {
+        type: 'button', class: 'chip' + (on ? ' chip--active' : ''), 'aria-pressed': on ? 'true' : 'false',
+        onclick: () => { if (range === id) return; range = id; state.costsRange = id; renderPick(); load(); },
+      }, id === '12m' ? 'Letzte 12 Monate' : id));
+    }
+  };
+
+  let token = 0;
+  const load = async () => {
+    const my = ++token;
+    const r = rangeOf(range);
+    out.textContent = '';
+    const progText = h('span', { text: ' Lade Viertelstundenwerte …' });
+    out.append(h('p', { class: 'hint' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), progText));
+    // Monate des Zeitraums; geladen wird immer der ganze Kalendermonat (teilt den Zwischenspeicher mit der Monatsansicht)
+    const months = [];
+    for (let m = new Date(r.from.getFullYear(), r.from.getMonth(), 1); m < r.to; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+      const next = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+      months.push({ start: m < r.from ? r.from : m, monthStart: m, next, end: next < r.to ? next : r.to });
+    }
+    const per = mps.map((mp) => ({ mp, name: meterLabel(mp, names, { compact: true }), color: ctx.meterColor(mp), months: [] }));
+    const total = months.length * per.length;
+    let done = 0;
+    try {
+      for (const x of per) {
+        const opts = ctx.costOptions(x.mp);
+        for (let i = 0; i < months.length; i += 3) {
+          const chunk = months.slice(i, i + 3);
+          const res = await Promise.all(chunk.map((m) => state.store.load(x.mp, 'consumption', m.monthStart, m.next, 'original').catch(() => null)));
+          if (my !== token || !body.isConnected) return;
+          chunk.forEach((m, j) => {
+            const rr = res[j];
+            const pts = rr ? rr.points.filter((p) => p.t >= m.start && p.t < m.end) : [];
+            const c = rr ? meterCost(pts, { fine: rr.fine, from: m.start, to: m.end, ...opts }) : null;
+            x.months.push({ ...m, c, fine: rr ? rr.fine : false, kwh: c ? c.kwh : null });
+          });
+          done += chunk.length;
+          progText.textContent = ` Lade Viertelstundenwerte … ${done} von ${total}`;
+        }
+      }
+    } catch (e) {
+      if (my !== token) return;
+      out.textContent = '';
+      out.append(h('p', { class: 'empty', text: e instanceof ApiError ? e.message : 'Die Werte konnten nicht geladen werden.' }));
+      return;
+    }
+    if (my !== token || !body.isConnected) return;
+    renderCostResult(out, { r, months, per, ctx });
+  };
+
+  renderPick();
+  load();
+}
+
+function renderCostResult(out, { r, months, per, ctx }) {
+  const T = charts.tokens();
+  out.textContent = '';
+  const allCosts = per.flatMap((x) => x.months.map((m) => m.c).filter(Boolean));
+  const sum = sumCosts(allCosts);
+  if (!sum.kwh) { out.append(h('p', { class: 'empty', text: 'Für diesen Zeitraum gibt es keine Messwerte.' })); return; }
+  const total = costTotal(sum);
+  const withData = months.filter((m, i) => per.some((x) => x.months[i] && x.months[i].kwh > 0)).length || 1;
+  const parts = costParts(sum, T);
+  const anyCoarse = per.some((x) => x.months.some((m) => m.c && !m.fine && m.kwh > 0));
+
+  /* ---- Summe */
+  out.append(h('section', { class: 'cost-hero' },
+    h('p', { class: 'hero-label', text: `Kosten ${r.label}` }),
+    h('p', { class: 'cost-hero-value' }, euro(total)),
+    h('p', { class: 'cost-hero-sub', text: `${r.sub} · ${kwh(sum.kwh)}${sum.supplier ? '' : ' · ohne Energie'}` }),
+    h('div', { class: 'stackbar', role: 'img', 'aria-label': parts.map((p) => `${p.name} ${pct(p.value / total)}`).join(', ') },
+      ...parts.map((p) => h('span', { style: `flex:${Math.max(p.value, 0.0001)};background:${p.color}` }))),
+    h('div', { class: 'stackbar-legend' }, ...parts.map((p) => h('span', { class: 'lg' }, h('span', { class: 'lg-key', style: `background:${p.color}` }), `${p.name} ${euro(p.value)}`))),
+    !sum.supplier ? h('button', { class: 'pill pill--link', type: 'button', onclick: () => ctx.goto('tariff') }, 'Preis deines Lieferanten eintragen, dann rechnet Netzblick auch die Energie mit') : null));
+
+  out.append(h('div', { class: 'kpis kpis--page' },
+    kpiTile('Je kWh', ct((total / sum.kwh) * 100, 1), sum.supplier ? 'alles inklusive' : 'Netz und Abgaben'),
+    kpiTile('Pro Monat', euro(total / withData), `Durchschnitt aus ${withData} Monat${withData === 1 ? '' : 'en'}`),
+    kpiTile('Pro Tag', euro(total / Math.max(1, Math.round((r.to - r.from) / 86400000))), r.running ? 'bis heute' : 'im Zeitraum'),
+    kpiTile('Niedertarif gespart', sum.snapKwh + sum.winapKwh > 0 ? euro(sum.snapSaving + sum.winapSaving) : '–', sum.snapKwh + sum.winapKwh > 0 ? `${kwh(sum.snapKwh + sum.winapKwh)} günstiger` : 'nur April bis September')));
+
+  /* ---- Monat für Monat */
+  const axis = r.yearStart ? Array.from({ length: 12 }, (_, i) => new Date(r.yearStart.getFullYear(), i, 1)) : months.map((m) => m.monthStart);
+  const monthSum = axis.map((a) => {
+    const i = months.findIndex((m) => m.monthStart.getTime() === a.getTime());
+    if (i < 0) return null;
+    const cs = per.map((x) => x.months[i] && x.months[i].c).filter(Boolean);
+    const s = cs.length ? sumCosts(cs) : null;
+    return s && s.kwh > 0 ? s : null;
+  });
+  const chart = h('div', { class: 'chart chart--costs' });
+  out.append(section('Monat für Monat', 'Brutto. Fahre über einen Balken für die Aufteilung.',
+    h('div', { class: 'legend legend--static' }, ...[...parts].reverse().map((p) => h('span', { class: 'lg' }, h('span', { class: 'lg-key', style: `background:${p.color}` }), p.name))),
+    chart));
+  charts.render(chart, charts.costMonthsOption(T, {
+    axis,
+    kwh: monthSum.map((s) => (s ? s.kwh : null)),
+    parts: parts.map((p) => ({ name: p.name, color: p.color, data: monthSum.map((s) => (s ? costParts(s, T).find((q) => q.id === p.id).value : null)) })),
+  }));
+
+  /* ---- Je Zählpunkt */
+  if (per.length > 1) {
+    const cards = h('div', { class: 'meter-costs' });
+    for (const x of per) {
+      const cs = x.months.map((m) => m.c).filter(Boolean);
+      if (!cs.length) continue;
+      const s = sumCosts(cs);
+      const t = costTotal(s);
+      const ps = costParts(s, T);
+      const cls = tariffClassOf(ctx.podFor(x.mp.id));
+      cards.append(h('div', { class: 'meter-cost' },
+        h('p', { class: 'meter-cost-name' }, h('span', { class: 'lg-key', style: `background:${x.color}` }), x.name, cls === 'u' ? h('small', { text: ' unterbrechbar' }) : null),
+        h('p', { class: 'meter-cost-value', text: euro(t) }),
+        h('p', { class: 'meter-cost-sub', text: `${kwh(s.kwh)} · ${s.kwh > 0 ? ct((t / s.kwh) * 100, 1) : '–'} je kWh · ${pct(total ? t / total : 0)} der Kosten` }),
+        h('div', { class: 'stackbar stackbar--thin', role: 'img', 'aria-label': ps.map((p) => `${p.name} ${euro(p.value)}`).join(', ') },
+          ...ps.map((p) => h('span', { style: `flex:${Math.max(p.value, 0.0001)};background:${p.color}` }))),
+        h('p', { class: 'meter-cost-parts', text: ps.map((p) => `${p.name.replace(' (Lieferant)', '')} ${euro(p.value)}`).join(' · ') })));
+    }
+    out.append(section('Je Zählpunkt', 'Netztarif je Zählpunkt aus dem Kundenportal.', cards));
+  }
+
+  /* ---- Aufstellung */
+  const community = !!(ctx.state.kpData && ctx.state.kpData.pods.some((p) => p.communities && p.communities.some((x) => x.status === 'aktiv')));
+  const notes = costNotes(sum, { community });
+  if (!anyCoarse) notes.unshift('Gerechnet aus Viertelstundenwerten, die Niedertarife also genau.');
+  out.append(section('Aufstellung', null, costTable(sum, T, { meters: per.length }), h('p', { class: 'note', text: notes.join(' ') })));
+
+  /* ---- Alle Monate */
+  const rows = [];
+  axis.forEach((a, i) => {
+    const s = monthSum[i];
+    if (!s) return;
+    const ps = costParts(s, T);
+    const val = (id) => { const p = ps.find((q) => q.id === id); return p ? euro(p.value) : '–'; };
+    rows.push(h('tr', {},
+      h('td', { text: `${MONTHS_SHORT[a.getMonth()]} ${a.getFullYear()}` }),
+      h('td', { class: 'num', text: num(s.kwh, 0) }),
+      h('td', { class: 'num', text: val('energy') }),
+      h('td', { class: 'num', text: val('grid') }),
+      h('td', { class: 'num', text: val('levies') }),
+      h('td', { class: 'num' }, h('b', { text: euro(costTotal(s)) }))));
+  });
+  rows.push(h('tr', { class: 'cost-total' },
+    h('th', { scope: 'row', text: 'Summe' }),
+    h('td', { class: 'num', text: num(sum.kwh, 0) }),
+    h('td', { class: 'num', text: sum.supplier ? euro(sum.supplier.total) : '–' }),
+    h('td', { class: 'num', text: euro(sum.gridGross) }),
+    h('td', { class: 'num', text: euro(sum.leviesGross) }),
+    h('td', { class: 'num', text: euro(total) })));
+  const csvBtn = h('button', { class: 'btn btn--small', type: 'button', onclick: () => shareCostsCsv(r, months, per, T) }, icon('share'), 'CSV teilen');
+  out.append(h('section', { class: 'panel' },
+    h('div', { class: 'panel-head' }, h('h2', { text: 'Alle Monate' }), csvBtn),
+    h('p', { class: 'panel-sub', text: 'Brutto, alle Zählpunkte zusammen. Die CSV-Datei enthält jeden Zählpunkt einzeln.' }),
+    h('div', { class: 'tbl-scroll' }, h('table', { class: 'tbl tbl--months' },
+      h('thead', {}, h('tr', {}, ...['Monat', 'kWh', 'Energie', 'Netz', 'Abgaben', 'Summe'].map((t, i) => h('th', { scope: 'col', class: i ? 'num' : '', text: t })))),
+      h('tbody', {}, ...rows)))));
+  fillIcons(out);
+}
+
+/** CSV je Monat und Zählpunkt (Semikolon, Dezimalkomma, für Excel) */
+function shareCostsCsv(r, months, per, T) {
+  const n = (x, d = 2) => (x == null ? '' : x.toFixed(d).replace('.', ','));
+  const lines = ['Monat;Zählpunkt;kWh;davon Niedertarif kWh;Energie €;Netz €;Steuern und Abgaben €;Summe €'];
+  months.forEach((m, i) => {
+    for (const x of per) {
+      const c = x.months[i] && x.months[i].c;
+      if (!c || !c.kwh) continue;
+      lines.push([`${m.monthStart.getFullYear()}-${String(m.monthStart.getMonth() + 1).padStart(2, '0')}`, x.mp.id, n(c.kwh, 3), n(c.snapKwh + c.winapKwh, 3), c.supplier ? n(c.supplier.total) : '', n(c.gridGross), n(c.leviesGross), n(costTotal(c))].join(';'));
+    }
+  });
+  const name = `netzblick-kosten-${r.yearStart ? r.yearStart.getFullYear() : '12-monate'}.csv`;
+  shareFile(name, '\ufeff' + lines.join('\r\n'), 'text/csv;charset=utf-8', 'Kosten teilen').catch(() => toast('Teilen nicht möglich'));
 }
 
 /* ================================================================ Leistung (Leistungspreis ab 2027) */

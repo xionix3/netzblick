@@ -44,17 +44,18 @@ All images show demo mode with made-up sample data.
   </tr>
   <tr>
     <td align="center"><img src="docs/readme/kosten.png" width="200" alt="Cost breakdown into energy, grid and taxes" /><br /><sub><b>Costs</b><br />energy, grid, taxes</sub></td>
+    <td align="center"><img src="docs/readme/kosten-seite.png" width="200" alt="Costs page with monthly chart" /><br /><sub><b>Costs per year</b><br />month by month, per meter</sub></td>
     <td align="center"><img src="docs/readme/aufteilung.png" width="200" alt="Donut chart: consumption by time of day" /><br /><sub><b>Breakdown</b><br />by meter, time of day, weekday</sub></td>
     <td align="center"><img src="docs/readme/analyse.png" width="200" alt="Load heat map and typical daily profile" /><br /><sub><b>Analysis</b><br />load map and daily profile</sub></td>
-    <td align="center"><img src="docs/readme/strompreis.png" width="200" alt="Supplier price and reminder" /><br /><sub><b>Electricity price</b><br />supplier and reminder</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/readme/strompreis.png" width="200" alt="Supplier price and reminder" /><br /><sub><b>Electricity price</b><br />supplier and reminder</sub></td>
     <td align="center"><img src="docs/readme/abrechnung.png" width="200" alt="Current billing year with forecast" /><br /><sub><b>Billing</b><br />forecast and instalments</sub></td>
     <td align="center"><img src="docs/readme/energiegemeinschaft.png" width="200" alt="Energy communities with participation factor" /><br /><sub><b>Energy community</b><br />memberships and factors</sub></td>
     <td align="center"><img src="docs/readme/anlagen.png" width="200" alt="Installations with meter number and supplier" /><br /><sub><b>Installations</b><br />meter, grid tariff, supplier</sub></td>
-    <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Fault service and emergency line to call" /><br /><sub><b>Power outage</b><br />call directly</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Fault service and emergency line to call" /><br /><sub><b>Power outage</b><br />call directly</sub></td>
     <td align="center"><img src="docs/readme/jahr-dunkel.png" width="200" alt="Year view in dark mode" /><br /><sub><b>Dark mode</b><br />year comparison</sub></td>
     <td align="center"><img src="docs/readme/menue.png" width="200" alt="Menu with all pages" /><br /><sub><b>Menu</b><br />everything one tap away</sub></td>
     <td align="center"><img src="docs/readme/kontakt.png" width="200" alt="Contact with service centres" /><br /><sub><b>Contact</b><br />phone, e-mail, service centres</sub></td>
@@ -95,6 +96,7 @@ All images show demo mode with made-up sample data.
 | **Grid costs** | Calculated from Netz Burgenland's price sheet, including the summer low tariff (1 April to 30 September, 10 am–4 pm) taken from the quarter-hour values. From 2027 including the power price from the monthly peak and the winter low tariff (from October 2027, 11 pm–5 am). Whether a meter is a household or interruptible tariff comes from the customer portal. |
 | **Taxes and levies** | Electricity tax, renewable energy flat fee and renewable energy contribution, 20 % VAT. |
 | **Cost breakdown** | In the overview with shares; cost per day and forecast for the period. "What a year costs you" based on the last 12 months. |
+| **"Kosten" page** | Last 12 months or a calendar year: total and shares, cost per kWh, per month and per day, month-by-month chart (energy, grid, levies), cost per meter, full breakdown, table of all months as CSV. Calculated from quarter-hour values, so low tariffs are exact. |
 | **Reminder** | Notification and in-app hint before a new-customer discount or a minimum term ends; calendar entry; link to E-Control's tariff calculator. |
 | **Billing** | Current billing year with forecast, measured vs. billed, costs vs. instalments, billed annual consumption, bills. |
 
@@ -123,7 +125,7 @@ No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgen
 ## How to use it
 
 - **Menu:** ☰ at the top left, or swipe in from the left edge. On tablets it stays on the side.
-  It contains Verbrauch (consumption), Leistung (power), Strompreis (price), Abrechnung (billing), Anlagen (installations), Energiegemeinschaft, Störung (outage), Kontakt, Konto (account), Einstellungen (settings), Info and Abmelden (sign out).
+  It contains Verbrauch (consumption), Leistung (power), Kosten (costs), Strompreis (price), Abrechnung (billing), Anlagen (installations), Energiegemeinschaft, Störung (outage), Kontakt, Konto (account), Einstellungen (settings), Info and Abmelden (sign out).
 - **Period:** the bar at the top. The calendar icon opens a custom period with presets.
 - **Browse:** arrows next to the date, or swipe across the total. Tap the date to pick one.
 - **Meters:** tap the name at the top (tick several or "nur dieser"), or tap them in the chart legend.
@@ -226,12 +228,13 @@ netzblick/
 │   ├── kundenportal.js  customer portal: profile, metering points, energy communities, contracts, billing
 │   ├── model.js         loading, caching, filters, figures, breakdowns
 │   ├── costs.js         cost model: supplier, grid, levies, low tariffs, power price from 2027
+│   ├── costview.js      cost breakdown for the overview and the costs page
 │   ├── netzdaten.js     grid prices, levies, outage and contact data (with sources)
 │   ├── billing.js       current billing year and forecast
 │   ├── reminder.js      reminder date and calendar file
 │   ├── charts.js        charts (Apache ECharts)
 │   ├── main.js          start, sign-in, menu, consumption view
-│   ├── pages.js         pages: power, price, billing, installations, energy community, outage, contact, account, info
+│   ├── pages.js         pages: power, costs, price, billing, installations, energy community, outage, contact, account, info
 │   ├── ui.js            DOM helpers, bottom sheet, rolling counter, logo
 │   ├── platform.js      native bridge: HTTP without CORS, secure storage, share, notifications
 │   ├── demo.js          demo data in the format of the real APIs
@@ -263,7 +266,7 @@ netzblick/
 
 Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
 
-1. **Unit tests** (`test/unit/`, 81 cases):
+1. **Unit tests** (`test/unit/`, 82 cases):
    - periods incl. daylight saving time, number formats
    - API clients with error cases and re-login
    - data model and filters, cache
@@ -272,7 +275,7 @@ Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
    - cost model, checked against Netz Burgenland's comparison chart
    - power price 2027 with monthly peaks and winter low tariff
    - reminder and calendar file, version numbers
-2. **UI test** (`test/e2e/smoke.mjs`, 24 scenarios):
+2. **UI test** (`test/e2e/smoke.mjs`, 26 scenarios):
    - all periods, dark mode, filters, multi-select, chart types, power chart with 10 kW line
    - costs and reminder, every page
    - tablet, landscape, tall status bar, sign-out

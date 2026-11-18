@@ -737,3 +737,32 @@ body::after {
   .kpis--page .kpi:nth-child(2n) { border-right: 1px solid var(--line); }
   .kpis--page .kpi:last-child { border-right: 0; }
 }
+
+/* ------------------------------------------------------------ 1.4: Seite Kosten */
+.panel-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.chip-row { display: flex; gap: 8px; overflow-x: auto; padding: 12px 18px 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.chip-row::-webkit-scrollbar { display: none; }
+.chip-row .chip { cursor: pointer; }
+.cost-hero { padding: 14px 18px 8px; }
+.cost-hero .hero-label { color: var(--ink-2); font-size: 15px; }
+.cost-hero-value { font: 600 52px/1.05 var(--font-num); letter-spacing: -0.01em; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.cost-hero-sub { color: var(--ink-2); font-size: 15px; margin-top: 4px; }
+.cost-hero .pill { margin-top: 12px; }
+.costs-out > .kpis--page { margin: 10px 14px 0; background: var(--surface); }
+.costs-out > .hint, .costs-out > .empty { padding: 16px 18px; }
+.chart--costs { height: 260px; margin-top: 4px; }
+.meter-costs { display: grid; gap: 16px; margin-top: 8px; }
+.meter-cost-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.meter-cost-name small { color: var(--muted); font-weight: 500; }
+.meter-cost-name .lg-key { width: 10px; height: 10px; border-radius: 3px; }
+.meter-cost-value { font: 600 30px/1.1 var(--font-num); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.meter-cost-sub, .meter-cost-parts { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.stackbar--thin { height: 8px; margin-top: 8px; border-radius: 4px; }
+.tbl--months { font-size: 13px; }
+.tbl--months th, .tbl--months td { white-space: nowrap; padding-left: 5px; padding-right: 5px; }
+.tbl--months th:first-child, .tbl--months td:first-child { padding-left: 0; }
+.tbl--months .cost-total th, .tbl--months .cost-total td { font-weight: 600; }
+@container page (min-width: 700px) {
+  .meter-costs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart--costs { height: 300px; }
+}
