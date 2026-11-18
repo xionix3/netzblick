@@ -5,6 +5,19 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.1.1] – 2026-11-18
+
+### Behoben
+- Auf Handys mit hoher Statusleiste war die Kopfzeile mit Menü, Zählpunktwahl und Neu-laden-Knopf verdeckt. Dadurch waren Menü, Mehrfachauswahl und die Seiten zum Kundenportal nicht erreichbar.
+- Standard-Versionsnummer im Android-Projekt war ungültig; der Build in Android Studio und in der CI brach ab.
+
+### Neu
+- Einmaliger Hinweis „Neu in Netzblick 1.1“ mit den wichtigsten Neuerungen und einem Knopf zum Menü.
+
+### Geändert
+- `proguard-android-optimize.txt` statt `proguard-android.txt` (Hinweis von Android Studio).
+- npm 12: esbuild darf sein Installationsskript ausführen (`allowScripts`).
+
 ## [1.1.0] – 2026-11-17
 
 ### Neu
@@ -40,6 +53,7 @@ Erste Version.
 - Kennzeichnung von Ersatz-, vorläufigen und fehlenden Werten.
 - Offline-Anzeige zuletzt geladener Werte, Dunkelmodus, Demo-Modus.
 
-[Unveröffentlicht]: https://github.com/xionix3/netzblick/compare/v1.1.0...HEAD
+[Unveröffentlicht]: https://github.com/xionix3/netzblick/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/xionix3/netzblick/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/xionix3/netzblick/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/xionix3/netzblick/releases/tag/v1.0.0
