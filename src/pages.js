@@ -345,8 +345,12 @@ export function renderInfo(body, ctx) {
   const list = (...items) => h('ul', { class: 'plain-list' }, ...items.map((x) => h('li', {}, x)));
   body.append(
     section('Von', null,
-      h('p', { class: 'panel-text' }, 'Patrick Schlögl, geister-it'),
-      h('p', { class: 'panel-text' }, h('a', { href: 'mailto:patrick-schloegl@gmx.at', class: 'link' }, 'patrick-schloegl@gmx.at'))),
+      h('div', { class: 'maker' },
+        h('img', { class: 'maker-logo maker-logo--sm', src: 'brand/geister-it.webp', alt: 'Logo von geister-it', width: '56', height: '56' }),
+        h('div', {},
+          h('p', { class: 'panel-text' }, 'Patrick Schlögl, geister-it'),
+          h('p', { class: 'panel-text' }, h('a', { href: 'mailto:patrick-schloegl@gmx.at', class: 'link' }, 'patrick-schloegl@gmx.at')),
+          h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal('https://www.geister-it.at') }, icon('external'), 'www.geister-it.at')))),
     section('Woher die Daten kommen', null, list(
       'Messwerte und Zählerstände: Smart-Meter-Portal von Netz Burgenland (smartmeter.netzburgenland.at)',
       'Anlagen, Verträge und Abrechnungen: Kundenportal von Netz Burgenland (portal.netzburgenland.at)',

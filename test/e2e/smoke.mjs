@@ -402,6 +402,15 @@ await scenario('Seite Börsenpreis: Tag, Zeitfenster, Nachbarländer, Muster', {
       winRows: document.querySelectorAll('.tbl--win tbody tr').length,
       nextOff: document.querySelector('.spot-controls .icon-btn[aria-label="Nächster Tag"]').disabled,
     }));
+    await page.click('.seg--res button[data-res="60"]');
+    await sleep(300);
+    const hourly = await page.evaluate(() => ({
+      h2: document.querySelector('#pageBody section.panel h2').textContent,
+      wins: [...document.querySelectorAll('.tbl--win td b')].map((b) => b.textContent),
+      saved: JSON.parse(localStorage.getItem('nb.settings') || '{}').spotRes,
+    }));
+    await page.click('.seg--res button[data-res="15"]');
+    await sleep(200);
     await page.click('.spot-controls .icon-btn[aria-label="Nächster Tag"]');
     await waitText(page, /Am ganzen Tag/, 15000);
     const tomorrow = await page.evaluate(() => ({ t: document.querySelector('.spot-controls .period-title').textContent, off: document.querySelector('.spot-controls .icon-btn[aria-label="Nächster Tag"]').disabled }));
@@ -410,6 +419,7 @@ await scenario('Seite Börsenpreis: Tag, Zeitfenster, Nachbarländer, Muster', {
       expect(st.day >= 1 && st.carpet >= 1 && st.prof >= 1, `Diagramme fehlen: ${JSON.stringify(st)}`),
       expect(st.zonesH === '254px', `nicht alle 7 Länder: ${st.zonesH}`),
       expect(st.winRows === 4, `Zeitfenster fehlen (${st.winRows})`),
+      expect(hourly.h2 === 'Preise je Stunde' && hourly.wins.length && hourly.wins.every((w) => /^\d\d:00–\d\d:00 Uhr$/.test(w)), `Stundenwerte falsch: ${JSON.stringify(hourly)}`),
       expect(/Am günstigsten/.test(s.text) && /Am teuersten/.test(s.text) && /Meist am günstigsten/.test(s.text), 'Kennzahlen fehlen'),
       expect(await page.$$eval('.zone-table tbody tr', (r) => r.length) === 7, 'Nachbarländer fehlen in der Tabelle'),
       expect(/Energy-Charts/.test(s.text) && /SMARD/.test(s.text), 'Quelle fehlt'),

@@ -459,7 +459,7 @@ function showWhatsNew() {
   const major = APP_VERSION.split('.').slice(0, 2).join('.');
   try { if (localStorage.getItem('nb.seenVersion') === major) return; localStorage.setItem('nb.seenVersion', major); } catch { return; }
   const items = [
-    ['spot', 'Börsenpreis: die Day-Ahead-Preise für heute und morgen, die günstigsten und teuersten Zeiten, der Vergleich mit den Nachbarländern und wann Strom meist günstig ist.'],
+    ['spot', 'Börsenpreis: die Day-Ahead-Preise für heute und morgen, je Viertelstunde oder Stunde, die günstigsten und teuersten Zeiten, der Vergleich mit den Nachbarländern und wann Strom meist günstig ist.'],
     ['euro', 'Dynamischer Stromtarif: Börsenpreis plus Aufschlag, mit Vorlagen für aWATTar, smartENERGY, VERBUND und oekostrom.'],
     ['wallet', 'Kosten: eigene Seite mit allen Kosten Monat für Monat, je Zählpunkt und als Aufstellung.'],
     ['gauge', 'Leistung: die Viertelstunden in kW mit einblendbarer 10-kW-Linie.'],

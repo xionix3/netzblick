@@ -1,6 +1,7 @@
 # Netzblick im Google Play Store
 
-Checkliste, vorbereitete Texte und Grafiken für die Veröffentlichung. Stand der Anforderungen: November 2026.
+Hintergründe, Checkliste und Grafiken für die Veröffentlichung. Stand der Anforderungen: November 2026.
+**Alle Eingaben zum Kopieren, Schritt für Schritt: [PLAY-CONSOLE.md](PLAY-CONSOLE.md)** (erzeugt mit `node scripts/play-console.mjs`).
 Die Regeln ändern sich regelmäßig, deshalb vor dem Einreichen kurz in der Play Console prüfen.
 
 ## Vorher klären
@@ -92,44 +93,7 @@ Fakten für das Formular (die Zuordnung zu Googles Kategorien vor dem Absenden m
 
 ## Store-Eintrag
 
-| Feld | Text | Länge |
-|---|---|---|
-| App-Name (max. 30) | `Netzblick: Stromverbrauch` | 25 |
-| Kurzbeschreibung (max. 80) | `Deine Smart-Meter-Werte von Netz Burgenland: Diagramme, Filter und Vergleiche` | 77 |
-
-**Vollständige Beschreibung** (rund 2.000 von 4.000 Zeichen):
-
-```text
-Netzblick zeigt die Werte deines Smart Meters aus dem Verbrauchsdatenportal von Netz Burgenland – übersichtlich, schnell und zum Filtern. Dazu kommen deine Anlagen und Abrechnungen aus dem Kundenportal, mit derselben Anmeldung.
-
-Melde dich mit deinem gewohnten Portal-Zugang an und sieh sofort:
-• deinen Verbrauch für Tag, Woche, Monat, Jahr oder einen eigenen Zeitraum
-• den Vergleich zur Vorperiode oder zum Vorjahr – fair bis zum gleichen Zeitpunkt
-• eine Hochrechnung und die Kosten: Energie deines Lieferanten, Netzkosten von Netz Burgenland und Abgaben
-• alle Kosten Monat für Monat und je Zählpunkt, für die letzten 12 Monate oder ein ganzes Jahr
-• eine Erinnerung, bevor Neukundenrabatt oder Vertragsbindung enden
-• Börsenpreise (Day-Ahead) für heute und morgen: wann Strom am günstigsten und am teuersten ist, Vergleich mit den Nachbarländern
-• dynamische Stromtarife: Börsenpreis plus Aufschlag
-• deine Energiegemeinschaften mit Teilnahmefaktor
-• Störungsdienst und Kontakt zum direkten Anrufen
-• die Leistungskurve in 15-Minuten-Schritten, auch für einen ganzen Monat, mit 10-kW-Linie
-• deine Monatsspitzen und was du mit dem Leistungspreis ab 2027 fürs Netz zahlst
-• wann am Tag Strom gebraucht wird (Lastgang), den typischen Tagesverlauf und den Verbrauch je Wochentag
-• Spitzenleistung, Grundlast und Nachtanteil
-• deinen aktuellen Zählerstand
-• wie viel du seit der letzten Jahresabrechnung verbraucht hast, worauf es hinausläuft und ob die Teilbeträge reichen
-• Zählernummer, Lieferant, Netzebene, Energiegemeinschaft und abgerechnete Jahresverbräuche
-
-Filter nach Wochentagen und Uhrzeit zeigen zum Beispiel, was nachts oder am Wochenende verbraucht wird. Mehrere Zählpunkte lassen sich beliebig kombinieren und benennen. Diagramme als Balken, Linien, Fläche oder Kreis. Optimiert für Handy und Tablet, im Hoch- und Querformat. Alle Werte gibt es auch als Tabelle und als CSV-Export.
-
-Datenschutz: Netzblick verbindet sich mit den Portalen von Netz Burgenland und liest dort nur; für die Börsenpreise kommen öffentliche Marktdaten von Energy-Charts dazu. Kein eigener Server, keine Werbung, kein Tracking. Zugangsdaten werden auf Wunsch verschlüsselt auf dem Gerät gespeichert.
-
-Ohne Konto ausprobieren: Auf der Anmeldeseite „Demo mit Beispieldaten ansehen“ tippen.
-
-Hinweis: Netzblick ist eine inoffizielle App und steht in keiner Verbindung zu Netz Burgenland. Für die Nutzung ist ein Zugang zu den Portalen von Netz Burgenland nötig.
-```
-
-**Kategorie:** Tools. **Tags:** Energie, Strom, Smart Meter.
+App-Name, Kurz- und Langbeschreibung, Kategorie und Kontaktdaten stehen fertig in [PLAY-CONSOLE.md](PLAY-CONSOLE.md). Dort prüft das Skript auch die Längen (Name 30, Kurzbeschreibung 80, Beschreibung 4.000 Zeichen).
 
 ### Grafiken (liegen in [`docs/store/`](store/))
 
@@ -137,7 +101,7 @@ Hinweis: Netzblick ist eine inoffizielle App und steht in keiner Verbindung zu N
 |---|---|---|
 | `icon-512.png` | App-Symbol | 512 × 512 PNG |
 | `feature-graphic.png` | Vorstellungsgrafik | 1024 × 500 PNG |
-| `phone-1.png` … `phone-8.png` | Screenshots Smartphone (Übersicht, Leistung, Kosten, dynamischer Tarif, Leistung ab 2027, Abrechnung, Lastgang, Dunkelmodus) | 1080 × 1920 (9:16), Demo-Daten |
+| `phone-1.png` … `phone-8.png` | Screenshots Smartphone (Übersicht, Leistung, Kosten, Börsenpreis, Leistung ab 2027, Abrechnung, Lastgang, Dunkelmodus) | 1080 × 1920 (9:16), Demo-Daten |
 | `tablet-1.png`, `tablet-2.png` | Screenshots Tablet 7 und 10 Zoll (dieselben Bilder für beide) | 1920 × 1080 (16:9), Demo-Daten |
 
 Neu erzeugen nach Änderungen an der Oberfläche: `npm run build`, dann `node scripts/store-assets.mjs`.

@@ -180,10 +180,18 @@ h1, h2, h3, p { margin: 0; }
 .intro { display: grid; justify-items: center; gap: 22px; }
 .intro-word { display: grid; justify-items: center; gap: 6px; }
 .intro-name { font: 600 46px/1 var(--font-num); color: var(--ink); letter-spacing: -0.01em; clip-path: inset(0 100% 0 0); transition: clip-path 0.55s cubic-bezier(.2,.8,.2,1) 0.55s; }
-.intro-by { font-size: 15px; color: var(--muted); opacity: 0; transform: translateY(4px); transition: opacity 0.35s ease 0.95s, transform 0.35s ease 0.95s; }
+.intro-by { font-size: 15px; color: var(--muted); }
+/* Hersteller unten: Logo von geister-it, blendet nach dem Namen ein */
+.boot-maker {
+  position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 36px);
+  display: grid; justify-items: center; gap: 8px;
+  opacity: 0; transform: translateY(6px); transition: opacity 0.4s ease 0.95s, transform 0.4s ease 0.95s;
+}
+.maker-logo { width: 72px; height: 72px; display: block; }
 .boot.play .intro-name { clip-path: inset(0 0 0 0); }
-.boot.play .intro-by { opacity: 1; transform: none; }
-.boot.instant .intro-name, .boot.instant .intro-by { transition: none; }
+.boot.play .boot-maker { opacity: 1; transform: none; }
+.boot.instant .intro-name, .boot.instant .boot-maker { transition: none; }
+@media (max-height: 520px) { .boot-maker { bottom: calc(var(--sab) + 14px); } .maker-logo { width: 52px; height: 52px; } }
 .login { min-height: 100vh; display: grid; padding: calc(var(--sat) + 28px) calc(var(--sar) + 22px) calc(var(--sab) + 24px) calc(var(--sal) + 22px); }
 .login-inner { width: 100%; max-width: 420px; margin: auto; display: grid; gap: 14px; }
 .brand { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
@@ -807,3 +815,8 @@ body::after {
   .spot-controls .seg { min-width: 260px; }
   .chart--spotday { height: 290px; }
 }
+.maker { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+.maker-logo--sm { width: 56px; height: 56px; flex: 0 0 auto; }
+.seg--res { flex: 0 0 auto; margin-top: 0; padding: 2px; }
+.seg--res button { height: 30px; padding: 0 12px; font-size: 14px; }
+.seg--res button:disabled { opacity: 0.4; }

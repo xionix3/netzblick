@@ -4,6 +4,9 @@
 
 <img src="docs/readme/banner-en.png" alt="Netzblick: your electricity use at a glance. Three phones showing the overview, costs and energy community" width="100%" />
 
+<a href="https://github.com/sponsors/xionix3"><img src="docs/readme/sponsor-en.png" alt="☕ Buy me a coffee via GitHub Sponsors" width="400" /></a><br />
+<sub>☕ Netzblick is and stays free – no ads, no subscription. If you like the app, I'd be happy about a coffee. Entirely voluntary, thank you! ❤</sub>
+
 [![CI](https://github.com/xionix3/netzblick/actions/workflows/ci.yml/badge.svg)](https://github.com/xionix3/netzblick/actions/workflows/ci.yml)
 [![Release](https://github.com/xionix3/netzblick/actions/workflows/release.yml/badge.svg)](https://github.com/xionix3/netzblick/releases)
 
@@ -92,7 +95,7 @@ All images show demo mode with made-up sample data.
 
 | | |
 |---|---|
-| **Day-ahead prices** | A page of its own with the EPEX Spot Austria prices for every day since October 2018, today and, from about 1 pm, tomorrow. Bars per quarter hour: blue is cheaper, red more expensive than the day's average. Average, cheapest and most expensive quarter hour, price right now. |
+| **Day-ahead prices** | A page of its own with the EPEX Spot Austria prices for every day since October 2018, today and, from about 1 pm, tomorrow. Bars per quarter hour or per hour (switchable): blue is cheaper, red more expensive than the day's average. Average, cheapest and most expensive quarter hour, price right now. |
 | **Cheapest and most expensive times** | The best and the most expensive 1, 2, 3 and 4 hours in a row, today from now on. For the washing machine, dishwasher, heat pump or charging the car. |
 | **Where is it cheaper?** | Daily average in Austria, Germany, Switzerland, Czechia, Hungary, Slovenia and northern Italy, with a table. |
 | **When is it usually cheap?** | Over 7 days up to 12 months: every day hour by hour as a carpet, the typical day for weekdays and weekends, negative prices. |
@@ -302,7 +305,7 @@ Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
 
 - **New version:** add an entry to [CHANGELOG.md](CHANGELOG.md), bump the version in `package.json` and push to `main`. GitHub builds a signed APK and AAB, sets the tag and publishes both under **Releases**.
 - **Release key** (one-time setup): [docs/RELEASE.md](docs/RELEASE.md).
-- **Google Play:** checklist, store texts and data safety in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), tester guide in [docs/TESTER.md](docs/TESTER.md).
+- **Google Play:** every entry ready to copy in [docs/PLAY-CONSOLE.md](docs/PLAY-CONSOLE.md), background and checklist in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), tester guide in [docs/TESTER.md](docs/TESTER.md) (all German).
 
 ## License
 

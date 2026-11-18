@@ -5,6 +5,13 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.7.0] – 2026-11-18
+
+### Neu
+- **Startbildschirm** mit dem Logo von geister-it. Auch die Seite „Info“ zeigt das Logo und verlinkt www.geister-it.at.
+- **Börsenpreis:** Der Tag lässt sich zwischen Viertelstunden und Stunden umschalten. Die Wahl bleibt gespeichert; die günstigsten und teuersten Zeiten folgen dem Raster. Bei einem Stundentarif zeigt „Dein Preis“ immer Stunden.
+- README: Knopf „Kaffee spendieren“ über GitHub Sponsors, dazu der Sponsor-Knopf auf der Seite des Repositorys. In der App gibt es bewusst keinen Spendenlink (Zahlungsrichtlinie von Google Play).
+
 ## [1.6.1] – 2026-11-18
 
 ### Geändert

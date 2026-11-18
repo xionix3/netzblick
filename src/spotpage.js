@@ -76,14 +76,18 @@ export function renderSpotPage(body, ctx) {
   let mode = sup && state.spotMode !== 'spot' ? 'mine' : 'spot';
   let day = state.spotDay && state.spotDay >= SPOT_SINCE && state.spotDay <= tomorrow ? startOfDay(state.spotDay) : today;
   let range = RANGES.find((r) => r.id === state.spotRange) || RANGES[1];
+  let res = state.settings.spotRes === 60 ? 60 : 15; // Tagesansicht: Viertelstunden oder Stunden
 
-  // Preis je Punkt: Börse netto oder dein Energiepreis brutto (mit Aufschlag, im Raster deines Tarifs)
+  // Preis je Punkt: Börse netto oder dein Energiepreis brutto (mit Aufschlag)
   const label = () => (mode === 'mine' ? 'dein Preis brutto' : 'Börse netto');
-  const priced = (raw, fine) => {
+  const hourlyTariff = () => mode === 'mine' && sup.interval === 60;
+  const priced = (raw, hourly) => {
     let pts = raw.map((x) => ({ t: x.t, spot: x.p, v: x.p == null ? null : mode === 'mine' ? dynamicPrice(x.p, sup, VAT) : x.p, step: x.step }));
-    if (fine && mode === 'mine' && sup.interval === 60) {
-      const sp = toHourly(raw.map((x) => ({ t: x.t, v: x.p, step: x.step })));
-      pts = sp.map((x) => ({ t: x.t, spot: x.v, v: x.v == null ? null : dynamicPrice(x.v, sup, VAT), step: x.step }));
+    if (hourly && pts.length && pts[0].step < 3600000) {
+      // Stundentarif: Aufschlag auf das Stundenmittel der Börse (wie abgerechnet); sonst Mittel der Viertelstundenpreise
+      const hs = toHourly(raw.map((x) => ({ t: x.t, v: x.p, step: x.step })));
+      const hv = mode === 'mine' && !hourlyTariff() ? toHourly(pts) : null;
+      pts = hs.map((x, i) => ({ t: x.t, spot: x.v, v: x.v == null ? null : mode !== 'mine' ? x.v : hv ? hv[i].v : dynamicPrice(x.v, sup, VAT), step: 3600000 }));
     }
     return pts;
   };
@@ -117,9 +121,32 @@ export function renderSpotPage(body, ctx) {
   const patBox = h('div', {});
   const dayH2 = h('h2');
   const daySub = h('p', { class: 'panel-sub' });
+  const resBtns = [[15, '15 Min'], [60, 'Stunde']].map(([id, text]) => h('button', {
+    type: 'button', 'data-res': String(id),
+    onclick: () => {
+      if (res === id) return;
+      res = id;
+      state.settings.spotRes = id;
+      ctx.saveSettings();
+      renderDay();
+    },
+  }, text));
+  const resSeg = h('div', { class: 'seg seg--small seg--res', role: 'group', 'aria-label': 'Raster' }, ...resBtns);
+  const syncRes = (fine) => {
+    const eff = !fine || hourlyTariff() ? 60 : res;
+    resBtns.forEach((b) => {
+      const id = Number(b.dataset.res);
+      const on = id === eff;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.disabled = id === 15 && (!fine || hourlyTariff());
+      b.title = id === 15 && !fine ? 'Vor Oktober 2025 gibt es nur Stundenpreise' : id === 15 && hourlyTariff() ? 'Dein Tarif rechnet je Stunde' : '';
+    });
+    return eff;
+  };
   const winSub = h('p', { class: 'panel-sub' });
   body.append(
-    h('section', { class: 'panel' }, h('div', { class: 'panel-head' }, dayH2), daySub, dayBox),
+    h('section', { class: 'panel' }, h('div', { class: 'panel-head' }, dayH2, resSeg), daySub, dayBox),
     h('section', { class: 'panel' }, h('div', { class: 'panel-head' }, h('h2', { text: 'Günstigste und teuerste Zeiten' })), winSub, winBox),
     section('Wo ist es günstiger?', 'Tagesschnitt der Börsenpreise in Österreich und den Nachbarländern, netto in Cent je kWh.', zoneBox),
     section('Wann ist es meist günstig?', 'Stundenmittel über einen längeren Zeitraum.', patBox));
@@ -173,8 +200,9 @@ export function renderSpotPage(body, ctx) {
     dayBox.textContent = '';
     winBox.textContent = '';
     const raw = state.spot.series(day, addDays(day, 1));
-    const fine = raw.length && raw[0].step === 900000;
-    const pts = priced(raw, fine);
+    const fine = !raw.length || raw[0].step === 900000;
+    const eff = syncRes(fine);
+    const pts = priced(raw, eff === 60);
     const st = dayStats(pts);
     const step = pts.length ? pts[0].step : 900000;
     const per = step === 3600000 ? 'Stunde' : 'Viertelstunde';

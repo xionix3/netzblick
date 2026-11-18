@@ -10,6 +10,7 @@ const out = resolve(root, 'www');
 const version = process.env.APP_VERSION || JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).version;
 rmSync(out, { recursive: true, force: true });
 mkdirSync(resolve(out, 'fonts'), { recursive: true });
+mkdirSync(resolve(out, 'brand'), { recursive: true });
 
 await build({
   entryPoints: [resolve(root, 'src/main.js')],
@@ -34,4 +35,6 @@ const fonts = {
   'barlow-sc-600.woff2': '@fontsource/barlow-semi-condensed/files/barlow-semi-condensed-latin-600-normal.woff2',
 };
 for (const [name, src] of Object.entries(fonts)) copyFileSync(resolve(root, 'node_modules', src), resolve(out, 'fonts', name));
+// Logo von geister-it (Startbildschirm, Info)
+copyFileSync(resolve(root, 'www-src/brand/geister-it.webp'), resolve(out, 'brand', 'geister-it.webp'));
 console.log(`www/ fertig (Version ${version})`);

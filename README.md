@@ -4,6 +4,9 @@
 
 <img src="docs/readme/banner-de.png" alt="Netzblick: Deinen Stromverbrauch im Blick. Drei Handys mit Übersicht, Kosten und Energiegemeinschaft" width="100%" />
 
+<a href="https://github.com/sponsors/xionix3"><img src="docs/readme/sponsor-de.png" alt="☕ Kaffee spendieren über GitHub Sponsors" width="400" /></a><br />
+<sub>☕ Netzblick ist und bleibt kostenlos – ohne Werbung, ohne Abo. Wenn dir die App gefällt, freue ich mich über einen Kaffee. Völlig freiwillig, danke! ❤</sub>
+
 [![CI](https://github.com/xionix3/netzblick/actions/workflows/ci.yml/badge.svg)](https://github.com/xionix3/netzblick/actions/workflows/ci.yml)
 [![Release](https://github.com/xionix3/netzblick/actions/workflows/release.yml/badge.svg)](https://github.com/xionix3/netzblick/releases)
 
@@ -90,7 +93,7 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
 
 | | |
 |---|---|
-| **Day-Ahead-Preise** | Eigene Seite mit den Börsenpreisen EPEX Spot Österreich für jeden Tag seit Oktober 2018, heute und ab etwa 13 Uhr auch morgen. Säulen je Viertelstunde: blau günstiger, rot teurer als der Tagesschnitt. Durchschnitt, günstigste und teuerste Viertelstunde, Preis jetzt. |
+| **Day-Ahead-Preise** | Eigene Seite mit den Börsenpreisen EPEX Spot Österreich für jeden Tag seit Oktober 2018, heute und ab etwa 13 Uhr auch morgen. Säulen je Viertelstunde oder je Stunde (umschaltbar): blau günstiger, rot teurer als der Tagesschnitt. Durchschnitt, günstigste und teuerste Viertelstunde, Preis jetzt. |
 | **Günstigste und teuerste Zeiten** | Die besten und die teuersten 1, 2, 3 und 4 Stunden am Stück, heute ab jetzt. Für Waschmaschine, Geschirrspüler, Wärmepumpe oder das Laden des Autos. |
 | **Wo ist es günstiger?** | Tagesschnitt in Österreich, Deutschland, der Schweiz, Tschechien, Ungarn, Slowenien und Norditalien, mit Tabelle. |
 | **Wann ist es meist günstig?** | Über 7 Tage bis 12 Monate: jeder Tag Stunde für Stunde als Teppich, typischer Tagesverlauf für Werktage und Wochenende, negative Preise. |
@@ -301,7 +304,7 @@ Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 
 - **Neue Version:** Eintrag in [CHANGELOG.md](CHANGELOG.md), Version in `package.json` erhöhen und nach `main` pushen. GitHub baut signierte APK und AAB, setzt den Tag und legt beides unter **Releases** ab.
 - **Release-Schlüssel** (einmalig): [docs/RELEASE.md](docs/RELEASE.md).
-- **Play Store:** Checkliste, Store-Texte und Datensicherheit in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), Anleitung für Tester in [docs/TESTER.md](docs/TESTER.md).
+- **Play Store:** alle Eingaben zum Kopieren in [docs/PLAY-CONSOLE.md](docs/PLAY-CONSOLE.md), Hintergründe und Checkliste in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), Anleitung für Tester in [docs/TESTER.md](docs/TESTER.md).
 
 ## Lizenz
 
