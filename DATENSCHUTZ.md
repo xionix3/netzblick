@@ -21,7 +21,7 @@ Diese Erklärung beschreibt, welche Daten die App verarbeitet und wohin sie flie
 | Sitzungs-Token beider Portale | Abruf deiner Daten nach der Anmeldung. Das Smart-Meter-Portal liefert bei der Anmeldung auch ein Token für das Kundenportal (gleiche Anmeldung von Netz Burgenland). | nur im Arbeitsspeicher, bis die App beendet wird |
 | Zählpunkte, Adresse, Messwerte, Zählerstände | Anzeige, Diagramme, Auswertungen | Zwischenspeicher auf deinem Gerät für die Offline-Anzeige |
 | Aus dem Kundenportal: Name, Kundennummer, E-Mail, Adresse, Zählernummer, Lieferant, Verträge, abgerechnete Verbräuche, Rechnungsbeträge, Teilbeträge | Anzeige auf den Seiten Anlagen, Abrechnung und Konto, Hochrechnung des Abrechnungsjahres | nur im Arbeitsspeicher, bis die App beendet wird |
-| Einstellungen (Strompreis, Namen der Zählpunkte, Darstellung) | Berechnung der Kosten, Anzeige | auf deinem Gerät |
+| Einstellungen (Lieferant, Strompreis, Namen der Zählpunkte, Darstellung) und das Datum für die Erinnerung | Berechnung der Kosten, Anzeige, Erinnerung | auf deinem Gerät |
 
 Die Zugangsdaten werden nur an die Portale von Netz Burgenland übertragen, genauso wie bei der Anmeldung im Web-Portal.
 Für die Verarbeitung deiner Daten auf den Servern von Netz Burgenland gilt deren Datenschutzerklärung.
@@ -39,7 +39,9 @@ Wenn du „CSV teilen“ verwendest, erzeugt die App eine Datei mit den angezeig
 
 ## Berechtigungen
 
-Netzblick benötigt nur die Berechtigung **Internet**, um die Portale zu erreichen.
+Netzblick benötigt die Berechtigung **Internet**, um die Portale zu erreichen. Für die Erinnerung an Rabatt- oder Bindungsende fragt die App einmal nach **Benachrichtigungen**; die Erinnerung wird nur auf deinem Gerät geplant. Damit sie einen Neustart übersteht, darf die App den Neustart des Geräts empfangen.
+
+Netzpreise, Abgaben und Kontaktdaten von Netz Burgenland sind fest in der App hinterlegt; dafür werden keine Daten übertragen. Links zu Telefon, E-Mail, Karten oder Webseiten öffnen die jeweilige App auf deinem Gerät.
 
 ## Deine Rechte
 

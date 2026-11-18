@@ -30,5 +30,13 @@ export const icons = {
   pie: svg('<path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>', 'width="18" height="18"'),
   copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>', 'width="16" height="16"'),
   link: svg('<path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/>', 'width="16" height="16"'),
+  euro: svg('<path d="M18 6.5A7 7 0 1 0 18 17.5"/><path d="M4 10.5h9M4 13.5h9"/>'),
+  community: svg('<circle cx="8" cy="9" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M2.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5"/><path d="M14 15c.8-.6 1.6-.9 2.5-.9 2 0 3.6 1.2 4.3 3.9"/>'),
+  bolt: svg('<path d="M13 2 4.5 13.5H12L11 22l8.5-11.5H12z"/>'),
+  phone: svg('<path d="M5 3h3.5l2 5-2.5 1.5a11 11 0 0 0 5.5 5.5L15 12.5l5 2V18a3 3 0 0 1-3 3A14 14 0 0 1 3 7a3 3 0 0 1 2-4z"/>'),
+  mail: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 7 8.5-7"/>'),
+  pin: svg('<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0C18.5 14.8 12 21 12 21z"/><circle cx="12" cy="10" r="2.3"/>'),
+  bell: svg('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>'),
+  external: svg('<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>', 'width="16" height="16"'),
   leaf: svg('<path d="M5 19c0-8 6-14 15-14 0 9-6 15-14 15"/><path d="M5 19c3-4 6-6 10-8"/>', 'width="16" height="16"'),
 };

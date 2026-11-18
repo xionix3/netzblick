@@ -44,7 +44,7 @@ Mit 12 Testern ist das private Konto der schnellste Weg. Das Organisationskonto 
 | Format **Android App Bundle (AAB)** | ✅ wird bei jedem Release gebaut |
 | Play App Signing | ✅ in der Console aktivieren (Standard), Release-Schlüssel als Upload-Schlüssel |
 | Versionsnummer steigt mit jedem Upload | ✅ `versionCode` wird aus dem Tag berechnet (v1.2.3 → 10203) |
-| Berechtigungen | ✅ nur Internet |
+| Berechtigungen | ✅ Internet, Benachrichtigungen (Erinnerung, wird zur Laufzeit erfragt), Neustart-Empfang (geplante Erinnerung behalten). Keine exakten Alarme. |
 
 ## App-Inhalte (Play Console → Richtlinien → App-Inhalte)
 
@@ -92,7 +92,7 @@ Fakten für das Formular (die Zuordnung zu Googles Kategorien vor dem Absenden m
 | App-Name (max. 30) | `Netzblick: Stromverbrauch` | 25 |
 | Kurzbeschreibung (max. 80) | `Deine Smart-Meter-Werte von Netz Burgenland: Diagramme, Filter und Vergleiche` | 77 |
 
-**Vollständige Beschreibung** (rund 1.800 von 4.000 Zeichen):
+**Vollständige Beschreibung** (rund 2.000 von 4.000 Zeichen):
 
 ```text
 Netzblick zeigt die Werte deines Smart Meters aus dem Verbrauchsdatenportal von Netz Burgenland – übersichtlich, schnell und zum Filtern. Dazu kommen deine Anlagen und Abrechnungen aus dem Kundenportal, mit derselben Anmeldung.
@@ -100,7 +100,10 @@ Netzblick zeigt die Werte deines Smart Meters aus dem Verbrauchsdatenportal von 
 Melde dich mit deinem gewohnten Portal-Zugang an und sieh sofort:
 • deinen Verbrauch für Tag, Woche, Monat, Jahr oder einen eigenen Zeitraum
 • den Vergleich zur Vorperiode oder zum Vorjahr – fair bis zum gleichen Zeitpunkt
-• eine Hochrechnung und – mit deinem Strompreis – die Kosten
+• eine Hochrechnung und die Kosten: Energie deines Lieferanten, Netzkosten von Netz Burgenland und Abgaben
+• eine Erinnerung, bevor Neukundenrabatt oder Vertragsbindung enden
+• deine Energiegemeinschaften mit Teilnahmefaktor
+• Störungsdienst und Kontakt zum direkten Anrufen
 • die Leistungskurve in 15-Minuten-Schritten
 • wann am Tag Strom gebraucht wird (Lastgang), den typischen Tagesverlauf und den Verbrauch je Wochentag
 • Spitzenleistung, Grundlast und Nachtanteil

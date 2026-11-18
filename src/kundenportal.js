@@ -204,29 +204,77 @@ export function normalizePods(pods = [], podsData = []) {
   for (const d of Array.isArray(podsData) ? podsData : []) {
     const e = byId.get(d.extUI) || { id: d.extUI, address: '' };
     const net = d.net || {};
-    const ecs = ((d.approvals && d.approvals.active) || []).filter((x) => x.energyCommunity || /EnergyCommunity/i.test(x.dataType || ''));
-    const ec = ecs[0] && ecs[0].energyCommunity;
-    const hist = Array.isArray(d.participationHistory) ? d.participationHistory : [];
+    const communities = normalizeCommunities(d);
+    const active = communities.filter((c) => c.status === 'aktiv');
+    const first = active[0] || null;
     Object.assign(e, {
       contractFrom: d.contractDateFrom ? new Date(d.contractDateFrom) : null,
       supplier: (d.details || '').split('/').slice(1).join('/').trim() || d.details || '',
       supplierId: (d.details || '').split('/')[0].trim(),
       meterNr: net.serialNr || '',
       deviceType: DEVICE_TYPES[net.deviceType] || net.deviceType || '',
-      gridLevel: net.gridUsageLevel != null ? Number(net.gridUsageLevel) : null,
+      gridLevel: net.gridUsageLevel != null && net.gridUsageLevel !== '' ? Number(net.gridUsageLevel) : null,
       loadProfile: LOAD_PROFILES[net.loadProfileType] || net.loadProfileType || '',
+      loadProfileCode: net.loadProfileType || '',
       lastBillingPeriod: net.lastBillingPeriod || '',
-      energyCommunity: ec ? {
-        share: ec.share != null ? Number(ec.share) : null,
-        factor: ec.factor != null ? Number(ec.factor) : null,
-        type: ec.type || '',
-        direction: ec.direction || '',
-        since: hist.length ? new Date(hist.map((h) => h.dateFrom).filter(Boolean).sort()[0]) : null,
-      } : null,
+      tariffClass: d.tariffClass || '',
+      communities,
+      participation: normalizeParticipation(d.participationHistory),
+      // Kurzform für ältere Ansichten: erste aktive Gemeinschaft
+      energyCommunity: first ? { share: first.share, factor: first.factor, type: first.type, direction: first.direction, since: first.since, id: first.id } : null,
     });
     byId.set(d.extUI, e);
   }
   return [...byId.values()].filter((p) => p.id);
+}
+
+const STATUS = { active: 'aktiv', open: 'beantragt', terminated: 'beendet' };
+const date = (x) => (x ? new Date(x) : null);
+const num0 = (x) => (x == null || x === '' ? null : Number(x));
+
+/** Teilnahmen an Energiegemeinschaften aus den Freigaben (aktiv, beantragt, beendet) */
+export function normalizeCommunities(d) {
+  const out = [];
+  const approvals = (d && d.approvals) || {};
+  for (const [key, status] of Object.entries(STATUS)) {
+    for (const a of approvals[key] || []) {
+      const ec = a && a.energyCommunity;
+      if (!ec || !(ec.id || ec.type)) continue;
+      const consent = a.consent || {};
+      const request = a.request || {};
+      out.push({
+        id: ec.id || '',
+        type: ec.type || '',
+        direction: ec.direction === 'G' ? 'Einspeisung' : ec.direction === 'C' ? 'Bezug' : ec.direction || '',
+        model: (ec.gcDisModel || d.gcDisModel || '').toUpperCase() === 'S' ? 'statisch' : (ec.gcDisModel || d.gcDisModel || '').toUpperCase() === 'D' ? 'dynamisch' : '',
+        share: num0(ec.share),
+        factor: num0(ec.factor),
+        status,
+        since: date(consent.dateFrom),
+        until: date(consent.dateTo),
+        requested: request.history && request.history.length ? date(request.history[0].createdAt) : null,
+        partner: request.serviceProvider || '',
+      });
+    }
+  }
+  // dieselbe Gemeinschaft nur einmal (aktiv vor beantragt vor beendet)
+  const seen = new Set();
+  return out.filter((c) => { const k = c.id + c.direction; if (seen.has(k)) return false; seen.add(k); return true; });
+}
+
+/** Verlauf der Teilnahmefaktoren: [{from, to, community, factor}] neueste zuerst */
+export function normalizeParticipation(list) {
+  return (Array.isArray(list) ? list : [])
+    .map((x) => ({ from: date(x.dateFrom), to: date(x.dateTo), community: x.leadPod || '', factor: num0(x.ecFactor) }))
+    .filter((x) => x.from && x.community)
+    .sort((a, b) => b.from - a.from || String(a.community).localeCompare(b.community));
+}
+
+/** Aktueller Teilnahmefaktor eines Zählpunkts an einer Gemeinschaft */
+export function currentFactor(pod, communityId, now = new Date()) {
+  const list = (pod && pod.participation) || [];
+  const hit = list.find((x) => x.community === communityId && x.from <= now && (!x.to || x.to >= new Date(now.getFullYear(), now.getMonth(), now.getDate())));
+  return hit ? hit.factor : null;
 }
 
 export function normalizeContracts(list = []) {

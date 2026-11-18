@@ -580,9 +580,10 @@ body::after {
   .content > .hero { grid-column: 1; grid-row: 2; padding-top: 22px; }
   .content > .kpis { grid-column: 1; grid-row: 3; grid-template-columns: 1fr 1fr; }
   .content > .panel--main { grid-column: 2; grid-row: 2 / span 2; margin-left: 0; }
-  .content > .analysis { grid-column: 1 / -1; grid-row: 4; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .content > .panel--table { grid-column: 1 / -1; grid-row: 5; }
-  .content > .foot { grid-column: 1 / -1; grid-row: 6; }
+  .content > .panel--costs { grid-column: 1 / -1; grid-row: 4; }
+  .content > .analysis { grid-column: 1 / -1; grid-row: 5; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .content > .panel--table { grid-column: 1 / -1; grid-row: 6; }
+  .content > .foot { grid-column: 1 / -1; grid-row: 7; }
   .analysis > .panel:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .analysis > .panel:nth-child(odd):not(:last-child) { margin-right: 0; }
   .kpi:nth-child(3n) { border-right: 1px solid var(--line); }
@@ -614,14 +615,80 @@ body::after {
     .content > .hero { grid-column: 1; grid-row: 2; }
     .content > .kpis { grid-column: 1; grid-row: 3; }
     .content > .panel--main { grid-column: 2; grid-row: 2 / span 2; margin-left: 0; margin-right: 0; }
-    .content > .analysis { grid-column: 1 / -1; grid-row: 4; }
-    .content > .panel--table { grid-column: 1 / -1; grid-row: 5; }
-    .content > .foot { grid-column: 1 / -1; grid-row: 6; }
+    .content > .panel--costs { grid-column: 1 / -1; grid-row: 4; }
+    .content > .analysis { grid-column: 1 / -1; grid-row: 5; }
+    .content > .panel--table { grid-column: 1 / -1; grid-row: 6; }
+    .content > .foot { grid-column: 1 / -1; grid-row: 7; }
     .chart--main, .chart--main.chart--tall { height: calc(100vh - 150px); min-height: 220px; }
     .controls { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); column-gap: 12px; align-items: center; }
     .controls .chips { grid-column: 1 / -1; }
   }
 }
+
+
+/* ------------------------------------------------------------ Kosten, Erinnerung, Störung, Kontakt (1.2) */
+.btn .ic, .btn--small .ic { display: inline-flex; }
+.btn { gap: 8px; }
+.btn--quiet { color: var(--ink-2); box-shadow: none; background: transparent; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.link-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; color: var(--series-1); font-weight: 500; text-align: left; }
+.link-btn .ic { flex: 0 0 auto; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-group { padding: 10px 0 2px; border-top: 1px solid var(--line); margin-top: 8px; }
+.field-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 2px; }
+.more--inline summary { padding-top: 6px; }
+.status-line { font-size: 14px; color: var(--ink-2); }
+.note--warn { color: var(--ink-2); background: var(--paper); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+
+.hero-notice { margin-top: 12px; }
+.notice { display: grid; grid-template-columns: 24px 1fr; gap: 4px 10px; padding: 12px 14px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--series-4); }
+.notice > .ic { color: var(--series-4); margin-top: 2px; }
+.notice-text { display: grid; gap: 2px; font-size: 14px; }
+.notice-text b { font-weight: 600; font-size: 15px; }
+.notice-text span { color: var(--ink-2); }
+.notice-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+
+.stackbar { display: flex; gap: 2px; height: 14px; margin-top: 12px; border-radius: 7px; overflow: hidden; }
+.stackbar span { display: block; min-width: 3px; }
+.stackbar-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 13px; color: var(--ink-2); }
+.tbl--costs td small, .tbl--costs th small, .tbl--prices th small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 2px; }
+.tbl--costs tr.cost-group th, .tbl--costs tr.cost-group td { padding-top: 14px; color: var(--ink); font-size: 14px; font-weight: 600; border-bottom: 1px solid var(--axis); }
+.tbl--costs tr:not(.cost-group):not(.cost-total) td:first-child { padding-left: 16px; color: var(--ink-2); }
+.tbl--costs tr.cost-total th, .tbl--costs tr.cost-total td { font-size: 16px; font-weight: 600; color: var(--ink); border-bottom: 0; padding-top: 12px; }
+.tbl--costs td.num, .tbl--prices td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tbl--prices th[scope="row"] { color: var(--ink); font-size: 14px; font-weight: 500; }
+
+.badge { flex: 0 0 auto; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: var(--paper); color: var(--ink-2); }
+.badge--aktiv { color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--good-ic); }
+.badge--beantragt { box-shadow: inset 0 0 0 1.5px var(--series-4); }
+.member-list, .ec-inline { display: grid; gap: 4px; }
+.member { display: flex; align-items: center; gap: 2px; }
+.card-head > .ic { color: var(--series-1); }
+
+.callcards { display: grid; gap: 10px; padding: 12px 14px 0; }
+.callcard {
+  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 12px;
+  padding: 16px; border-radius: 16px; text-align: left;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line);
+}
+.callcard > .ic { color: var(--ink-2); }
+.callcard-text { display: grid; gap: 2px; min-width: 0; }
+.callcard-label { font-size: 14px; color: var(--ink-2); }
+.callcard-number { font: 600 26px/1.15 var(--font-num); letter-spacing: 0.01em; color: var(--ink); }
+.callcard small { font-size: 13px; color: var(--muted); }
+.callcard-go { font-weight: 600; font-size: 14px; padding: 8px 14px; border-radius: 18px; box-shadow: inset 0 0 0 1px var(--axis); color: var(--ink); }
+.callcard--primary { background: var(--meter-frame); box-shadow: none; }
+.callcard--primary > .ic, .callcard--primary .callcard-label, .callcard--primary small { color: rgba(255, 255, 255, 0.78); }
+.callcard--primary .callcard-number { color: #fff; font-size: 30px; }
+.callcard--primary .callcard-go { background: var(--meter-red); color: #fff; box-shadow: none; }
+.center-list { list-style: none; margin: 8px 0 12px; padding: 0; }
+.center-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.center-list li:first-child { border-top: 0; }
+.center-text { flex: 1; display: grid; gap: 2px; font-size: 15px; }
+.center-text span { color: var(--ink-2); font-size: 14px; }
+.plain-list--links { list-style: none; padding-left: 0; gap: 0; }
+.nav-sep { height: 1px; background: var(--line); margin: 6px 12px; }
+@media (min-width: 700px) { .callcards { padding: 14px 14px 0; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

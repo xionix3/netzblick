@@ -173,6 +173,8 @@ function handleMaxPower(url) {
 
 const b64url = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 const DEMO_CUSTOMER = '1000000001';
+// erfundene Gemeinschafts-IDs im Format der echten
+const DEMO_EC = { beg: 'ATCC0000DEMOCC000001000000000001', eeg: 'AT00900000000RC000002000000000001' };
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const DEMO_JWT = `${b64url({ alg: 'none', typ: 'JWT' })}.${b64url({ 'custom:customerNr': DEMO_CUSTOMER, email: 'demo@example.at', exp: 4102444800 })}.demo`;
 
@@ -229,8 +231,23 @@ function handleKp(method, path, data) {
           contractDateFrom: i === 0 ? '2016-04-01' : '2021-09-15',
           details: 'AT000000/Musterstrom GmbH',
           net: { serialNr: i === 0 ? '1KFM0200012345' : '1KFM0200054321', deviceType: 'IME', gridUsageLevel: '7', loadProfileType: i === 0 ? 'H0' : 'HA', lastBillingPeriod: periodText(last.from, last.to) },
-          approvals: { active: i === 0 ? [{ dataType: 'EnergyCommunity', energyCommunity: { share: '50', factor: '1', type: 'Erneuerbare-Energie-Gemeinschaft', direction: 'consumption' } }] : [] },
-          participationHistory: i === 0 ? [{ dateFrom: '2024-03-01' }] : [],
+          tariffClass: i === 0 ? 'N' : 'U',
+          gcDisModel: 'D',
+          approvals: {
+            active: [
+              { dataType: 'EnergyCommunityRegistration', energyCommunity: { id: DEMO_EC.beg, direction: 'C', type: 'CC', gcDisModel: 'D', share: 0, factor: 0 }, consent: { dateFrom: '2025-03-01', dateTo: '' }, request: { serviceProvider: 'CC000001', history: [{ status: 1, createdAt: '2025-02-20T09:00:00Z' }] } },
+              ...(i === 0 ? [{ dataType: 'EnergyCommunityRegistration', energyCommunity: { id: DEMO_EC.eeg, direction: 'C', type: 'RC_R', gcDisModel: 'D', share: 0, factor: 0 }, consent: { dateFrom: '2026-04-01', dateTo: '' }, request: { serviceProvider: 'RC000002', history: [{ status: 1, createdAt: '2026-03-15T09:00:00Z' }] } }] : []),
+            ],
+            open: [],
+            terminated: [],
+          },
+          participationHistory: i === 0
+            ? [
+              { dateFrom: '2025-03-01', dateTo: '2026-03-31', leadPod: DEMO_EC.beg, ecFactor: 100 },
+              { dateFrom: '2026-04-01', dateTo: '', leadPod: DEMO_EC.beg, ecFactor: 60 },
+              { dateFrom: '2026-04-01', dateTo: '', leadPod: DEMO_EC.eeg, ecFactor: 40 },
+            ]
+            : [{ dateFrom: '2025-03-01', dateTo: '', leadPod: DEMO_EC.beg, ecFactor: 100 }],
         };
       }),
     };

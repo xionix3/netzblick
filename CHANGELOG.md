@@ -5,6 +5,23 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.2.0] – 2026-11-18
+
+### Neu
+- **Strompreis und Kosten:** Arbeitspreis und Grundpreis des Lieferanten eintragen (auch je Zählpunkt, z. B. für eine Wärmepumpe). Netzkosten rechnet Netzblick selbst nach dem Preisblatt von Netz Burgenland 2025/2026, samt Sommer-Niedertarif (1.4.–30.9., 10–16 Uhr) aus den Viertelstundenwerten, Pauschale und Messentgelt. Dazu Elektrizitätsabgabe, Erneuerbaren-Förderpauschale und -Förderbeitrag sowie 20 % USt.
+- **Kostenaufstellung** in der Übersicht: Energie, Netz Burgenland, Steuern und Abgaben mit Anteilsbalken; Kosten pro Tag und Hochrechnung auf den Zeitraum.
+- **Was dich ein Jahr kostet:** aus den Messwerten der letzten 12 Monate mit den aktuellen Preisen.
+- **Erinnerung an Rabatt- oder Bindungsende:** Benachrichtigung am Handy, Hinweis in der Übersicht, Kalendereintrag (.ics), Link zum Tarifkalkulator der E-Control.
+- **Seite „Energiegemeinschaft“:** alle Teilnahmen aus dem Kundenportal mit Art der Gemeinschaft, Gemeinschafts-ID, Marktpartner, Richtung, Aufteilung (dynamisch/statisch), Status, Teilnahmefaktor je Zählpunkt und Verlauf.
+- **Seite „Störung“:** Störungsdienst und Stromnotruf direkt anrufen, Hinweise vor dem Anruf, Störungskarte, Online-Meldung.
+- **Seite „Kontakt“:** Kundentelefon, E-Mail, Kontaktformular, Servicezentren mit Karte, Themen-Links.
+- Netztarif je Zählpunkt aus dem Kundenportal (Haushalt oder unterbrechbar) fließt in die Kosten ein.
+
+### Geändert
+- Abrechnungsjahr: Hochrechnung immer mit den 12 Monaten davor; Zwischenabrechnungen (z. B. „Oktober 2026 bis Oktober 2026“) werden erkannt.
+- Der bisherige Gesamtpreis in den Einstellungen gilt weiter, bis ein Lieferantenpreis eingetragen ist.
+- Menü in Gruppen: Verbrauch, Strompreis, Abrechnung · Anlagen, Energiegemeinschaft · Störung, Kontakt · Konto, Einstellungen, Info.
+
 ## [1.1.1] – 2026-11-18
 
 ### Behoben
@@ -53,7 +70,8 @@ Erste Version.
 - Kennzeichnung von Ersatz-, vorläufigen und fehlenden Werten.
 - Offline-Anzeige zuletzt geladener Werte, Dunkelmodus, Demo-Modus.
 
-[Unveröffentlicht]: https://github.com/xionix3/netzblick/compare/v1.1.1...HEAD
+[Unveröffentlicht]: https://github.com/xionix3/netzblick/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/xionix3/netzblick/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/xionix3/netzblick/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/xionix3/netzblick/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/xionix3/netzblick/releases/tag/v1.0.0

@@ -3,6 +3,7 @@ import { Capacitor, CapacitorHttp, SystemBars, SystemBarsStyle, registerPlugin }
 import { App } from '@capacitor/app';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export const isNative = Capacitor.isNativePlatform();
 
@@ -73,18 +74,65 @@ export function saveSettings(s) {
 
 /* ------------------------------------------------------------ Teilen / Export */
 export async function shareCsv(filename, csv) {
+  return shareFile(filename, '\ufeff' + csv, 'text/csv;charset=utf-8', 'Werte teilen');
+}
+
+/** Textdatei teilen (App) bzw. herunterladen (Browser) */
+export async function shareFile(filename, text, mime, dialogTitle = 'Teilen') {
   if (isNative) {
-    const res = await Filesystem.writeFile({ path: filename, data: '﻿' + csv, directory: Directory.Cache, encoding: Encoding.UTF8 });
-    await Share.share({ title: filename, url: res.uri, dialogTitle: 'Werte teilen' });
+    const res = await Filesystem.writeFile({ path: filename, data: text, directory: Directory.Cache, encoding: Encoding.UTF8 });
+    await Share.share({ title: filename, url: res.uri, dialogTitle });
     return;
   }
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob([text], { type: mime });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+/* ------------------------------------------------------------ Erinnerungen (lokale Benachrichtigung) */
+export const REMINDER_ID = 4711;
+
+/** Erinnerung planen. Ergebnis: 'ok' | 'denied' | 'unsupported' */
+export async function scheduleReminder({ id = REMINDER_ID, at, title, body }) {
+  if (!isNative) return 'unsupported';
+  let perm = await LocalNotifications.checkPermissions();
+  if (perm.display !== 'granted') perm = await LocalNotifications.requestPermissions();
+  if (perm.display !== 'granted') return 'denied';
+  await LocalNotifications.cancel({ notifications: [{ id }] }).catch(() => {});
+  // ungenaue Weckzeit genügt (keine Sonderberechtigung für exakte Alarme nötig)
+  await LocalNotifications.schedule({
+    notifications: [{ id, title, body, schedule: { at, allowWhileIdle: true }, isExactNotification: false, smallIcon: 'ic_stat_netzblick', iconColor: '#2A78D6' }],
+  });
+  return 'ok';
+}
+
+export async function cancelReminder(id = REMINDER_ID) {
+  if (!isNative) return;
+  await LocalNotifications.cancel({ notifications: [{ id }] }).catch(() => {});
+}
+
+/** Ist die Erinnerung noch eingeplant? (null = unbekannt, z. B. im Browser) */
+export async function reminderPending(id = REMINDER_ID) {
+  if (!isNative) return null;
+  try {
+    const { notifications } = await LocalNotifications.getPending();
+    return notifications.some((n) => n.id === id);
+  } catch { return null; }
+}
+
+/** Externe Adresse öffnen (Telefon, E-Mail, Karte, Webseite) */
+export function openExternal(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  // In der App öffnet Capacitor fremde Adressen im Browser bzw. in der passenden App (Telefon, Mail, Karten)
+  if (!isNative && /^https?:/.test(url)) { a.target = '_blank'; a.rel = 'noopener'; }
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 /* ------------------------------------------------------------ System */
