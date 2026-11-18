@@ -71,6 +71,7 @@ function power(kind, t) {
   if (h >= 18 && h < 19 && rnd(di, 3) > 0.35) kw += 2.4 * n; // Kochen
   if (rnd(di, 4) > 0.72 && h >= 9 && h < 10.75) kw += 1.9; // Waschmaschine
   if (rnd(di, 6) > 0.7 && (h >= 23 || h < 3)) kw += 3.6; // E-Auto laden
+  if (rnd(di, 7) > 0.985 && h >= 17.5 && h < 19) kw += 11; // E-Auto schnell laden (11-kW-Wallbox)
   return kw;
 }
 

@@ -693,3 +693,47 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ------------------------------------------------------------ 1.3: Leistung */
+.tool-segs { flex: 0 0 auto; display: flex; gap: 6px; margin-left: auto; align-items: center; }
+.tool-segs .type-seg { margin-left: 0; }
+.tool-segs .type-seg[hidden] { display: none; }
+.unit-seg button { width: auto; min-width: 40px; padding: 0 8px; font: 600 13px/1 var(--font-num); letter-spacing: 0.01em; }
+@media (max-width: 420px) {
+  .panel--main .panel-tools { flex-wrap: wrap; }
+  .panel--main .panel-tools .legend { flex-basis: 100%; order: 2; min-height: 0; }
+  .panel--main .panel-tools .legend:empty, .panel--main .panel-tools .legend[hidden] { display: none !important; }
+  .panel--main .tool-segs { order: 1; margin-left: auto; }
+}
+.power-box { display: grid; gap: 6px; margin-top: 8px; }
+.power-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.power-tools .chip { height: 32px; }
+.chip.on { color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.chip-line { width: 18px; height: 0; border-top: 2px dashed currentColor; opacity: 0.8; }
+.chip:not(.on) .chip-line { opacity: 0.35; }
+.power-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; color: var(--ink-2); }
+.power-list li { display: flex; gap: 6px; align-items: flex-start; }
+.power-list li b { color: var(--ink); font-weight: 600; }
+.power-list li.is-over .ic { color: var(--warn); flex: 0 0 auto; margin-top: -1px; }
+.power-list li.is-over .ic svg { width: 18px; height: 18px; }
+.chart--peaks { height: 230px; margin-top: 4px; }
+.peak-cards { display: grid; gap: 14px; margin-top: 10px; }
+.peak-card-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+.peak-card-title small { color: var(--muted); font-weight: 500; }
+.peak-card-title .lg-key { width: 10px; height: 10px; border-radius: 3px; }
+.kpis--page { margin-top: 6px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.kpis--page .kpi-value { font-size: 22px; }
+.peak-details { margin-top: 6px; }
+.peak-details summary { cursor: pointer; color: var(--series-1); font-weight: 500; padding: 6px 0; }
+.tbl tr.is-over td { font-weight: 600; }
+.over-mark { color: var(--warn); font-size: 11px; }
+.tips { margin: 6px 0 10px; padding-left: 20px; display: grid; gap: 8px; max-width: 65ch; }
+.tips b { font-weight: 600; }
+.notice--quiet { box-shadow: inset 0 0 0 1px var(--line); margin-top: 10px; }
+.notice--quiet > .ic { color: var(--ink-2); }
+@media (min-width: 700px) {
+  .kpis--page { grid-template-columns: repeat(4, 1fr); }
+  .kpis--page .kpi { border-bottom: 0; }
+  .kpis--page .kpi:nth-child(2n) { border-right: 1px solid var(--line); }
+  .kpis--page .kpi:last-child { border-right: 0; }
+}

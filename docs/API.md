@@ -181,6 +181,18 @@ Auf Ebene des Zählpunkts liefert `participationHistory[]` den Verlauf: `dateFro
 ### Netzpreise
 
 Die Netzpreise stehen nicht in den Portalen, sondern im Preisblatt Strom im Downloadcenter von Netz Burgenland (PDF, netto). Netzblick hinterlegt sie mit Steuern und Abgaben in `src/netzdaten.js` und rechnet daraus in `src/costs.js`.
+
+**Ab 2027: Leistungspreis.** Grundlage ist der Begutachtungsentwurf der SNE-T-V 2027 (E-Control, 29.10.2026), § 5 Abs. 1 Z 6 lit. a, Bereich Burgenland, Netzebene 7 (netto):
+
+| | bis 10 kW | über 10 kW | Arbeitspreis | Niedertarif (SNAP/WiNAP) |
+|---|---|---|---|---|
+| Haushalt (gemessene Leistung) | 340 Cent/kW/Monat | 510 Cent/kW/Monat | 6,60 ct/kWh | 5,28 ct/kWh |
+| unterbrechbar | – | – | 6,10 ct/kWh | 4,88 ct/kWh |
+
+- Verrechnungsleistung (§ 2 Z 4): höchste Viertelstunde je Monat und Zählpunkt, auf zwei Kommastellen gerundet. Der Anteil bis 10 kW kostet den niedrigen, der Rest den höheren Satz.
+- Pauschale und Messentgelt entfallen; Netzverlust 0. WiNAP: 1.10.–31.3., 23–5 Uhr, ab 1.10.2027.
+- Die Monatsspitzen holt Netzblick je Monat über `api/maxPower` (oben); mit Viertelstundenwerten rechnet es sie selbst.
+- Die endgültige Verordnung erscheint Mitte Dezember 2026; dann `GRID[2027]` in `src/netzdaten.js` prüfen und `draft` entfernen.
 - Rechnet ein **externer Lieferant** ab, antworten `bills` und `part-payment-plan` mit Fehler `ErrCodeExternalServiceProvider`. Das ist kein Defekt; Netzblick zeigt dann einen Hinweis.
 - Das Postfach (`/api/inbox…`) antwortete beim Test mit HTTP 500, ein Endpunkt für Börsenpreise war nicht verfügbar. Beides nutzt Netzblick nicht.
 - Netzblick ruft **nur lesende** Endpunkte auf. Schreibende Aufrufe des Portals (Profil ändern, Zählerstand melden, Verknüpfungen) werden nicht verwendet.

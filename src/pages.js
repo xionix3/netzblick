@@ -3,12 +3,12 @@ import { h, icon, toast, row, brandMark, spinBrand, fillIcons } from './ui.js';
 import { meterLabel, firstDataDate } from './model.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { billingYearStatus, consumptionFor } from './billing.js';
-import { yearCost, meterCost, sumCosts, supplierFor } from './costs.js';
-import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, ecTypeLabel } from './netzdaten.js';
+import { yearCost, meterCost, sumCosts, supplierFor, forYear, powerCharge, tariffClassOf } from './costs.js';
+import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, ecTypeLabel } from './netzdaten.js';
 import { currentFactor } from './kundenportal.js';
 import { reminderIcs, reminderTime } from './reminder.js';
 import { makePeriod, addDays, startOfDay, daysBetween } from './time.js';
-import { num, kwh, euro, pct, dateNum, dateLong, time, MONTHS_LONG } from './format.js';
+import { num, kwh, kw, euro, pct, dateNum, dateLong, time, MONTHS_LONG } from './format.js';
 import * as charts from './charts.js';
 import { secure, saveSettings, scheduleReminder, cancelReminder, reminderPending, shareFile, openExternal, isNative } from './platform.js';
 import { cacheClear } from './cache.js';
@@ -507,7 +507,13 @@ export function renderTariff(body, ctx) {
       const r = await state.store.load(mp, 'consumption', from, today, 'daily');
       const pts = r.points.filter((p) => p.v != null);
       if (!pts.length) continue;
-      list.push(meterCost(pts.map((p) => ({ ...p, t: new Date(today.getFullYear(), p.t.getMonth(), p.t.getDate()) })), { fine: false, from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), ...ctx.costOptions(mp) }));
+      // Ab 2027: Leistungspreis mit den Monatsspitzen derselben 12 Monate
+      let peaks = null;
+      if (forYear(GRID, today.getFullYear()).data.nm.lpKw) {
+        const mp12 = await state.store.monthlyPeaks(mp, 'consumption', new Date(from.getFullYear(), from.getMonth() + 1, 1), today).catch(() => []);
+        peaks = new Map(mp12.filter((m) => m.kw != null).map((m) => [`${today.getFullYear()}-${String(m.start.getMonth() + 1).padStart(2, '0')}`, m.kw]));
+      }
+      list.push(meterCost(pts.map((p) => ({ ...p, t: new Date(today.getFullYear(), p.t.getMonth(), p.t.getDate()) })), { fine: false, peaks, from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), ...ctx.costOptions(mp) }));
     }
     yearBox.textContent = '';
     if (!list.length) { yearBox.append(h('p', { class: 'empty', text: 'Noch keine Messwerte.' })); return; }
@@ -521,12 +527,11 @@ export function renderTariff(body, ctx) {
         row('Netz Burgenland', euro(c.gridGross)),
         row('Steuern und Abgaben', euro(c.leviesGross)),
         row('Durchschnitt je kWh', c.total != null && c.kwh ? ct((c.total / c.kwh) * 100, 1) : null)),
-      h('p', { class: 'note', text: `Mit den Preisen von ${latestYear(GRID)}, brutto. Aus Tageswerten, daher ohne Sommer-Niedertarif; die Übersicht rechnet ihn mit Viertelstundenwerten genau.` }));
+      h('p', { class: 'note', text: `Mit den Preisen von ${forYear(GRID, today.getFullYear()).year}, brutto. Aus Tageswerten, daher ohne Niedertarife${c.peakUnknown ? ' und ohne Leistungspreis' : ''}; die Übersicht rechnet sie mit Viertelstundenwerten genau.` }));
   })().catch(() => { yearBox.textContent = ''; yearBox.append(h('p', { class: 'empty', text: 'Messwerte konnten nicht geladen werden.' })); });
 
   /* ---- 4) Netzpreise */
-  const gy = latestYear(GRID);
-  const g = GRID[gy];
+  const { year: gy, data: g } = forYear(GRID, new Date().getFullYear());
   const both = (a, b, fmt) => [fmt(a), fmt(b)];
   const gross = (x) => x * (1 + VAT);
   const priceRow = (label, vals, sub) => h('tr', {}, h('th', { scope: 'row' }, label, sub ? h('small', { text: sub }) : null), ...vals.map((v) => h('td', { class: 'num', text: v })));
@@ -542,8 +547,11 @@ export function renderTariff(body, ctx) {
         g.nm.snap != null ? priceRow('Sommer-Niedertarif je kWh', both(g.nm.snap, g.u.snap, (x) => ct(gross(x))), '1. April bis 30. September, 10–16 Uhr') : null,
         priceRow('Netznutzung Pauschale', both(g.nm.lp, g.u.lp, (x) => (x ? `${euro(gross(x))} / Jahr` : '–'))),
         priceRow('Netzverlust je kWh', both(g.nm.loss, g.u.loss, (x) => ct(gross(x)))),
-        priceRow('Messentgelt', [`${euro(gross(METERING.three))} / Monat`, `${euro(gross(METERING.three))} / Monat`], `Drehstrom; Wechselstrom ${euro(gross(METERING.single))}`)))),
-    assign.length && pods.length ? h('p', { class: 'hint', text: `Deine Zählpunkte: ${assign.join(', ')}.` }) : null));
+        priceRow('Messentgelt', [`${euro(gross(g.metering.three))} / Monat`, `${euro(gross(g.metering.three))} / Monat`], `Drehstrom; Wechselstrom ${euro(gross(g.metering.single))}`)))),
+    assign.length && pods.length ? h('p', { class: 'hint', text: `Deine Zählpunkte: ${assign.join(', ')}.` }) : null,
+    gy < 2027 ? h('div', { class: 'notice notice--quiet' }, icon('gauge'),
+      h('div', { class: 'notice-text' }, h('b', { text: 'Ab 2027 kommt der Leistungspreis.' }), h('span', { text: `Die Pauschale fällt weg, dafür zählt die höchste Viertelstunde jedes Monats: bis ${POWER_TARIFF.limitKw} kW ${euro(gross(GRID[2027].nm.lpKw.low))}, darüber ${euro(gross(GRID[2027].nm.lpKw.high))} je kW und Monat (Entwurf).` })),
+      h('div', { class: 'notice-actions' }, h('button', { class: 'btn btn--small', type: 'button', onclick: () => ctx.goto('power') }, 'Deine Spitzen ansehen'))) : null));
 
   /* ---- 5) Steuern und Abgaben */
   const ly = latestYear(LEVIES);
@@ -557,6 +565,152 @@ export function renderTariff(body, ctx) {
     h('p', { class: 'note', text: `Stand ${STAND}. Neue Preisblätter gelten meist ab 1. Jänner.` }),
     h('ul', { class: 'plain-list' }, ...PRICE_SOURCES.map((src) => h('li', {}, h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(src.url) }, src.label))))));
 }
+
+/* ================================================================ Leistung (Leistungspreis ab 2027) */
+export function renderPower(body, ctx) {
+  const { state, names } = ctx;
+  const limit = POWER_TARIFF.limitKw;
+  const g27 = GRID[2027];
+  const lp = g27.nm.lpKw;
+  const gross = (x) => x * (1 + VAT);
+  const mps = state.mps.filter((m) => m.flows.consumption);
+  body.append(h('p', { class: 'page-lead', text: 'Ab 2027 zahlst du fürs Netz auch nach Leistung. Es zählt die höchste Viertelstunde jedes Monats, für jeden Zählpunkt extra.' }));
+
+  /* ---- 1) Monatsspitzen */
+  const peaksBox = h('div', {}, h('p', { class: 'hint' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Lade Monatsspitzen …'));
+  body.append(section('Deine Monatsspitzen', `Höchste Viertelstunde je Monat, letzte 13 Monate. Die Linie zeigt ${limit} kW: Darüber kostet jedes kW mehr.`, peaksBox));
+
+  /* ---- 2) Vergleich */
+  const cmpBox = h('div', {}, h('p', { class: 'hint', text: 'Rechne …' }));
+  body.append(section('Netzkosten: 2026 und ab 2027', 'Deine letzten 12 Monate, einmal mit den Netzpreisen 2026 und einmal mit dem neuen Leistungspreis. Brutto, ohne Niedertarife, Steuern und Abgaben.', cmpBox));
+
+  /* ---- 3) So wird gerechnet */
+  const u = g27.u;
+  body.append(section('So rechnet Netz Burgenland ab 2027', `Netzebene 7, brutto inklusive 20 % USt. ${POWER_TARIFF.status}.`,
+    dl(
+      row(`Leistungspreis bis ${limit} kW`, `${euro(gross(lp.low))} je kW und Monat`),
+      row(`Anteil über ${limit} kW`, `${euro(gross(lp.high))} je kW und Monat`),
+      row('Arbeitspreis Netz', `${ct(gross(g27.nm.ap))} je kWh (2026: ${ct(gross(GRID[2026].nm.ap))})`),
+      row('Niedertarife', `${ct(gross(g27.nm.snap))} je kWh im Sommer (1.4.–30.9., 10–16 Uhr), ab Oktober 2027 auch im Winter (1.10.–31.3., 23–5 Uhr)`),
+      row('Unterbrechbar (z. B. Wärmepumpe)', `${ct(gross(u.ap))} je kWh, kein Leistungspreis`),
+      row('Pauschale und Messentgelt', `entfallen (2026: ${euro(gross(GRID[2026].nm.lp))} und bis zu ${euro(gross(METERING.three * 12))} im Jahr)`),
+      stack(row('Beispiel', `Spitze 6 kW: 6 × ${euro(gross(lp.low))} = ${euro(gross(powerCharge(6, lp)))} im Monat. Spitze 12 kW: ${limit} × ${euro(gross(lp.low))} + 2 × ${euro(gross(lp.high))} = ${euro(gross(powerCharge(12, lp)))} im Monat.`))),
+    h('p', { class: 'note', text: 'Gezählt wird die mittlere Leistung einer ganzen Viertelstunde, auf zwei Kommastellen gerundet. Kurze Spitzen beim Einschalten fallen kaum ins Gewicht. Die endgültigen Preise legt die E-Control Mitte Dezember 2026 fest; Netz Burgenland kündigt die Umstellung für Jänner 2027 an.' })));
+
+  /* ---- 4) Tipps */
+  body.append(section(`So bleibst du unter ${limit} kW`, null,
+    h('ul', { class: 'tips' },
+      h('li', {}, h('b', { text: 'E-Auto: ' }), `Eine 11-kW-Wallbox liegt allein schon über ${limit} kW. Mit weniger Leistung laden oder dann, wenn sonst wenig läuft.`),
+      h('li', {}, h('b', { text: 'Große Geräte nacheinander: ' }), 'Herd und Backofen, Geschirrspüler, Waschmaschine, Trockner, Durchlauferhitzer oder Sauna nicht gleichzeitig.'),
+      h('li', {}, h('b', { text: 'Wärmepumpe und Heizstab: ' }), 'Auf einem eigenen, unterbrechbaren Zählpunkt fällt laut Entwurf kein Leistungspreis an.'),
+      h('li', {}, h('b', { text: 'Flexible Leistung: ' }), 'Wer dem Netzbetreiber erlaubt, die Leistung zeitweise zu begrenzen, zahlt dafür einen deutlich niedrigeren Leistungspreis.')),
+    h('button', { class: 'btn btn--small', type: 'button', onclick: () => ctx.showUsage(null, makePeriod('month', new Date()), { power: true }) }, icon('gauge'), 'Viertelstunden dieses Monats ansehen')));
+
+  body.append(section('Quellen', null,
+    h('ul', { class: 'plain-list' }, ...POWER_TARIFF.sources.map((src) => h('li', {}, h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(src.url) }, icon('external'), src.label))))));
+
+  if (!mps.length) { peaksBox.textContent = ''; peaksBox.append(h('p', { class: 'empty', text: 'Keine Zählpunkte mit Verbrauch.' })); cmpBox.textContent = ''; return; }
+
+  (async () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - 12, 1);
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const data = [];
+    for (const mp of mps) {
+      const peaks = await state.store.monthlyPeaks(mp, 'consumption', from, now);
+      data.push({ mp, name: meterLabel(mp, names, { compact: true }), color: ctx.meterColor(mp), peaks, interruptible: tariffClassOf(ctx.podFor(mp.id)) === 'u' });
+    }
+    if (!body.isConnected) return;
+    renderPeaks(peaksBox, data, { from, thisMonth, limit, lp, gross });
+    const kwhs = [];
+    for (const x of data) {
+      const r = await state.store.load(x.mp, 'consumption', from, thisMonth, 'daily');
+      kwhs.push(r.points.reduce((a, p) => a + (p.v || 0), 0));
+    }
+    if (!body.isConnected) return;
+    renderPowerCompare(cmpBox, data, kwhs, { thisMonth, lp, gross, ctx });
+  })().catch((e) => {
+    peaksBox.textContent = '';
+    peaksBox.append(h('p', { class: 'empty', text: e instanceof ApiError ? e.message : 'Die Monatsspitzen konnten nicht geladen werden.' }));
+    cmpBox.textContent = '';
+  });
+}
+
+function renderPeaks(box, data, { from, thisMonth, limit, lp, gross }) {
+  box.textContent = '';
+  const axis = [];
+  for (let m = new Date(from); m <= thisMonth; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) axis.push(m);
+  const at = (x, m) => x.peaks.find((p) => p.start.getTime() === m.getTime()) || null;
+  const chart = h('div', { class: 'chart chart--peaks' });
+  const legend = data.length > 1 ? h('div', { class: 'legend' }, ...data.map((x) => h('span', { class: 'lg' }, h('span', { class: 'lg-key lg-key--bar', style: `background:${x.color}` }), x.name))) : null;
+  box.append(...[legend, chart].filter(Boolean));
+
+  const cards = h('div', { class: 'peak-cards' });
+  for (const x of data) {
+    const done = x.peaks.filter((p) => p.start < thisMonth && p.kw != null);
+    const cur = x.peaks.find((p) => p.start.getTime() === thisMonth.getTime());
+    const best = done.reduce((a, p) => (!a || p.kw > a.kw ? p : a), null);
+    const over = done.filter((p) => p.kw > limit).length;
+    const yearLp = done.length ? done.reduce((a, p) => a + powerCharge(p.kw, lp), 0) * (12 / done.length) : null;
+    const tiles = h('div', { class: 'kpis kpis--page' },
+      kpiTile('Höchste Spitze', best ? kw(best.kw) : '–', best && best.t ? `${dateNum(best.t)}, ${time(best.t)} Uhr` : 'letzte 12 Monate'),
+      kpiTile(`Über ${limit} kW`, done.length ? (over ? `${over} von ${done.length}` : 'nie') : '–', over ? 'Monaten' : `in ${done.length} Monaten`),
+      kpiTile('Dieser Monat bisher', cur && cur.kw != null ? kw(cur.kw) : '–', cur && cur.t ? `${dateNum(cur.t)}, ${time(cur.t)} Uhr` : MONTHS_LONG[thisMonth.getMonth()]),
+      kpiTile('Leistungspreis ab 2027', x.interruptible ? 'keiner' : yearLp == null ? '–' : `${euro(gross(yearLp))}`, x.interruptible ? 'unterbrechbarer Zählpunkt' : 'im Jahr mit diesen Spitzen'));
+    const rows = [...x.peaks].reverse().map((p) => h('tr', { class: p.kw != null && p.kw > limit ? 'is-over' : '' },
+      h('td', { text: monthYear(p.start) }),
+      h('td', { class: 'num' }, p.kw != null && p.kw > limit ? h('span', { class: 'over-mark', title: `über ${limit} kW`, 'aria-label': `über ${limit} kW` }, '▲ ') : null, p.kw == null ? '–' : kw(p.kw)),
+      h('td', { text: p.t ? `${dateNum(p.t)}, ${time(p.t)}` : '' }),
+      h('td', { class: 'num', text: x.interruptible || p.kw == null ? '–' : euro(gross(powerCharge(p.kw, lp))) })));
+    cards.append(h('div', { class: 'peak-card' },
+      data.length > 1 ? h('h3', { class: 'peak-card-title' }, h('span', { class: 'lg-key', style: `background:${x.color}` }), x.name, x.interruptible ? h('small', { text: ' unterbrechbar' }) : null) : null,
+      tiles,
+      h('details', { class: 'peak-details' }, h('summary', { text: 'Alle Monate' }),
+        h('div', { class: 'tbl-scroll' }, h('table', { class: 'tbl' },
+          h('thead', {}, h('tr', {}, h('th', { scope: 'col', text: 'Monat' }), h('th', { scope: 'col', class: 'num', text: 'Spitze' }), h('th', { scope: 'col', text: 'Zeitpunkt' }), h('th', { scope: 'col', class: 'num', text: 'Leistungspreis' }))),
+          h('tbody', {}, ...rows))),
+        h('p', { class: 'note', text: 'Leistungspreis brutto, mit den Preisen ab 2027 (Entwurf) auf diese Spitzen gerechnet.' }))));
+  }
+  box.append(cards);
+  const T = charts.tokens();
+  charts.render(chart, charts.powerOption(T, { bucket: 'month', axis, days: 400, limit, series: data.map((x) => ({ name: x.name, color: x.color, data: axis.map((m) => { const p = at(x, m); return { v: p ? p.kw : null, t: p ? p.t : null }; }) })) }));
+  fillIcons(box);
+}
+
+function renderPowerCompare(box, data, kwhs, { thisMonth, lp, gross, ctx }) {
+  box.textContent = '';
+  const rows = [];
+  let sumOld = 0, sumNew = 0, partial = false;
+  data.forEach((x, i) => {
+    const done = x.peaks.filter((p) => p.start < thisMonth);
+    const known = done.filter((p) => p.kw != null);
+    if (!kwhs[i] || !known.length) return;
+    if (known.length < done.length) partial = true;
+    const fill = Math.max(...known.map((p) => p.kw)); // fehlende Monate vorsichtig mit der höchsten Spitze
+    const peaks = new Map(done.map((p) => [String(p.start.getMonth() + 1).padStart(2, '0'), p.kw != null ? p.kw : fill]));
+    const opts = ctx.costOptions(x.mp);
+    const old = yearCost(kwhs[i], { year: 2026, ...opts }).gridGross;
+    const neu = yearCost(kwhs[i], { year: 2027, peakKw: peaks, ...opts }).gridGross;
+    sumOld += old; sumNew += neu;
+    rows.push(h('tr', {}, h('th', { scope: 'row' }, data.length > 1 ? h('span', { class: 'lg-key', style: `background:${x.color}` }) : null, data.length > 1 ? ` ${x.name}` : 'Netz', h('small', { text: `${kwh(kwhs[i])}${x.interruptible ? ', unterbrechbar' : ''}` })),
+      h('td', { class: 'num', text: euro(old) }), h('td', { class: 'num', text: euro(neu) }), h('td', { class: 'num', text: signedEuro(neu - old) })));
+  });
+  if (!rows.length) { box.append(h('p', { class: 'empty', text: 'Für den Vergleich fehlen Messwerte.' })); return; }
+  if (rows.length > 1) rows.push(h('tr', { class: 'cost-total' }, h('th', { scope: 'row', text: 'Zusammen' }), h('td', { class: 'num', text: euro(sumOld) }), h('td', { class: 'num', text: euro(sumNew) }), h('td', { class: 'num', text: signedEuro(sumNew - sumOld) })));
+  const diff = sumNew - sumOld;
+  box.append(
+    h('p', { class: 'big-label' }, h('b', { text: Math.abs(diff) < 1 ? 'Etwa gleich viel' : `Rund ${euro(Math.abs(diff))} ${diff < 0 ? 'weniger' : 'mehr'}` }), ' im Jahr fürs Netz, wenn deine Spitzen so bleiben.'),
+    h('div', { class: 'tbl-scroll' }, h('table', { class: 'tbl tbl--costs' },
+      h('thead', {}, h('tr', {}, h('th', { scope: 'col' }), h('th', { scope: 'col', class: 'num', text: '2026' }), h('th', { scope: 'col', class: 'num', text: 'ab 2027' }), h('th', { scope: 'col', class: 'num', text: 'Unterschied' }))),
+      h('tbody', {}, ...rows))),
+    h('p', { class: 'note', text: `Jedes kW weniger Monatsspitze spart ${euro(gross(lp.low))} im Monat, über ${POWER_TARIFF.limitKw} kW ${euro(gross(lp.high))}.${partial ? ' Für Monate ohne Viertelstundenwerte rechnet Netzblick mit der höchsten bekannten Spitze.' : ''}` }));
+}
+
+const signedEuro = (x) => (Math.abs(x) < 0.005 ? euro(0) : `${x > 0 ? '+' : '−'}${euro(Math.abs(x))}`);
+const kpiTile = (label, value, sub) => h('div', { class: 'kpi' },
+  h('p', { class: 'kpi-label', text: label }),
+  h('p', { class: 'kpi-value', text: value }),
+  sub ? h('p', { class: 'kpi-sub', text: sub }) : null);
 
 /* ================================================================ Energiegemeinschaft */
 export function renderCommunity(body, ctx) {

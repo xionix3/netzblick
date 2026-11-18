@@ -187,6 +187,28 @@ export class DataStore {
       return null; // Spitzenwert ist optional
     }
   }
+
+  /**
+   * Höchste Viertelstunde je Kalendermonat (für den Leistungspreis) → [{key, start, kw, t, s}]
+   * Ein Aufruf je Monat; abgeschlossene Monate bleiben 30 Tage im Zwischenspeicher.
+   */
+  async monthlyPeaks(mp, flow, from, to) {
+    const months = [];
+    for (let m = new Date(from.getFullYear(), from.getMonth(), 1); m < to; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) months.push(m);
+    const out = [];
+    for (let i = 0; i < months.length; i += 4) {
+      const chunk = months.slice(i, i + 4);
+      const res = await Promise.all(chunk.map((m) => {
+        const end = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+        return this.maxPower(mp, flow, m, end < to ? end : to);
+      }));
+      chunk.forEach((m, j) => {
+        const r = res[j];
+        out.push({ key: `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`, start: m, kw: r && r.kw != null ? r.kw : null, t: r ? r.t : null, s: r ? r.s : null });
+      });
+    }
+    return out;
+  }
 }
 
 /** Summiert mehrere Reihen nach Zeitstempel (z. B. Tarifregister 1.8.1 + 1.8.2 oder mehrere Zählpunkte) */
@@ -208,10 +230,11 @@ export function mergeSum(seriesList) {
 
 /**
  * Lädt alles, was eine Ansicht braucht.
- * sel: {mps: [mp…], flow, period, compareMode}
+ * sel: {mps: [mp…], flow, period, compareMode, peaksFrom}
+ * peaksFrom: ohne Viertelstundenwerte die Monatsspitzen ab diesem Datum laden (Leistungspreis, Leistungsansicht)
  */
 export async function loadView(store, sel, { force = false } = {}) {
-  const { mps, flow, period, compareMode } = sel;
+  const { mps, flow, period, compareMode, peaksFrom } = sel;
   const res = resolutionFor(period);
   const bucket = chartBucketFor(period, res);
   const preferFine = bucket === 'quarter';
@@ -223,7 +246,14 @@ export async function loadView(store, sel, { force = false } = {}) {
     const cmp = cp ? await store.load(mp, flow, cp.start, cp.end, res, { preferFine, force }).catch(() => null) : null;
     // Spitzenleistung für lange Zeiträume ohne 15-min-Daten vom Server holen
     const peak = !cur.fine ? await store.maxPower(mp, flow, period.start, period.end) : null;
-    return { mp, cur, cmp, peak };
+    let monthPeaks = null;
+    if (!cur.fine && peaksFrom && period.end > peaksFrom) {
+      const now = new Date();
+      const from = period.start > peaksFrom ? period.start : peaksFrom;
+      const to = period.end < now ? period.end : now;
+      if (from < to) monthPeaks = await store.monthlyPeaks(mp, flow, from, to).catch(() => null);
+    }
+    return { mp, cur, cmp, peak, monthPeaks };
   });
   const perMp = await Promise.all(jobs);
   const fine = perMp.length > 0 && perMp.every((x) => x.cur.fine);

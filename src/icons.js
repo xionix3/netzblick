@@ -3,6 +3,7 @@ const svg = (d, extra = '') => `<svg viewBox="0 0 24 24" width="22" height="22" 
 
 export const icons = {
   prev: svg('<path d="M15 18l-6-6 6-6"/>'),
+  gauge: svg('<path d="M4.9 19a9 9 0 1 1 14.2 0"/><path d="M12 14l4-5"/><circle cx="12" cy="14" r="1.6"/>'),
   next: svg('<path d="M9 18l6-6-6-6"/>'),
   down: svg('<path d="M6 9l6 6 6-6"/>', 'width="18" height="18"'),
   refresh: svg('<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>'),

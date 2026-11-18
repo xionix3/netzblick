@@ -9,7 +9,7 @@
 
 </div>
 
-**Netzblick** zeigt deine Smart-Meter-Daten von Netz Burgenland übersichtlich auf Handy und Tablet: Verbrauch in Viertelstunden, Tagen, Monaten und Jahren, was dich der Strom kostet, deine Anlagen, Abrechnungen und Energiegemeinschaften. Du meldest dich mit deinem gewohnten Zugang an. Das [Smart-Meter-Portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) und das [Kundenportal](https://portal.netzburgenland.at/) verwenden dieselbe Anmeldung, Netzblick verbindet beide.
+**Netzblick** zeigt deine Smart-Meter-Daten von Netz Burgenland übersichtlich auf Handy und Tablet: Verbrauch in Viertelstunden, Tagen, Monaten und Jahren, deine Leistungsspitzen für den Leistungspreis ab 2027, was dich der Strom kostet, deine Anlagen, Abrechnungen und Energiegemeinschaften. Du meldest dich mit deinem gewohnten Zugang an. Das [Smart-Meter-Portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) und das [Kundenportal](https://portal.netzburgenland.at/) verwenden dieselbe Anmeldung, Netzblick verbindet beide.
 
 > Netzblick ist ein privates Projekt von Patrick Schlögl (geister-it) und **keine offizielle App** von Netz Burgenland. Es nutzt dieselben Schnittstellen wie die Web-Portale. Ändert Netz Burgenland diese, kann die App vorübergehend ausfallen.
 
@@ -37,20 +37,25 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
   <tr>
     <td align="center" width="25%"><img src="docs/readme/uebersicht.png" width="200" alt="Monatsübersicht mit zwei Zählpunkten" /><br /><sub><b>Übersicht</b><br />Summe, Vergleich, Hochrechnung</sub></td>
     <td align="center" width="25%"><img src="docs/readme/tag.png" width="200" alt="Tagesansicht mit Zählerstand und Leistungskurve" /><br /><sub><b>Tag</b><br />Zählerstand und Viertelstunden</sub></td>
-    <td align="center" width="25%"><img src="docs/readme/kosten.png" width="200" alt="Kostenaufstellung nach Energie, Netz und Abgaben" /><br /><sub><b>Kosten</b><br />Energie, Netz, Abgaben</sub></td>
-    <td align="center" width="25%"><img src="docs/readme/aufteilung.png" width="200" alt="Kreisdiagramm: Verbrauch nach Tageszeit" /><br /><sub><b>Aufteilung</b><br />nach Zähler, Tageszeit, Wochentag</sub></td>
+    <td align="center" width="25%"><img src="docs/readme/leistung-monat.png" width="200" alt="Viertelstunden eines Monats in kW mit 10-kW-Linie" /><br /><sub><b>Leistung</b><br />Viertelstunden, 10-kW-Grenze</sub></td>
+    <td align="center" width="25%"><img src="docs/readme/leistung.png" width="200" alt="Monatsspitzen und Leistungspreis ab 2027" /><br /><sub><b>Leistung ab 2027</b><br />Monatsspitzen, Kostenvergleich</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/readme/kosten.png" width="200" alt="Kostenaufstellung nach Energie, Netz und Abgaben" /><br /><sub><b>Kosten</b><br />Energie, Netz, Abgaben</sub></td>
+    <td align="center"><img src="docs/readme/aufteilung.png" width="200" alt="Kreisdiagramm: Verbrauch nach Tageszeit" /><br /><sub><b>Aufteilung</b><br />nach Zähler, Tageszeit, Wochentag</sub></td>
     <td align="center"><img src="docs/readme/analyse.png" width="200" alt="Lastgang-Teppich und typischer Tagesverlauf" /><br /><sub><b>Analysen</b><br />Lastgang und Tagesverlauf</sub></td>
     <td align="center"><img src="docs/readme/strompreis.png" width="200" alt="Strompreis des Lieferanten und Erinnerung" /><br /><sub><b>Strompreis</b><br />Lieferant und Erinnerung</sub></td>
-    <td align="center"><img src="docs/readme/abrechnung.png" width="200" alt="Laufendes Abrechnungsjahr mit Hochrechnung" /><br /><sub><b>Abrechnung</b><br />Hochrechnung und Teilbeträge</sub></td>
-    <td align="center"><img src="docs/readme/energiegemeinschaft.png" width="200" alt="Energiegemeinschaften mit Teilnahmefaktor" /><br /><sub><b>Energiegemeinschaft</b><br />Teilnahmen und Faktoren</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/readme/abrechnung.png" width="200" alt="Laufendes Abrechnungsjahr mit Hochrechnung" /><br /><sub><b>Abrechnung</b><br />Hochrechnung und Teilbeträge</sub></td>
+    <td align="center"><img src="docs/readme/energiegemeinschaft.png" width="200" alt="Energiegemeinschaften mit Teilnahmefaktor" /><br /><sub><b>Energiegemeinschaft</b><br />Teilnahmen und Faktoren</sub></td>
     <td align="center"><img src="docs/readme/anlagen.png" width="200" alt="Anlagen mit Zählernummer und Lieferant" /><br /><sub><b>Anlagen</b><br />Zähler, Netztarif, Lieferant</sub></td>
     <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Störungsdienst und Stromnotruf zum Anrufen" /><br /><sub><b>Störung</b><br />direkt anrufen</sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="docs/readme/jahr-dunkel.png" width="200" alt="Jahresansicht im Dunkelmodus" /><br /><sub><b>Dunkelmodus</b><br />Jahr im Vergleich</sub></td>
     <td align="center"><img src="docs/readme/menue.png" width="200" alt="Menü mit allen Seiten" /><br /><sub><b>Menü</b><br />alles mit einem Tipp</sub></td>
+    <td align="center"><img src="docs/readme/kontakt.png" width="200" alt="Kontakt mit Servicezentren" /><br /><sub><b>Kontakt</b><br />Telefon, E-Mail, Servicezentren</sub></td>
   </tr>
 </table>
 
@@ -71,12 +76,21 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
 | **Mehrere Zählpunkte** | Beliebig kombinierbar, in der Legende ein- und ausblenden. Ohne eigenen Namen heißt jeder Zählpunkt nach seiner Nummer. |
 | **Werte und Export** | Wertetabelle und CSV-Export (Excel-tauglich). Ersatz-, vorläufige und fehlende Werte sind markiert. |
 
+### Leistung (ab 2027)
+
+| | |
+|---|---|
+| **kWh oder kW** | Über dem Diagramm umschalten. In kW zeigt Netzblick die mittlere Leistung jeder Viertelstunde, auch für einen ganzen Monat. Im Jahr und Gesamt die höchste Viertelstunde je Monat. |
+| **10-kW-Linie** | Ein- und ausblendbar. Ab 2027 kostet der Anteil der Monatsspitze über 10 kW mehr. Die höchste Spitze ist markiert, darunter steht je Zählpunkt, wie oft sie über 10 kW lag. |
+| **Seite „Leistung“** | Monatsspitzen der letzten 13 Monate je Zählpunkt, Monate über 10 kW, Spitze im laufenden Monat, Leistungspreis pro Jahr, Netzkosten 2026 gegen ab 2027, Tipps. |
+| **Grundlage** | Entwurf der Tarifverordnung 2027 der E-Control (29.10.2026), Netzbereich Burgenland. Netz Burgenland kündigt die Umstellung für Jänner 2027 an. |
+
 ### Kosten und Abrechnung
 
 | | |
 |---|---|
 | **Strompreis** | Arbeitspreis und Grundpreis deines Lieferanten eintragen, auf Wunsch je Zählpunkt (z. B. Wärmepumpe). |
-| **Netzkosten** | Rechnet Netzblick selbst nach dem Preisblatt von Netz Burgenland, samt Sommer-Niedertarif (1. April bis 30. September, 10–16 Uhr) aus den Viertelstundenwerten. Haushalt oder unterbrechbar kommt aus dem Kundenportal. |
+| **Netzkosten** | Rechnet Netzblick selbst nach dem Preisblatt von Netz Burgenland, samt Sommer-Niedertarif (1. April bis 30. September, 10–16 Uhr) aus den Viertelstundenwerten. Ab 2027 mit Leistungspreis aus der Monatsspitze und Winter-Niedertarif (ab Oktober 2027, 23–5 Uhr). Haushalt oder unterbrechbar kommt aus dem Kundenportal. |
 | **Steuern und Abgaben** | Elektrizitätsabgabe, Erneuerbaren-Förderpauschale und -Förderbeitrag, 20 % USt. |
 | **Kostenaufstellung** | In der Übersicht mit Anteilen; Kosten pro Tag und Hochrechnung auf den Zeitraum. „Was dich ein Jahr kostet“ aus den letzten 12 Monaten. |
 | **Erinnerung** | Benachrichtigung und Hinweis, bevor Neukundenrabatt oder Vertragsbindung enden; Kalendereintrag; Link zum Tarifkalkulator der E-Control. |
@@ -107,10 +121,11 @@ Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at]
 ## Bedienung
 
 - **Menü:** ☰ oben links oder vom linken Rand wischen. Auf dem Tablet steht es fest am Rand.
-  Verbrauch, Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Einstellungen, Info, Abmelden.
+  Verbrauch, Leistung, Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Einstellungen, Info, Abmelden.
 - **Zeitraum:** Leiste oben. Das Kalendersymbol öffnet einen eigenen Zeitraum mit Schnellwahl.
 - **Blättern:** Pfeile neben dem Datum oder auf der Summe wischen. Ein Tipp aufs Datum öffnet die Datumsauswahl.
 - **Zählpunkte:** Tipp auf den Namen oben (mehrere ankreuzen oder „nur dieser“), oder in der Diagrammlegende antippen.
+- **kWh oder kW:** Schalter rechts über dem Diagramm. In kW gibt es die Viertelstunden und unter dem Diagramm den Schalter für die 10-kW-Linie.
 - **Diagrammart:** Symbole rechts über dem Diagramm; die Wahl wird je Auflösung gemerkt.
 - **Vergleich und Filter:** Chips unter dem Datum. Aktive Filter erscheinen dunkel und lassen sich mit ✕ entfernen.
 - **Strompreis:** Preis des Lieferanten (brutto), Erinnerung an Rabatt- oder Bindungsende, Jahreskosten, Netzpreise.
@@ -125,7 +140,8 @@ Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at]
 | **Vergleich** | Änderung gegenüber dem Vergleichszeitraum. Läuft der Zeitraum noch, wird der Vergleich auf dieselbe Dauer gekürzt. |
 | **Hochrechnung** | Ø pro Tag × Tage des ganzen Zeitraums; ab 1 Tag Daten (Woche), 3 Tagen (Monat) bzw. 14 Tagen (Jahr). |
 | **Ø pro Tag** | Verbrauch ÷ Tage mit Messwerten; angebrochene Tage zählen anteilig. |
-| **Spitzenleistung** | Höchster Viertelstundenwert × 4 = mittlere Leistung in kW in dieser Viertelstunde. |
+| **Spitzenleistung** | Höchster Viertelstundenwert × 4 = mittlere Leistung in kW in dieser Viertelstunde. Bei mehreren Zählpunkten der höchste einzelne. |
+| **Leistungspreis (ab 2027)** | Je Zählpunkt und Monat die höchste Viertelstunde, auf zwei Kommastellen gerundet: bis 10 kW × 3,40 €, Anteil darüber × 5,10 € (netto, Entwurf). Beispiel 12 kW: 10 × 3,40 + 2 × 5,10 = 44,20 € netto im Monat. Unterbrechbare Zählpunkte zahlen keinen. |
 | **Grundlast** | 10-%-Wert der Viertelstundenleistung: was praktisch immer läuft. Ein guter Ansatzpunkt zum Sparen. |
 | **Nachts 22–6 Uhr** | Anteil des Verbrauchs zwischen 22 und 6 Uhr. |
 | **Kosten** | **Lieferant:** kWh × Arbeitspreis + Grundpreis anteilig (brutto, wie eingegeben). **Netz Burgenland** (Netzebene 7, netto + 20 % USt): kWh × Netznutzung, Viertelstunden von April bis September zwischen 10 und 16 Uhr zum Sommer-Niedertarif, dazu Pauschale pro Jahr und Messentgelt pro Monat anteilig. **Abgaben:** Elektrizitätsabgabe je kWh, Erneuerbaren-Förderpauschale pro Jahr, Erneuerbaren-Förderbeitrag pro Jahr und je kWh. Preise in [`src/netzdaten.js`](src/netzdaten.js). Eine Schätzung, maßgeblich ist deine Rechnung. |
@@ -205,13 +221,13 @@ netzblick/
 │   ├── api.js           Smart-Meter-API: Anmeldung, Messreihen, Spitzenleistung
 │   ├── kundenportal.js  Kundenportal: Profil, Zählpunkte, Energiegemeinschaften, Verträge, Abrechnung
 │   ├── model.js         Laden, Zwischenspeichern, Filtern, Kennzahlen, Aufteilung
-│   ├── costs.js         Kostenmodell: Lieferant, Netz, Abgaben, Sommer-Niedertarif
+│   ├── costs.js         Kostenmodell: Lieferant, Netz, Abgaben, Niedertarife, Leistungspreis ab 2027
 │   ├── netzdaten.js     Netzpreise, Abgaben, Störungs- und Kontaktdaten (mit Quellen)
 │   ├── billing.js       Laufendes Abrechnungsjahr und Hochrechnung
 │   ├── reminder.js      Erinnerung: Zeitpunkt und Kalenderdatei
 │   ├── charts.js        Diagramme (Apache ECharts)
 │   ├── main.js          Start, Anmeldung, Menü, Verbrauchsansicht
-│   ├── pages.js         Seiten Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Info
+│   ├── pages.js         Seiten Leistung, Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Info
 │   ├── ui.js            DOM-Helfer, Bottom-Sheet, Rollenzählwerk, Markenzeichen
 │   ├── platform.js      Native Brücke: HTTP ohne CORS, sicherer Speicher, Teilen, Benachrichtigungen
 │   ├── demo.js          Demo-Daten im Format der echten APIs
@@ -259,8 +275,8 @@ flowchart LR
 
 Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 
-1. **Unit-Tests** (`test/unit/`, 75 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Erinnerung und Kalenderdatei, Versionsnummern.
-2. **Oberflächentest** (`test/e2e/smoke.mjs`, 21 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
+1. **Unit-Tests** (`test/unit/`, 81 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Leistungspreis 2027 mit Monatsspitzen und Winter-Niedertarif, Erinnerung und Kalenderdatei, Versionsnummern.
+2. **Oberflächentest** (`test/e2e/smoke.mjs`, 24 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsansicht mit 10-kW-Linie, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
 3. **Android-Build**: baut die Debug-APK.
 
 ## Releases und Play Store

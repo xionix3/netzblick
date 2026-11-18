@@ -104,7 +104,8 @@ Melde dich mit deinem gewohnten Portal-Zugang an und sieh sofort:
 • eine Erinnerung, bevor Neukundenrabatt oder Vertragsbindung enden
 • deine Energiegemeinschaften mit Teilnahmefaktor
 • Störungsdienst und Kontakt zum direkten Anrufen
-• die Leistungskurve in 15-Minuten-Schritten
+• die Leistungskurve in 15-Minuten-Schritten, auch für einen ganzen Monat, mit 10-kW-Linie
+• deine Monatsspitzen und was du mit dem Leistungspreis ab 2027 fürs Netz zahlst
 • wann am Tag Strom gebraucht wird (Lastgang), den typischen Tagesverlauf und den Verbrauch je Wochentag
 • Spitzenleistung, Grundlast und Nachtanteil
 • deinen aktuellen Zählerstand

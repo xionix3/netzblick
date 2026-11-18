@@ -9,7 +9,7 @@
 
 </div>
 
-**Netzblick** shows your smart meter data from Netz Burgenland, the distribution grid operator in Burgenland (Austria), clearly on phone and tablet. It covers consumption in quarter hours, days, months and years. It also shows what your electricity costs, plus your installations, bills and energy communities. You sign in with your usual account. The [smart meter portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) and the [customer portal](https://portal.netzburgenland.at/) share the same login, and Netzblick combines both.
+**Netzblick** shows your smart meter data from Netz Burgenland, the distribution grid operator in Burgenland (Austria), clearly on phone and tablet. It covers consumption in quarter hours, days, months and years, and your power peaks for the power-based grid price from 2027. It also shows what your electricity costs, plus your installations, bills and energy communities. You sign in with your usual account. The [smart meter portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) and the [customer portal](https://portal.netzburgenland.at/) share the same login, and Netzblick combines both.
 
 > Netzblick is a private project by Patrick Schlögl (geister-it) and **not an official app** of Netz Burgenland. It uses the same interfaces as the web portals. If Netz Burgenland changes them, the app may stop working for a while.
 >
@@ -39,20 +39,25 @@ All images show demo mode with made-up sample data.
   <tr>
     <td align="center" width="25%"><img src="docs/readme/uebersicht.png" width="200" alt="Monthly overview with two metering points" /><br /><sub><b>Overview</b><br />total, comparison, forecast</sub></td>
     <td align="center" width="25%"><img src="docs/readme/tag.png" width="200" alt="Day view with meter reading and load curve" /><br /><sub><b>Day</b><br />meter reading and quarter hours</sub></td>
-    <td align="center" width="25%"><img src="docs/readme/kosten.png" width="200" alt="Cost breakdown into energy, grid and taxes" /><br /><sub><b>Costs</b><br />energy, grid, taxes</sub></td>
-    <td align="center" width="25%"><img src="docs/readme/aufteilung.png" width="200" alt="Donut chart: consumption by time of day" /><br /><sub><b>Breakdown</b><br />by meter, time of day, weekday</sub></td>
+    <td align="center" width="25%"><img src="docs/readme/leistung-monat.png" width="200" alt="Quarter hours of a month in kW with the 10 kW line" /><br /><sub><b>Power</b><br />quarter hours, 10 kW limit</sub></td>
+    <td align="center" width="25%"><img src="docs/readme/leistung.png" width="200" alt="Monthly peaks and power price from 2027" /><br /><sub><b>Power from 2027</b><br />monthly peaks, cost comparison</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/readme/kosten.png" width="200" alt="Cost breakdown into energy, grid and taxes" /><br /><sub><b>Costs</b><br />energy, grid, taxes</sub></td>
+    <td align="center"><img src="docs/readme/aufteilung.png" width="200" alt="Donut chart: consumption by time of day" /><br /><sub><b>Breakdown</b><br />by meter, time of day, weekday</sub></td>
     <td align="center"><img src="docs/readme/analyse.png" width="200" alt="Load heat map and typical daily profile" /><br /><sub><b>Analysis</b><br />load map and daily profile</sub></td>
     <td align="center"><img src="docs/readme/strompreis.png" width="200" alt="Supplier price and reminder" /><br /><sub><b>Electricity price</b><br />supplier and reminder</sub></td>
-    <td align="center"><img src="docs/readme/abrechnung.png" width="200" alt="Current billing year with forecast" /><br /><sub><b>Billing</b><br />forecast and instalments</sub></td>
-    <td align="center"><img src="docs/readme/energiegemeinschaft.png" width="200" alt="Energy communities with participation factor" /><br /><sub><b>Energy community</b><br />memberships and factors</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/readme/abrechnung.png" width="200" alt="Current billing year with forecast" /><br /><sub><b>Billing</b><br />forecast and instalments</sub></td>
+    <td align="center"><img src="docs/readme/energiegemeinschaft.png" width="200" alt="Energy communities with participation factor" /><br /><sub><b>Energy community</b><br />memberships and factors</sub></td>
     <td align="center"><img src="docs/readme/anlagen.png" width="200" alt="Installations with meter number and supplier" /><br /><sub><b>Installations</b><br />meter, grid tariff, supplier</sub></td>
     <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Fault service and emergency line to call" /><br /><sub><b>Power outage</b><br />call directly</sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="docs/readme/jahr-dunkel.png" width="200" alt="Year view in dark mode" /><br /><sub><b>Dark mode</b><br />year comparison</sub></td>
     <td align="center"><img src="docs/readme/menue.png" width="200" alt="Menu with all pages" /><br /><sub><b>Menu</b><br />everything one tap away</sub></td>
+    <td align="center"><img src="docs/readme/kontakt.png" width="200" alt="Contact with service centres" /><br /><sub><b>Contact</b><br />phone, e-mail, service centres</sub></td>
   </tr>
 </table>
 
@@ -73,12 +78,21 @@ All images show demo mode with made-up sample data.
 | **Several meters** | Combine any metering points and toggle them in the chart legend. Without a custom name, each one is called by its metering point number. |
 | **Values and export** | Value table and CSV export (Excel-friendly). Substitute, provisional and missing values are marked. |
 
+### Power (from 2027)
+
+| | |
+|---|---|
+| **kWh or kW** | Switch above the chart. In kW, Netzblick shows the average power of every quarter hour, even for a whole month. For year and all time it shows the highest quarter hour per month. |
+| **10 kW line** | Can be shown or hidden. From 2027, the part of the monthly peak above 10 kW costs more. The highest peak is marked, and below the chart each meter shows how often it went above 10 kW. |
+| **"Leistung" page** | Monthly peaks of the last 13 months per meter, months above 10 kW, the peak so far this month, yearly power price, grid costs 2026 vs. from 2027, tips. |
+| **Basis** | E-Control's draft tariff regulation 2027 (29 Oct 2026), Burgenland grid area. Netz Burgenland has announced the switch for January 2027. |
+
 ### Costs and billing
 
 | | |
 |---|---|
 | **Electricity price** | Enter your supplier's energy price per kWh and monthly base fee, optionally per meter (e.g. a heat pump). |
-| **Grid costs** | Calculated from Netz Burgenland's price sheet, including the summer low tariff (1 April to 30 September, 10 am–4 pm) taken from the quarter-hour values. Whether a meter is a household or interruptible tariff comes from the customer portal. |
+| **Grid costs** | Calculated from Netz Burgenland's price sheet, including the summer low tariff (1 April to 30 September, 10 am–4 pm) taken from the quarter-hour values. From 2027 including the power price from the monthly peak and the winter low tariff (from October 2027, 11 pm–5 am). Whether a meter is a household or interruptible tariff comes from the customer portal. |
 | **Taxes and levies** | Electricity tax, renewable energy flat fee and renewable energy contribution, 20 % VAT. |
 | **Cost breakdown** | In the overview with shares; cost per day and forecast for the period. "What a year costs you" based on the last 12 months. |
 | **Reminder** | Notification and in-app hint before a new-customer discount or a minimum term ends; calendar entry; link to E-Control's tariff calculator. |
@@ -109,10 +123,11 @@ No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgen
 ## How to use it
 
 - **Menu:** ☰ at the top left, or swipe in from the left edge. On tablets it stays on the side.
-  It contains Verbrauch (consumption), Strompreis (price), Abrechnung (billing), Anlagen (installations), Energiegemeinschaft, Störung (outage), Kontakt, Konto (account), Einstellungen (settings), Info and Abmelden (sign out).
+  It contains Verbrauch (consumption), Leistung (power), Strompreis (price), Abrechnung (billing), Anlagen (installations), Energiegemeinschaft, Störung (outage), Kontakt, Konto (account), Einstellungen (settings), Info and Abmelden (sign out).
 - **Period:** the bar at the top. The calendar icon opens a custom period with presets.
 - **Browse:** arrows next to the date, or swipe across the total. Tap the date to pick one.
 - **Meters:** tap the name at the top (tick several or "nur dieser"), or tap them in the chart legend.
+- **kWh or kW:** switch above the chart on the right. In kW you get the quarter hours, and below the chart the toggle for the 10 kW line.
 - **Chart type:** icons above the chart; the choice is remembered per resolution.
 - **Comparison and filters:** chips below the date. Active filters turn dark and can be removed with ✕.
 - **Strompreis:** supplier price (incl. VAT), reminder, yearly cost, grid prices.
@@ -127,7 +142,8 @@ No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgen
 | **Comparison** | Change against the comparison period. If the period is still running, the comparison is cut to the same length. |
 | **Forecast** | Average per day × days of the whole period; shown from 1 day of data (week), 3 days (month) or 14 days (year). |
 | **Average per day** | Consumption ÷ days with values; partial days count proportionally. |
-| **Peak power** | Highest quarter-hour value × 4 = average power in kW during that quarter hour. |
+| **Peak power** | Highest quarter-hour value × 4 = average power in kW during that quarter hour. With several meters, the highest single meter. |
+| **Power price (from 2027)** | Per meter and month the highest quarter hour, rounded to two decimals: up to 10 kW × €3.40, the part above × €5.10 (net, draft). Example 12 kW: 10 × 3.40 + 2 × 5.10 = €44.20 net per month. Interruptible meters pay none. |
 | **Base load** | 10th percentile of quarter-hour power: what is practically always running. A good place to start saving. |
 | **Night 10 pm–6 am** | Share of consumption between 10 pm and 6 am. |
 | **Costs** | **Supplier:** kWh × energy price + base fee pro rata (incl. VAT, as entered). **Netz Burgenland** (grid level 7, net + 20 % VAT): kWh × grid usage price, quarter hours from April to September between 10 am and 4 pm at the summer low tariff, plus the yearly flat fee and the monthly metering fee pro rata. **Levies:** electricity tax per kWh, renewable energy flat fee per year, renewable energy contribution per year and per kWh. Prices live in [`src/netzdaten.js`](src/netzdaten.js). This is an estimate; your bill is what counts. |
@@ -209,13 +225,13 @@ netzblick/
 │   ├── api.js           smart meter API: sign-in, series, peak power
 │   ├── kundenportal.js  customer portal: profile, metering points, energy communities, contracts, billing
 │   ├── model.js         loading, caching, filters, figures, breakdowns
-│   ├── costs.js         cost model: supplier, grid, levies, summer low tariff
+│   ├── costs.js         cost model: supplier, grid, levies, low tariffs, power price from 2027
 │   ├── netzdaten.js     grid prices, levies, outage and contact data (with sources)
 │   ├── billing.js       current billing year and forecast
 │   ├── reminder.js      reminder date and calendar file
 │   ├── charts.js        charts (Apache ECharts)
 │   ├── main.js          start, sign-in, menu, consumption view
-│   ├── pages.js         pages: price, billing, installations, energy community, outage, contact, account, info
+│   ├── pages.js         pages: power, price, billing, installations, energy community, outage, contact, account, info
 │   ├── ui.js            DOM helpers, bottom sheet, rolling counter, logo
 │   ├── platform.js      native bridge: HTTP without CORS, secure storage, share, notifications
 │   ├── demo.js          demo data in the format of the real APIs
@@ -247,16 +263,17 @@ netzblick/
 
 Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
 
-1. **Unit tests** (`test/unit/`, 75 cases):
+1. **Unit tests** (`test/unit/`, 81 cases):
    - periods incl. daylight saving time, number formats
    - API clients with error cases and re-login
    - data model and filters, cache
    - customer portal and energy communities
    - billing year incl. interim bills
    - cost model, checked against Netz Burgenland's comparison chart
+   - power price 2027 with monthly peaks and winter low tariff
    - reminder and calendar file, version numbers
-2. **UI test** (`test/e2e/smoke.mjs`, 21 scenarios):
-   - all periods, dark mode, filters, multi-select, chart types
+2. **UI test** (`test/e2e/smoke.mjs`, 24 scenarios):
+   - all periods, dark mode, filters, multi-select, chart types, power view with 10 kW line
    - costs and reminder, every page
    - tablet, landscape, tall status bar, sign-out
    - checks for console errors, empty views and broken text

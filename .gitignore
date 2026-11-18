@@ -6,3 +6,4 @@ test/*.png
 # Persönliche Android-Studio-Einstellungen
 android/.idea/
 .idea/
+.preview/

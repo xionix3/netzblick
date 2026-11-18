@@ -5,6 +5,18 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.3.0] – 2026-11-18
+
+### Neu
+- **Leistungsansicht:** Über dem Diagramm zwischen „kWh“ und „kW“ umschalten. In kW zeigt Netzblick die mittlere Leistung jeder Viertelstunde, auch für einen ganzen Monat; in Jahr und Gesamt die höchste Viertelstunde je Monat. Die höchste Spitze ist markiert.
+- **10-kW-Linie** zum Ein- und Ausblenden: Ab 2027 wird für den Anteil der Monatsspitze über 10 kW ein höherer Leistungspreis fällig. Unter dem Diagramm steht je Zählpunkt die höchste Viertelstunde und wie oft sie über 10 kW lag.
+- **Seite „Leistung“:** Monatsspitzen der letzten 13 Monate je Zählpunkt, Monate über 10 kW, Spitze im laufenden Monat, Leistungspreis pro Jahr, Netzkosten 2026 gegen ab 2027, Rechenweg, Tipps und Quellen.
+- **Kosten ab 2027** nach dem Entwurf der Tarifverordnung (E-Control, 29.10.2026), Netzbereich Burgenland: Leistungspreis 3,40 € je kW und Monat bis 10 kW, 5,10 € darüber (netto), Arbeitspreis 6,60 ct, Niedertarif 5,28 ct, Winter-Niedertarif ab 1.10.2027 (23–5 Uhr). Pauschale und Messentgelt entfallen. Unterbrechbare Zählpunkte ohne Leistungspreis.
+
+### Geändert
+- Spitzenleistung bei mehreren Zählpunkten: der höchste einzelne Zählpunkt, weil der Leistungspreis je Zählpunkt gilt.
+- Demo-Daten mit gelegentlichem Laden des E-Autos mit 11 kW.
+
 ## [1.2.0] – 2026-11-18
 
 ### Neu

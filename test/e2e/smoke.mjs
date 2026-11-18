@@ -251,6 +251,52 @@ await scenario('Seite Strompreis mit Netzpreisen und Jahreskosten', {
     expect(/Steuern und Abgaben 2026/.test(s.text), 'Abgaben fehlen'),
   ],
 });
+await scenario('Leistung: Monat in Viertelstunden mit 10-kW-Grenze', {
+  query: '&period=month&date=2026-10-05&sel=all&power=1',
+  shot: 'leistung-monat',
+  actions: async (page) => { await waitText(page, /Höchste Viertelstunde/); },
+  checks: async (s, page) => {
+    const before = await page.evaluate(() => ({
+      box: !document.querySelector('#powerBox').hidden,
+      types: document.querySelector('#typeSeg').hidden,
+      chip: document.querySelector('#powerBox .chip')?.getAttribute('aria-pressed'),
+      unit: [...document.querySelectorAll('#unitSeg button')].map((b) => b.textContent + ':' + b.getAttribute('aria-pressed')).join(','),
+    }));
+    await page.click('#powerBox .chip');
+    await sleep(300);
+    const chipOff = await page.$eval('#powerBox .chip', (b) => b.getAttribute('aria-pressed'));
+    await page.evaluate(() => [...document.querySelectorAll('#unitSeg button')].find((b) => b.textContent === 'kWh').click());
+    await sleep(400);
+    const after = await page.evaluate(() => ({ box: !document.querySelector('#powerBox').hidden, types: document.querySelector('#typeSeg').hidden }));
+    return [
+      expect(before.box && before.types, 'Leistungsansicht nicht aktiv'),
+      expect(before.chip === 'true' && chipOff === 'false', '10-kW-Grenze lässt sich nicht ausblenden'),
+      expect(before.unit === 'kWh:false,kW:true', `Umschalter falsch: ${before.unit}`),
+      expect(/über 10 kW|Immer unter 10 kW/.test(s.text), 'Überschreitung fehlt'),
+      expect(/je kW und Monat/.test(s.text), 'Hinweis zum Leistungspreis fehlt'),
+      expect(!after.box && !after.types, 'Zurück auf kWh klappt nicht'),
+    ];
+  },
+});
+await scenario('Leistung im Jahr: Monatsspitzen', {
+  query: '&period=year&date=2026-03-01&power=1',
+  actions: async (page) => { await waitText(page, /Höchste Viertelstunde/, 20000); },
+  checks: (s) => [
+    expect(/von 12 Monaten über 10 kW|Immer unter 10 kW/.test(s.text), 'Monatsspitzen fehlen'),
+  ],
+});
+await scenario('Seite Leistung: Monatsspitzen und Vergleich 2026/2027', {
+  query: '&page=power',
+  shot: 'leistung',
+  actions: async (page) => { await waitText(page, /im Jahr fürs Netz/, 20000); },
+  checks: async (s, page) => [
+    expect(/Deine Monatsspitzen/.test(s.text) && /Dieser Monat bisher/.test(s.text), 'Monatsspitzen fehlen'),
+    expect(/4,08 €/.test(s.text) && /6,12 €/.test(s.text), 'Leistungspreis brutto fehlt'),
+    expect(/unterbrechbar/.test(s.text), 'unterbrechbarer Zählpunkt nicht erkannt'),
+    expect(await page.$$eval('.peak-card', (l) => l.length === 2), 'Karten je Zählpunkt fehlen'),
+    expect(await page.$$eval('.chart--peaks canvas', (l) => l.length === 1), 'Diagramm fehlt'),
+  ],
+});
 await scenario('Seite Energiegemeinschaft mit Teilnahmefaktoren', {
   query: '&page=community',
   shot: 'energiegemeinschaft',

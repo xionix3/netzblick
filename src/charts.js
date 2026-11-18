@@ -1,12 +1,12 @@
 // Diagramme (ECharts, nur benötigte Module → kleines Bundle)
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, HeatmapChart, PieChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent } from 'echarts/components';
+import { GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, MarkLineComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { num, time, dateLong, dateShort, WEEKDAYS_SHORT, MONTHS_SHORT, MONTHS_LONG, isoDate } from './format.js';
+import { num, time, dateLong, dateShort, dateNum, WEEKDAYS_SHORT, MONTHS_SHORT, MONTHS_LONG, isoDate } from './format.js';
 import { STATUS_LABEL } from './model.js';
 
-echarts.use([BarChart, LineChart, HeatmapChart, PieChart, GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, CanvasRenderer]);
+echarts.use([BarChart, LineChart, HeatmapChart, PieChart, GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, MarkLineComponent, CanvasRenderer]);
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -80,16 +80,18 @@ function yAxis(T, unit) {
 function axisLabelFor(bucket, axis, days) {
   if (bucket === 'quarter') {
     const multiDay = days > 1;
+    const long = days > 7; // Monat in Viertelstunden: jede Woche ein Datum
     return {
       interval: (i) => {
         const d = axis[i];
         if (!d) return false;
+        if (long) return d.getHours() === 0 && d.getMinutes() === 0 && (d.getDate() - 1) % 7 === 0;
         if (multiDay) return d.getHours() === 0 && d.getMinutes() === 0;
         return d.getMinutes() === 0 && d.getHours() % 6 === 0;
       },
       formatter: (_, i) => {
         const d = axis[i];
-        return multiDay ? WEEKDAYS_SHORT[(d.getDay() + 6) % 7] : time(d);
+        return long ? `${d.getDate()}.${d.getMonth() + 1}.` : multiDay ? WEEKDAYS_SHORT[(d.getDay() + 6) % 7] : time(d);
       },
     };
   }
@@ -233,6 +235,101 @@ export function mainOption(T, cfg) {
       axisLabel: { color: T.muted, fontFamily: T.font, fontSize: 11, hideOverlap: true, ...axisLabelFor(bucket, axis, cfg.days) },
     },
     yAxis: yAxis(T, unit),
+    series: out,
+  };
+}
+
+/**
+ * Leistungsansicht: Viertelstunden-Leistung (bucket 'quarter') oder Monatsspitzen (bucket 'month') in kW,
+ * je Zählpunkt einzeln (der Leistungspreis gilt je Zählpunkt), mit Grenzlinie und markierter Spitze.
+ * cfg: {bucket, axis:[Date], days, series:[{name, color, data:[{v: kW|null, s, t?}]}], limit: kW|null}
+ */
+export function powerOption(T, cfg) {
+  const { bucket, axis, series, limit } = cfg;
+  const months = bucket === 'month';
+  const single = series.length === 1;
+  // Nur die höchste Spitze beschriften, sonst überlappen die Marken mehrerer Zählpunkte
+  const maxOf = (s) => s.data.reduce((a, p) => (p.v != null && p.v > a ? p.v : a), -Infinity);
+  const top = series.reduce((bi, s, i) => (maxOf(s) > maxOf(series[bi]) ? i : bi), 0);
+  const out = series.map((s, si) => {
+    const base = {
+      name: s.name,
+      z: 3 + si,
+      data: s.data.map((p) => (p.v == null ? null : p.v)),
+      markPoint: {
+        symbol: 'circle',
+        symbolSize: 9,
+        itemStyle: { color: s.color, borderColor: T.surface, borderWidth: 2 },
+        label: { show: true, position: 'top', distance: 6, color: T.ink, fontFamily: T.font, fontSize: 12, fontWeight: 600, formatter: (p) => `${num(p.value, 1)} kW` },
+        data: si === top ? [{ type: 'max' }] : [],
+        animation: false,
+      },
+    };
+    if (months) {
+      return {
+        ...base,
+        type: 'bar',
+        barMaxWidth: 18,
+        barGap: '12%',
+        barCategoryGap: axis.length > 24 ? '20%' : '36%',
+        itemStyle: { color: s.color, borderRadius: [4, 4, 0, 0] },
+        emphasis: { itemStyle: { opacity: 0.85 } },
+      };
+    }
+    return {
+      ...base,
+      type: 'line',
+      showSymbol: false,
+      smooth: false,
+      connectNulls: false,
+      lineStyle: { color: s.color, width: single ? 1.5 : 1.25, join: 'round' },
+      itemStyle: { color: s.color },
+      areaStyle: single ? { color: s.color, opacity: 0.14 } : undefined,
+      emphasis: { disabled: true },
+    };
+  });
+  if (limit != null && out.length) {
+    out[0].markLine = {
+      silent: true,
+      symbol: 'none',
+      animation: false,
+      lineStyle: { color: T.ink2, width: 1.5, type: [6, 4] },
+      label: { show: true, position: 'insideEndTop', color: T.ink2, fontFamily: T.font, fontSize: 11, fontWeight: 600, formatter: `${num(limit, 0)} kW` },
+      data: [{ yAxis: limit }],
+    };
+  }
+  const y = yAxis(T, 'kW');
+  if (limit != null) y.max = (v) => Math.ceil(Math.max(v.max, limit) * 1.12);
+  return {
+    animationDuration: 450,
+    animationEasing: 'cubicOut',
+    textStyle: { fontFamily: T.font },
+    grid: { left: 6, right: 16, top: 30, bottom: 6, containLabel: true },
+    tooltip: baseTooltip(T, {
+      axisPointer: months
+        ? { type: 'shadow', shadowStyle: { color: T.line, opacity: 0.5 } }
+        : { type: 'line', lineStyle: { color: T.axis, width: 1 }, snap: true },
+      formatter: (params) => {
+        const i = params[0].dataIndex;
+        let html = `<div class="tt-title">${esc(months ? `Höchste Viertelstunde ${MONTHS_LONG[axis[i].getMonth()]} ${axis[i].getFullYear()}` : bucketLabel('quarter', axis[i]))}</div>`;
+        series.forEach((s) => {
+          const p = s.data[i];
+          const when = months && p.t ? `${dateNum(p.t)}, ${time(p.t)} Uhr` : '';
+          html += row(s.color, p.v == null ? '–' : `${num(p.v, 2)} kW`, [single ? '' : s.name, when].filter(Boolean).join(', ') || (months ? '' : 'mittlere Leistung'));
+          if (limit != null && p.v != null && p.v > limit) html += `<div class="tt-sub">${esc(single ? '' : s.name + ': ')}${num(p.v - limit, 2)} kW über ${num(limit, 0)} kW</div>`;
+        });
+        return html;
+      },
+    }),
+    xAxis: {
+      type: 'category',
+      data: axis.map((d) => d.getTime()),
+      boundaryGap: months,
+      axisLine: { lineStyle: { color: T.axis } },
+      axisTick: { show: false },
+      axisLabel: { color: T.muted, fontFamily: T.font, fontSize: 11, hideOverlap: true, ...axisLabelFor(months ? 'month' : 'quarter', axis, cfg.days) },
+    },
+    yAxis: y,
     series: out,
   };
 }

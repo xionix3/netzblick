@@ -17,7 +17,7 @@ import { $, h, icon, fillIcons, reduceMotion, setCounter, countUp, openSheet, cl
 import * as pages from './pages.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { meterCost, sumCosts, supplierFor, tariffClassOf, projectCost } from './costs.js';
-import { STAND, TARIFF_CALCULATOR } from './netzdaten.js';
+import { STAND, TARIFF_CALCULATOR, POWER_TARIFF, GRID } from './netzdaten.js';
 
 // Web-Vorschau (ohne native Schicht): nur Demo-Daten möglich, da der Browser die Portal-API blockiert
 const PREVIEW = (document.querySelector('meta[name="netzblick-mode"]') || {}).content === 'demo-preview';
@@ -258,6 +258,7 @@ function podFor(id) {
 /* ================================================================ Menü */
 const NAV = [
   { id: 'usage', label: 'Verbrauch', icon: 'chart' },
+  { id: 'power', label: 'Leistung', icon: 'gauge' },
   { id: 'tariff', label: 'Strompreis', icon: 'euro' },
   { id: 'billing', label: 'Abrechnung', icon: 'receipt' },
   { sep: true },
@@ -324,7 +325,7 @@ function closeNav() {
   return true;
 }
 
-const PAGE_TITLES = { plants: 'Anlagen', billing: 'Abrechnung', account: 'Konto', info: 'Info', tariff: 'Strompreis', community: 'Energiegemeinschaft', outage: 'Störung', contact: 'Kontakt' };
+const PAGE_TITLES = { power: 'Leistung', plants: 'Anlagen', billing: 'Abrechnung', account: 'Konto', info: 'Info', tariff: 'Strompreis', community: 'Energiegemeinschaft', outage: 'Störung', contact: 'Kontakt' };
 function goto(page) {
   closeNav();
   if (state.page === page && page !== 'usage') { renderPage(); return; }
@@ -341,7 +342,7 @@ function goto(page) {
   $('pageTitle').textContent = PAGE_TITLES[page] || '';
   $('pageRefresh').hidden = ['info', 'outage', 'contact'].includes(page);
   renderPage();
-  if (['plants', 'billing', 'account', 'community', 'tariff'].includes(page)) ensureKp().catch(() => {});
+  if (['plants', 'billing', 'account', 'community', 'tariff', 'power'].includes(page)) ensureKp().catch(() => {});
 }
 
 function pageCtx() {
@@ -349,8 +350,9 @@ function pageCtx() {
     state, APP_VERSION, PREVIEW,
     names: state.settings.meterNames,
     meterColor, podFor, ensureKp, setupKp, logout, goto, openSettings, toast, renderPage,
-    showUsage: (ids, period) => {
+    showUsage: (ids, period, opts = {}) => {
       if (ids) { state.selected = normalizeSelection(ids, state.mps); saveSelection(); }
+      if (opts.power != null) { state.settings.powerView = opts.power; saveSettings(state.settings); }
       if (period) state.period = period;
       if (!availableFlows().includes(state.flow)) state.flow = availableFlows()[0] || 'consumption';
       goto('usage');
@@ -370,7 +372,7 @@ function renderPage() {
   body.querySelectorAll('.chart').forEach((c) => charts.dispose(c));
   body.textContent = '';
   const ctx = pageCtx();
-  const fn = { plants: pages.renderPlants, billing: pages.renderBilling, account: pages.renderAccount, info: pages.renderInfo, tariff: pages.renderTariff, community: pages.renderCommunity, outage: pages.renderOutage, contact: pages.renderContact }[state.page];
+  const fn = { power: pages.renderPower, plants: pages.renderPlants, billing: pages.renderBilling, account: pages.renderAccount, info: pages.renderInfo, tariff: pages.renderTariff, community: pages.renderCommunity, outage: pages.renderOutage, contact: pages.renderContact }[state.page];
   if (fn) fn(body, ctx);
   fillIcons(body);
 }
@@ -443,17 +445,16 @@ function showWhatsNew() {
   const major = APP_VERSION.split('.').slice(0, 2).join('.');
   try { if (localStorage.getItem('nb.seenVersion') === major) return; localStorage.setItem('nb.seenVersion', major); } catch { return; }
   const items = [
-    ['euro', 'Strompreis: Preis deines Lieferanten eintragen. Netzkosten, Steuern und Abgaben rechnet Netzblick selbst, samt Sommer-Niedertarif.'],
-    ['bell', 'Erinnerung, bevor Neukundenrabatt oder Vertragsbindung enden, damit du rechtzeitig wechseln kannst.'],
-    ['community', 'Energiegemeinschaft: alle Teilnahmen mit Teilnahmefaktor, Aufteilung und Verlauf.'],
-    ['bolt', 'Störung und Kontakt: Störungsdienst, Servicezentren und Kundentelefon direkt anrufen.'],
+    ['gauge', 'Leistung: Über dem Diagramm auf „kW“ tippen. Dann siehst du die Viertelstunden, auch für einen ganzen Monat, mit einblendbarer 10-kW-Linie.'],
+    ['chart', 'Ab 2027 zählt fürs Netz die höchste Viertelstunde jedes Monats. Die Seite „Leistung“ zeigt deine Monatsspitzen und was du 2027 zahlst.'],
+    ['euro', 'Kosten ab 2027 mit dem neuen Leistungspreis und dem Winter-Niedertarif (Entwurf der E-Control).'],
     ['menu', 'Alles im Menü über ☰ oben links.'],
   ];
   const body = h('div', { class: 'whatsnew' },
     h('ul', { class: 'whatsnew-list', role: 'list' }, ...items.map(([ic, text]) => h('li', {}, icon(ic), h('span', { text })))),
     h('div', { class: 'sheet-actions' },
       h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => closeSheet() }, 'Später'),
-      h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); setTimeout(openNav, 240); } }, 'Menü öffnen')));
+      h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); goto('power'); } }, 'Leistung ansehen')));
   setTimeout(() => openSheet(`Neu in Netzblick ${major}`, body), 700);
 }
 
@@ -586,6 +587,8 @@ async function refresh({ force = false } = {}) {
       flow: state.flow,
       period: state.period,
       compareMode: state.settings.compareMode,
+      // Monatsspitzen für den Leistungspreis ab 2027 und für die Leistungsansicht in Jahr/Gesamt
+      peaksFrom: state.flow === 'consumption' ? (state.settings.powerView ? new Date(2000, 0, 1) : POWER_TARIFF.since) : null,
     }, { force });
     if (seq !== state.loadSeq) return;
     state.view = view;
@@ -628,6 +631,7 @@ function derive() {
     cur: applyFilters(x.cur.points, f, x.cur.fine),
     cmp: x.cmp ? applyFilters(x.cmp.points, f, x.cmp.fine) : null,
     peak: x.peak,
+    monthPeaks: x.monthPeaks,
   }));
   const combined = per.length === 1 ? per[0].cur : mergeSum(per.map((x) => x.cur));
   const combinedCmpRaw = v.comparePeriod && per.length && per.every((x) => x.cmp) ? (per.length === 1 ? per[0].cmp : mergeSum(per.map((x) => x.cmp))) : null;
@@ -686,7 +690,8 @@ function periodCosts(d) {
     const lastDay = addDays(startOfDay(d.stats.last), 1);
     to = lastDay < d.v.period.end ? lastDay : d.v.period.end;
   }
-  const c = sumCosts(d.per.map((x) => meterCost(x.cur, { fine: d.v.fine, from, to, ...costOptions(x.mp) })));
+  const peaksOf = (x) => (x.monthPeaks ? new Map(x.monthPeaks.filter((m) => m.kw != null).map((m) => [m.key, m.kw])) : null);
+  const c = sumCosts(d.per.map((x) => meterCost(x.cur, { fine: d.v.fine, from, to, peaks: peaksOf(x), ...costOptions(x.mp) })));
   c.coveredDays = from && to ? daysBetween(from, to) : 0;
   c.filtered = filtered;
   return c;
@@ -797,7 +802,11 @@ function renderCosts(d) {
     if (c.supplier.base) rows.push(row('Grundpreis', c.supplier.base, null));
   }
   rows.push(head('Netz Burgenland', grid, T.s[1]));
-  rows.push(row('Netznutzung (Arbeit)', c.grid.usage * vat, c.snapKwh > 0 ? `davon ${num(c.snapKwh, 0)} kWh im Sommer-Niedertarif, ${euro(c.snapSaving)} günstiger` : null));
+  const lowParts = [];
+  if (c.snapKwh > 0) lowParts.push(`${num(c.snapKwh, 0)} kWh im Sommer-Niedertarif`);
+  if (c.winapKwh > 0) lowParts.push(`${num(c.winapKwh, 0)} kWh im Winter-Niedertarif`);
+  rows.push(row('Netznutzung (Arbeit)', c.grid.usage * vat, lowParts.length ? `davon ${lowParts.join(' und ')}, ${euro(c.snapSaving + c.winapSaving)} günstiger` : null));
+  if (c.grid.power) rows.push(row('Netznutzung (Leistung)', c.grid.power * vat, c.peakKw != null ? `höchste Viertelstunde ${kw(c.peakKw)}${c.powerMonths.length > d.per.length ? ' (höchster Monat)' : ''}` : null));
   if (c.grid.base) rows.push(row('Netznutzung (Pauschale)', c.grid.base * vat, null));
   if (c.grid.metering) rows.push(row('Messentgelt', c.grid.metering * vat, null));
   if (c.grid.loss) rows.push(row('Netzverlust', c.grid.loss * vat, null));
@@ -810,6 +819,9 @@ function renderCosts(d) {
   const notes = [`Alle Beträge inklusive 20 % USt (${euro(c.vat)} auf Netz und Abgaben). Netzpreise laut Preisblatt von Netz Burgenland ${years}, Stand ${STAND}.`];
   if (c.filtered) notes.push('Mit Filter nur die mengenabhängigen Kosten, ohne Pauschalen.');
   if (c.snapUnknown) notes.push('Den Sommer-Niedertarif (April bis September, 10–16 Uhr) kann Netzblick nur mit Viertelstundenwerten rechnen; hier gilt der normale Arbeitspreis.');
+  if (c.winapUnknown) notes.push('Den Winter-Niedertarif (ab Oktober 2027, 23–5 Uhr) rechnet Netzblick nur mit Viertelstundenwerten.');
+  if (c.draft) notes.push(`Netzpreise 2027 mit Leistungspreis laut ${POWER_TARIFF.status}; die endgültigen Werte kommen Mitte Dezember 2026.`);
+  if (c.peakUnknown) notes.push('Für einen Monat fehlt die höchste Viertelstunde, dieser Leistungspreis ist nicht enthalten.');
   if (c.approx) notes.push('Für Zeiträume ohne eigenes Preisblatt verwendet Netzblick die nächstgelegenen bekannten Preise.');
   if (state.kpData && state.kpData.pods.some((p) => p.communities && p.communities.some((x) => x.status === 'aktiv'))) notes.push('Strom aus deiner Energiegemeinschaft rechnet die Gemeinschaft ab. Die Portale liefern den Anteil nicht, darum zählt hier aller Strom als Netzbezug.');
 
@@ -889,17 +901,136 @@ function renderMainLegend(d, type, compareName) {
   el.hidden = !el.children.length;
 }
 
+/* ---------- Leistungsansicht: Viertelstunden in kW, Monatsspitzen, 10-kW-Grenze */
+const powerViewOn = () => !!state.settings.powerView && state.flow === 'consumption';
+
+function renderUnitSeg() {
+  const seg = $('unitSeg');
+  seg.textContent = '';
+  seg.hidden = state.flow !== 'consumption';
+  const on = powerViewOn();
+  for (const [id, label, title] of [['kwh', 'kWh', 'Verbrauch in kWh'], ['kw', 'kW', 'Leistung: höchste Viertelstunden in kW']]) {
+    const active = (id === 'kw') === on;
+    seg.append(h('button', {
+      type: 'button', class: active ? 'on' : '', 'aria-pressed': active ? 'true' : 'false', title,
+      onclick: () => setPowerView(id === 'kw'),
+    }, label));
+  }
+}
+
+function setPowerView(on) {
+  if (!!state.settings.powerView === on) return;
+  state.settings.powerView = on;
+  saveSettings(state.settings);
+  // Ohne Viertelstundenwerte braucht die Ansicht die Monatsspitzen des ganzen Zeitraums
+  if (on && state.view && !state.view.fine) refresh();
+  else if (state.view) renderMain(derive());
+}
+
+/** Höchste Viertelstunde und Überschreitungen je Zählpunkt */
+function powerStats(d) {
+  const limit = POWER_TARIFF.limitKw;
+  return d.per.map((x) => {
+    let best = null, over = 0, units = 0;
+    if (d.v.fine) {
+      for (const p of x.cur) {
+        if (p.v == null) continue;
+        const kwv = p.v * 4;
+        units++;
+        if (!best || kwv > best.kw) best = { kw: kwv, t: p.t };
+        if (kwv > limit) over++;
+      }
+    } else {
+      for (const m of x.monthPeaks || []) {
+        if (m.kw == null) continue;
+        units++;
+        if (!best || m.kw > best.kw) best = { kw: m.kw, t: m.t };
+        if (m.kw > limit) over++;
+      }
+    }
+    const cls = tariffClassOf(podFor(x.mp.id));
+    return { x, best, over, units, interruptible: cls === 'u' };
+  });
+}
+
+function renderPowerChart(d) {
+  const { v, per } = d;
+  const T = charts.tokens();
+  const chartEl = $('mainChart');
+  chartEl.classList.remove('chart--donut');
+  $('splitBox').hidden = true;
+  const limit = state.settings.powerLimit === false ? null : POWER_TARIFF.limitKw;
+  let cfg;
+  if (v.fine) {
+    const axis = bucketAxis(v.period, 'quarter');
+    const series = per.map((x) => ({ name: x.name, color: x.color, data: seriesOnAxis(x.cur, axis, 'quarter').map((p) => ({ v: p.v == null ? null : p.v * 4, s: p.s })) }));
+    cfg = { bucket: 'quarter', axis, days: daysBetween(v.period.start, v.period.end), series, limit };
+    chartEl.classList.add('chart--tall');
+  } else {
+    let axis = bucketAxis(v.period, 'month');
+    const maps = per.map((x) => new Map((x.monthPeaks || []).map((m) => [m.start.getTime(), m])));
+    const first = axis.findIndex((m) => maps.some((mp) => mp.get(m.getTime()) && mp.get(m.getTime()).kw != null));
+    if (first > 0) axis = axis.slice(first);
+    const series = per.map((x, i) => ({ name: x.name, color: x.color, data: axis.map((m) => { const e = maps[i].get(m.getTime()); return { v: e ? e.kw : null, t: e ? e.t : null }; }) }));
+    cfg = { bucket: 'month', axis, days: daysBetween(v.period.start, v.period.end), series, limit };
+    chartEl.classList.remove('chart--tall');
+  }
+  renderMainLegend(d, v.fine ? 'line' : 'bar', null);
+  charts.render(chartEl, charts.powerOption(T, cfg));
+  renderPowerBox(d);
+}
+
+function renderPowerBox(d) {
+  const box = $('powerBox');
+  box.textContent = '';
+  const limit = POWER_TARIFF.limitKw;
+  const on = state.settings.powerLimit !== false;
+  const lp = GRID[2027].nm.lpKw;
+  const gross = (x) => x * 1.2;
+  const st = powerStats(d);
+  const unit = d.v.fine ? 'Viertelstunden' : 'Monaten';
+  box.append(h('div', { class: 'power-tools' },
+    h('button', {
+      type: 'button', class: 'chip' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false',
+      onclick: () => { state.settings.powerLimit = !on; saveSettings(state.settings); renderMain(derive()); },
+    }, h('span', { class: 'chip-line' }), `${limit}-kW-Grenze`),
+    h('button', { type: 'button', class: 'link-btn', onclick: () => goto('power') }, icon('gauge'), 'Leistung und Kosten ab 2027')));
+  const list = h('ul', { class: 'power-list' });
+  for (const s of st) {
+    const name = d.per.length > 1 ? h('b', { text: `${s.x.name}: ` }) : null;
+    if (!s.best) { list.append(h('li', {}, name, 'keine Viertelstundenwerte')); continue; }
+    const when = d.v.fine ? `am ${dateNum(s.best.t)} um ${time(s.best.t)} Uhr` : s.best.t ? `am ${dateNum(s.best.t)}` : '';
+    const overText = s.over
+      ? `${d.v.fine ? `${num(s.over, 0)} Viertelstunde${s.over === 1 ? '' : 'n'}` : `${num(s.over, 0)} von ${num(s.units, 0)} Monaten`} über ${limit} kW.`
+      : `Immer unter ${limit} kW.`;
+    list.append(h('li', { class: s.over && !s.interruptible ? 'is-over' : '' },
+      s.over && !s.interruptible ? icon('warn') : null,
+      h('span', {}, name, 'Höchste Viertelstunde ', h('b', { text: kw(s.best.kw) }), ` ${when}. ${overText}`,
+        s.interruptible ? ' Unterbrechbar: laut Entwurf ohne Leistungspreis.' : '')));
+  }
+  box.append(list,
+    h('p', { class: 'note', text: `Ab 2027 zählt fürs Netz auch die höchste Viertelstunde jedes Monats, je Zählpunkt: bis ${limit} kW ${euro(gross(lp.low))}, darüber ${euro(gross(lp.high))} je kW und Monat (brutto, ${POWER_TARIFF.status}). Gezeigt: mittlere Leistung je Viertelstunde${d.v.fine ? '' : ', je Monat die höchste'}.` }));
+  fillIcons(box);
+  box.hidden = false;
+}
+
 function renderMain(d) {
   const { v, per, combinedCmpRaw } = d;
   const T = charts.tokens();
   const bucket = v.bucket;
   const type = chartTypeFor(d);
   renderTypeSeg(d, type);
+  renderUnitSeg();
+  const power = powerViewOn();
+  $('typeSeg').hidden = power;
+  $('powerBox').hidden = !power;
   const split = $('splitBox');
   split.textContent = '';
   const chartEl = $('mainChart');
 
-  if (type === 'pie') {
+  if (power) {
+    renderPowerChart(d);
+  } else if (type === 'pie') {
     renderMainLegend(d, type, null);
     chartEl.classList.remove('chart--tall');
     chartEl.classList.add('chart--donut');
@@ -932,7 +1063,7 @@ function renderMain(d) {
   if (estCount) {
     const unit = d.res === 'original' ? 'Viertelstunden' : d.res === 'monthly' ? 'Monate' : 'Tage';
     const parts = Object.entries(st).map(([k, n]) => `${STATUS_LABEL[k] || k}: ${num(n, 0)} ${unit}`).join(', ');
-    notes.push(`${parts}${type === 'bar' && (bucket === 'day' || bucket === 'quarter') ? ' (blasser dargestellt)' : ''}.`);
+    notes.push(`${parts}${!power && type === 'bar' && (bucket === 'day' || bucket === 'quarter') ? ' (blasser dargestellt)' : ''}.`);
   }
   if (hourFilterActive(state.filters) && !v.fine) notes.push('Der Tageszeit-Filter braucht Viertelstundenwerte und wirkt in dieser Ansicht nicht.');
   if (filtersActive(state.filters) && v.res === 'monthly') notes.push('In der Gesamtansicht liegen nur Monatswerte vor, Filter wirken hier nicht.');
@@ -1021,11 +1152,17 @@ function renderKpis(d) {
 
   let peak = stats.peak;
   let peakSub = null;
+  if (peak && per.length > 1 && v.fine) {
+    const best = powerStats(d).map((s) => s.best).filter(Boolean).sort((a, b) => b.kw - a.kw)[0];
+    if (best) { peak = best; peakSub = 'höchster einzelner Zähler'; }
+  }
   if (!peak) {
     const srv = per.map((x) => x.peak).filter(Boolean).sort((a, b) => b.kw - a.kw)[0];
     if (srv) { peak = srv; if (per.length > 1) peakSub = 'höchster einzelner Zähler'; }
   }
-  el.append(kpi('Spitzenleistung', peak ? kw(peak.kw) : '–', peak ? (peakSub ? `${peakSub}, ${dateShort(peak.t)}` : `${dateShort(peak.t)} um ${time(peak.t)} Uhr`) : 'Viertelstundenwert'));
+  const peakText = peak ? (peakSub ? `${peakSub}, ${dateShort(peak.t)}` : `${dateShort(peak.t)} um ${time(peak.t)} Uhr`) : 'Viertelstundenwert';
+  const over = peak && state.flow === 'consumption' && peak.kw > POWER_TARIFF.limitKw;
+  el.append(kpi('Spitzenleistung', peak ? kw(peak.kw) : '–', over ? `${peakText}, über ${POWER_TARIFF.limitKw} kW` : peakText));
 
   if (v.fine) {
     el.append(kpi('Grundlast', stats.baseLoad == null ? '–' : watt(stats.baseLoad), 'läuft fast immer (10-%-Wert)'));
@@ -1543,6 +1680,7 @@ async function boot() {
     if (PARAMS.get('remind')) state.settings.contract = { supplier: 'Musterstrom GmbH', kind: 'rabatt', end: PARAMS.get('remind'), days: 30 };
     if (PARAMS.get('chart')) state.settings.chartTypes = { quarter: PARAMS.get('chart'), day: PARAMS.get('chart'), month: PARAMS.get('chart'), year: PARAMS.get('chart') };
     if (PARAMS.get('split')) state.settings.splitBy = PARAMS.get('split');
+    if (PARAMS.has('power')) { state.settings.powerView = PARAMS.get('power') !== '0'; if (PARAMS.get('power') === 'noline') state.settings.powerLimit = false; }
     if (PARAMS.get('sel')) localStorage.setItem('nb.selection', JSON.stringify(PARAMS.get('sel') === 'all' ? 'all' : PARAMS.get('sel').split(',')));
     applyTheme();
     await doLogin('demo', 'demo', { demo: true });

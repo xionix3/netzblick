@@ -10,24 +10,60 @@ export const STAND = '18.11.2026';
  *  ap    Netznutzung Arbeitspreis in Cent/kWh
  *  snap  Sommer-Nieder-Arbeitspreis in Cent/kWh (1.4.–30.9., 10–16 Uhr), ab 2026
  *  loss  Netzverlustentgelt in Cent/kWh
+ *  metering  Messentgelt in Euro je Monat (Drehstrom / Wechselstrom)
  *  Klassen: nm = nicht gemessene Leistung (Haushalt), u = unterbrechbar (z. B. Wärmepumpe)
+ *
+ * Ab 2027 Leistungspreis statt Pauschale (siehe POWER_TARIFF):
+ *  lpKw    Euro je kW und Monat: low für den Anteil bis 10 kW, high für den Anteil darüber
+ *  winap   Winter-Niedertarif in Cent/kWh (1.10.–31.3., 23–5 Uhr), ab 1.10.2027
+ *  Quelle 2027: Begutachtungsentwurf der SNE-T-V 2027 der E-Control vom 29.10.2026,
+ *  § 5 Abs. 1 Z 6 lit. a, Bereich Burgenland; Messentgelt entfällt (Erläuterungen).
+ *  Netz Burgenland stellt laut eigener Ankündigung ab Jänner 2027 um. Die endgültige Verordnung
+ *  erscheint Mitte Dezember 2026; dann hier die Werte prüfen und draft entfernen.
  */
 export const GRID = {
   2025: {
     nm: { lp: 48.0, ap: 7.26, snap: null, loss: 0 },
     u: { lp: 0, ap: 4.49, snap: null, loss: 0 },
+    metering: { three: 2.4, single: 1.0 },
   },
   2026: {
     nm: { lp: 54.0, ap: 8.46, snap: 6.77, loss: 0 },
     u: { lp: 0, ap: 5.3, snap: 4.24, loss: 0 },
+    metering: { three: 2.4, single: 1.0 },
+  },
+  2027: {
+    draft: true,
+    nm: { lp: 0, ap: 6.6, snap: 5.28, winap: 5.28, loss: 0, lpKw: { low: 3.4, high: 5.1 } },
+    u: { lp: 0, ap: 6.1, snap: 4.88, winap: 4.88, loss: 0, lpKw: null },
+    metering: { three: 0, single: 0 },
   },
 };
 
-/** Entgelt für Messleistungen je Kalendermonat (netto) */
-export const METERING = { three: 2.4, single: 1.0 }; // Drehstromzählung / Wechselstromzählung
+/** Entgelt für Messleistungen je Kalendermonat (netto), bis 2026 */
+export const METERING = GRID[2026].metering; // Drehstromzählung / Wechselstromzählung
 
 /** Sommer-Niedertarif: April bis September, 10 bis 16 Uhr */
 export const SNAP_WINDOW = { fromMonth: 3, toMonth: 8, fromHour: 10, toHour: 16 };
+/** Winter-Niedertarif: Oktober bis März, 23 bis 5 Uhr, erstmals ab 1. Oktober 2027 */
+export const WINAP_WINDOW = { fromMonth: 9, toMonth: 2, fromHour: 23, toHour: 5, since: new Date(2027, 9, 1) };
+
+/* ------------------------------------------------------------------ Leistungspreis ab 2027
+ * Verrechnet wird je Zählpunkt und Monat die höchste Viertelstunde (kWh × 4 = kW), auf zwei
+ * Kommastellen gerundet. Der Anteil bis 10 kW kostet lpKw.low, der Anteil darüber lpKw.high.
+ * Quellen: SNE-T-V 2027 (Begutachtungsentwurf, § 2 Z 4 und § 5), FAQ der E-Control zur neuen Tarifstruktur,
+ * Presseartikel „Leistungstarif 2027“ von Netz Burgenland.
+ */
+export const POWER_TARIFF = {
+  since: new Date(2027, 0, 1),
+  limitKw: 10,
+  status: 'Entwurf der E-Control vom 29.10.2026',
+  sources: [
+    { label: 'Leistungstarif 2027 (Netz Burgenland)', url: 'https://netzburgenland.at/unternehmen/presse-artikel-leistungstarif2027/' },
+    { label: 'Fragen und Antworten zur neuen Tarifstruktur (E-Control)', url: 'https://www.e-control.at/konsumenten/faq-neue-tarifstruktur' },
+    { label: 'Entwurf SNE-T-V 2027 (E-Control, PDF)', url: 'https://www.e-control.at/documents/d/guest/snt-v-2027-begutachtungsentwurf-pdf' },
+  ],
+};
 
 /* ------------------------------------------------------------------ Steuern und Abgaben (bundesweit)
  *  eAbgabe   Elektrizitätsabgabe in Cent/kWh. 2026 für Haushalte 0,1 ct (Lastprofil H0), sonst 0,82 ct.
