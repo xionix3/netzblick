@@ -5,6 +5,14 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.3.1] – 2026-11-18
+
+### Geändert
+- **Leistung als eigenes Diagramm** direkt unter dem Verbrauch, immer sichtbar. Der Umschalter kWh/kW entfällt. Tag, Woche und Monat zeigen die Viertelstunden in kW, Jahr und Gesamt die höchste Viertelstunde je Monat. Die 10-kW-Linie schaltest du oben rechts im Diagramm ein und aus.
+
+### Behoben
+- Kommen die Daten aus dem Kundenportal erst nach der ersten Anzeige, rechnet die Übersicht jetzt sofort neu. Vorher galt für einen unterbrechbaren Zählpunkt (z. B. Wärmepumpe) bis zum nächsten Zeitraumwechsel der Haushaltstarif.
+
 ## [1.3.0] – 2026-11-18
 
 ### Neu

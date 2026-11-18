@@ -82,8 +82,8 @@ All images show demo mode with made-up sample data.
 
 | | |
 |---|---|
-| **kWh or kW** | Switch above the chart. In kW, Netzblick shows the average power of every quarter hour, even for a whole month. For year and all time it shows the highest quarter hour per month. |
-| **10 kW line** | Can be shown or hidden. From 2027, the part of the monthly peak above 10 kW costs more. The highest peak is marked, and below the chart each meter shows how often it went above 10 kW. |
+| **Power chart** | Its own chart right below consumption: average power of every quarter hour in kW, even for a whole month. For year and all time the highest quarter hour per month. |
+| **10 kW line** | Shown or hidden at the top right of the chart. From 2027, the part of the monthly peak above 10 kW costs more. The highest peak is marked, and below the chart each meter shows how often it went above 10 kW. |
 | **"Leistung" page** | Monthly peaks of the last 13 months per meter, months above 10 kW, the peak so far this month, yearly power price, grid costs 2026 vs. from 2027, tips. |
 | **Basis** | E-Control's draft tariff regulation 2027 (29 Oct 2026), Burgenland grid area. Netz Burgenland has announced the switch for January 2027. |
 
@@ -127,7 +127,7 @@ No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgen
 - **Period:** the bar at the top. The calendar icon opens a custom period with presets.
 - **Browse:** arrows next to the date, or swipe across the total. Tap the date to pick one.
 - **Meters:** tap the name at the top (tick several or "nur dieser"), or tap them in the chart legend.
-- **kWh or kW:** switch above the chart on the right. In kW you get the quarter hours, and below the chart the toggle for the 10 kW line.
+- **Power:** its own chart below consumption; toggle the 10 kW line at its top right.
 - **Chart type:** icons above the chart; the choice is remembered per resolution.
 - **Comparison and filters:** chips below the date. Active filters turn dark and can be removed with ✕.
 - **Strompreis:** supplier price (incl. VAT), reminder, yearly cost, grid prices.
@@ -273,7 +273,7 @@ Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
    - power price 2027 with monthly peaks and winter low tariff
    - reminder and calendar file, version numbers
 2. **UI test** (`test/e2e/smoke.mjs`, 24 scenarios):
-   - all periods, dark mode, filters, multi-select, chart types, power view with 10 kW line
+   - all periods, dark mode, filters, multi-select, chart types, power chart with 10 kW line
    - costs and reminder, every page
    - tablet, landscape, tall status bar, sign-out
    - checks for console errors, empty views and broken text

@@ -246,6 +246,8 @@ function ensureKp({ force = false } = {}) {
     state.kpPromise = null;
     if (state.mps.length) { renderHeader(); }
     if (state.page !== 'usage') renderPage();
+    // Tarifklasse (Haushalt/unterbrechbar) bestimmt Kosten und Leistungspreis: Übersicht neu rechnen
+    else if (state.kpData && state.view) renderAll();
   });
   return state.kpPromise;
 }
@@ -352,7 +354,7 @@ function pageCtx() {
     meterColor, podFor, ensureKp, setupKp, logout, goto, openSettings, toast, renderPage,
     showUsage: (ids, period, opts = {}) => {
       if (ids) { state.selected = normalizeSelection(ids, state.mps); saveSelection(); }
-      if (opts.power != null) { state.settings.powerView = opts.power; saveSettings(state.settings); }
+      if (opts.power) state.scrollTo = 'powerPanel';
       if (period) state.period = period;
       if (!availableFlows().includes(state.flow)) state.flow = availableFlows()[0] || 'consumption';
       goto('usage');
@@ -445,7 +447,7 @@ function showWhatsNew() {
   const major = APP_VERSION.split('.').slice(0, 2).join('.');
   try { if (localStorage.getItem('nb.seenVersion') === major) return; localStorage.setItem('nb.seenVersion', major); } catch { return; }
   const items = [
-    ['gauge', 'Leistung: Über dem Diagramm auf „kW“ tippen. Dann siehst du die Viertelstunden, auch für einen ganzen Monat, mit einblendbarer 10-kW-Linie.'],
+    ['gauge', 'Leistung: Unter dem Verbrauch zeigt ein eigenes Diagramm die Viertelstunden in kW, auch für einen ganzen Monat, mit einblendbarer 10-kW-Linie.'],
     ['chart', 'Ab 2027 zählt fürs Netz die höchste Viertelstunde jedes Monats. Die Seite „Leistung“ zeigt deine Monatsspitzen und was du 2027 zahlst.'],
     ['euro', 'Kosten ab 2027 mit dem neuen Leistungspreis und dem Winter-Niedertarif (Entwurf der E-Control).'],
     ['menu', 'Alles im Menü über ☰ oben links.'],
@@ -587,8 +589,8 @@ async function refresh({ force = false } = {}) {
       flow: state.flow,
       period: state.period,
       compareMode: state.settings.compareMode,
-      // Monatsspitzen für den Leistungspreis ab 2027 und für die Leistungsansicht in Jahr/Gesamt
-      peaksFrom: state.flow === 'consumption' ? (state.settings.powerView ? new Date(2000, 0, 1) : POWER_TARIFF.since) : null,
+      // Monatsspitzen für den Leistungspreis ab 2027 (das Leistungsdiagramm lädt den Rest selbst nach)
+      peaksFrom: state.flow === 'consumption' ? POWER_TARIFF.since : null,
     }, { force });
     if (seq !== state.loadSeq) return;
     state.view = view;
@@ -650,11 +652,17 @@ function renderAll() {
   const d = derive();
   renderHero(d);
   renderMain(d);
+  renderPower(d);
   renderKpis(d);
   renderCosts(d);
   renderAnalysis(d);
   renderTable(d);
   renderFoot(d);
+  if (state.scrollTo) {
+    const target = $(state.scrollTo);
+    state.scrollTo = null;
+    if (target && !target.hidden) requestAnimationFrame(() => target.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  }
 }
 
 /* ---------- Kosten: Lieferant (eingegeben) + Netz Burgenland + Steuern und Abgaben */
@@ -901,31 +909,7 @@ function renderMainLegend(d, type, compareName) {
   el.hidden = !el.children.length;
 }
 
-/* ---------- Leistungsansicht: Viertelstunden in kW, Monatsspitzen, 10-kW-Grenze */
-const powerViewOn = () => !!state.settings.powerView && state.flow === 'consumption';
-
-function renderUnitSeg() {
-  const seg = $('unitSeg');
-  seg.textContent = '';
-  seg.hidden = state.flow !== 'consumption';
-  const on = powerViewOn();
-  for (const [id, label, title] of [['kwh', 'kWh', 'Verbrauch in kWh'], ['kw', 'kW', 'Leistung: höchste Viertelstunden in kW']]) {
-    const active = (id === 'kw') === on;
-    seg.append(h('button', {
-      type: 'button', class: active ? 'on' : '', 'aria-pressed': active ? 'true' : 'false', title,
-      onclick: () => setPowerView(id === 'kw'),
-    }, label));
-  }
-}
-
-function setPowerView(on) {
-  if (!!state.settings.powerView === on) return;
-  state.settings.powerView = on;
-  saveSettings(state.settings);
-  // Ohne Viertelstundenwerte braucht die Ansicht die Monatsspitzen des ganzen Zeitraums
-  if (on && state.view && !state.view.fine) refresh();
-  else if (state.view) renderMain(derive());
-}
+/* ---------- Leistung: eigenes Diagramm unter dem Verbrauch (Viertelstunden in kW, Monatsspitzen, 10-kW-Grenze) */
 
 /** Höchste Viertelstunde und Überschreitungen je Zählpunkt */
 function powerStats(d) {
@@ -953,29 +937,70 @@ function powerStats(d) {
   });
 }
 
-function renderPowerChart(d) {
+/** Ohne Viertelstundenwerte (Jahr, Gesamt): Monatsspitzen des ganzen Zeitraums nachladen */
+async function loadPowerPeaks(view) {
+  if (view.peaksLoading) return;
+  view.peaksLoading = true;
+  try {
+    const now = new Date();
+    const to = view.period.end < now ? view.period.end : now;
+    const all = await Promise.all(view.perMp.map((x) => state.store.monthlyPeaks(x.mp, 'consumption', view.period.start, to).catch(() => null)));
+    if (state.view !== view) return;
+    view.perMp.forEach((x, i) => { if (all[i]) x.monthPeaks = all[i]; });
+    view.peaksFull = true;
+    renderPower(derive());
+  } finally {
+    view.peaksLoading = false;
+  }
+}
+
+function renderPower(d) {
+  const panel = $('powerPanel');
+  const show = state.flow === 'consumption' && d.per.length > 0;
+  panel.hidden = !show;
+  if (!show) return;
   const { v, per } = d;
+  const limit = POWER_TARIFF.limitKw;
+  const lineOn = state.settings.powerLimit !== false;
+  $('powerSub').textContent = v.fine ? 'Mittlere Leistung je Viertelstunde, je Zählpunkt' : 'Höchste Viertelstunde je Monat, je Zählpunkt';
+
+  const tools = $('powerTools');
+  tools.textContent = '';
+  tools.append(h('button', {
+    type: 'button', class: 'chip chip--line' + (lineOn ? ' on' : ''), 'aria-pressed': lineOn ? 'true' : 'false',
+    title: lineOn ? `${limit}-kW-Linie ausblenden` : `${limit}-kW-Linie einblenden`,
+    onclick: () => { state.settings.powerLimit = !lineOn; saveSettings(state.settings); renderPower(derive()); },
+  }, h('span', { class: 'chip-line' }), `${limit} kW`));
+
+  const legend = $('powerLegend');
+  legend.textContent = '';
+  if (per.length > 1) legend.append(...per.map((x) => h('span', { class: 'lg' }, h('span', { class: `lg-key ${v.fine ? 'lg-key--line' : 'lg-key--bar'}`, style: `background:${x.color}` }), x.name)));
+  legend.hidden = per.length < 2;
+
+  const chartEl = $('powerChart');
+  const box = $('powerBox');
+  if (!v.fine && !v.peaksFull) {
+    loadPowerPeaks(v);
+    charts.render(chartEl, { series: [] });
+    box.textContent = '';
+    box.append(h('p', { class: 'hint' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Lade Monatsspitzen …'));
+    return;
+  }
+
   const T = charts.tokens();
-  const chartEl = $('mainChart');
-  chartEl.classList.remove('chart--donut');
-  $('splitBox').hidden = true;
-  const limit = state.settings.powerLimit === false ? null : POWER_TARIFF.limitKw;
   let cfg;
   if (v.fine) {
     const axis = bucketAxis(v.period, 'quarter');
     const series = per.map((x) => ({ name: x.name, color: x.color, data: seriesOnAxis(x.cur, axis, 'quarter').map((p) => ({ v: p.v == null ? null : p.v * 4, s: p.s })) }));
-    cfg = { bucket: 'quarter', axis, days: daysBetween(v.period.start, v.period.end), series, limit };
-    chartEl.classList.add('chart--tall');
+    cfg = { bucket: 'quarter', axis, days: daysBetween(v.period.start, v.period.end), series, limit: lineOn ? limit : null };
   } else {
     let axis = bucketAxis(v.period, 'month');
     const maps = per.map((x) => new Map((x.monthPeaks || []).map((m) => [m.start.getTime(), m])));
     const first = axis.findIndex((m) => maps.some((mp) => mp.get(m.getTime()) && mp.get(m.getTime()).kw != null));
     if (first > 0) axis = axis.slice(first);
     const series = per.map((x, i) => ({ name: x.name, color: x.color, data: axis.map((m) => { const e = maps[i].get(m.getTime()); return { v: e ? e.kw : null, t: e ? e.t : null }; }) }));
-    cfg = { bucket: 'month', axis, days: daysBetween(v.period.start, v.period.end), series, limit };
-    chartEl.classList.remove('chart--tall');
+    cfg = { bucket: 'month', axis, days: daysBetween(v.period.start, v.period.end), series, limit: lineOn ? limit : null };
   }
-  renderMainLegend(d, v.fine ? 'line' : 'bar', null);
   charts.render(chartEl, charts.powerOption(T, cfg));
   renderPowerBox(d);
 }
@@ -984,21 +1009,12 @@ function renderPowerBox(d) {
   const box = $('powerBox');
   box.textContent = '';
   const limit = POWER_TARIFF.limitKw;
-  const on = state.settings.powerLimit !== false;
   const lp = GRID[2027].nm.lpKw;
   const gross = (x) => x * 1.2;
-  const st = powerStats(d);
-  const unit = d.v.fine ? 'Viertelstunden' : 'Monaten';
-  box.append(h('div', { class: 'power-tools' },
-    h('button', {
-      type: 'button', class: 'chip' + (on ? ' on' : ''), 'aria-pressed': on ? 'true' : 'false',
-      onclick: () => { state.settings.powerLimit = !on; saveSettings(state.settings); renderMain(derive()); },
-    }, h('span', { class: 'chip-line' }), `${limit}-kW-Grenze`),
-    h('button', { type: 'button', class: 'link-btn', onclick: () => goto('power') }, icon('gauge'), 'Leistung und Kosten ab 2027')));
   const list = h('ul', { class: 'power-list' });
-  for (const s of st) {
+  for (const s of powerStats(d)) {
     const name = d.per.length > 1 ? h('b', { text: `${s.x.name}: ` }) : null;
-    if (!s.best) { list.append(h('li', {}, name, 'keine Viertelstundenwerte')); continue; }
+    if (!s.best) { list.append(h('li', {}, h('span', {}, name, 'keine Viertelstundenwerte'))); continue; }
     const when = d.v.fine ? `am ${dateNum(s.best.t)} um ${time(s.best.t)} Uhr` : s.best.t ? `am ${dateNum(s.best.t)}` : '';
     const overText = s.over
       ? `${d.v.fine ? `${num(s.over, 0)} Viertelstunde${s.over === 1 ? '' : 'n'}` : `${num(s.over, 0)} von ${num(s.units, 0)} Monaten`} über ${limit} kW.`
@@ -1009,9 +1025,9 @@ function renderPowerBox(d) {
         s.interruptible ? ' Unterbrechbar: laut Entwurf ohne Leistungspreis.' : '')));
   }
   box.append(list,
-    h('p', { class: 'note', text: `Ab 2027 zählt fürs Netz auch die höchste Viertelstunde jedes Monats, je Zählpunkt: bis ${limit} kW ${euro(gross(lp.low))}, darüber ${euro(gross(lp.high))} je kW und Monat (brutto, ${POWER_TARIFF.status}). Gezeigt: mittlere Leistung je Viertelstunde${d.v.fine ? '' : ', je Monat die höchste'}.` }));
+    h('p', { class: 'note', text: `Ab 2027 zählt fürs Netz auch die höchste Viertelstunde jedes Monats, je Zählpunkt: bis ${limit} kW ${euro(gross(lp.low))}, darüber ${euro(gross(lp.high))} je kW und Monat (brutto, ${POWER_TARIFF.status}).` }),
+    h('button', { type: 'button', class: 'link-btn', onclick: () => goto('power') }, icon('gauge'), 'Monatsspitzen und Kosten ab 2027'));
   fillIcons(box);
-  box.hidden = false;
 }
 
 function renderMain(d) {
@@ -1020,17 +1036,11 @@ function renderMain(d) {
   const bucket = v.bucket;
   const type = chartTypeFor(d);
   renderTypeSeg(d, type);
-  renderUnitSeg();
-  const power = powerViewOn();
-  $('typeSeg').hidden = power;
-  $('powerBox').hidden = !power;
   const split = $('splitBox');
   split.textContent = '';
   const chartEl = $('mainChart');
 
-  if (power) {
-    renderPowerChart(d);
-  } else if (type === 'pie') {
+  if (type === 'pie') {
     renderMainLegend(d, type, null);
     chartEl.classList.remove('chart--tall');
     chartEl.classList.add('chart--donut');
@@ -1063,7 +1073,7 @@ function renderMain(d) {
   if (estCount) {
     const unit = d.res === 'original' ? 'Viertelstunden' : d.res === 'monthly' ? 'Monate' : 'Tage';
     const parts = Object.entries(st).map(([k, n]) => `${STATUS_LABEL[k] || k}: ${num(n, 0)} ${unit}`).join(', ');
-    notes.push(`${parts}${!power && type === 'bar' && (bucket === 'day' || bucket === 'quarter') ? ' (blasser dargestellt)' : ''}.`);
+    notes.push(`${parts}${type === 'bar' && (bucket === 'day' || bucket === 'quarter') ? ' (blasser dargestellt)' : ''}.`);
   }
   if (hourFilterActive(state.filters) && !v.fine) notes.push('Der Tageszeit-Filter braucht Viertelstundenwerte und wirkt in dieser Ansicht nicht.');
   if (filtersActive(state.filters) && v.res === 'monthly') notes.push('In der Gesamtansicht liegen nur Monatswerte vor, Filter wirken hier nicht.');
@@ -1680,7 +1690,8 @@ async function boot() {
     if (PARAMS.get('remind')) state.settings.contract = { supplier: 'Musterstrom GmbH', kind: 'rabatt', end: PARAMS.get('remind'), days: 30 };
     if (PARAMS.get('chart')) state.settings.chartTypes = { quarter: PARAMS.get('chart'), day: PARAMS.get('chart'), month: PARAMS.get('chart'), year: PARAMS.get('chart') };
     if (PARAMS.get('split')) state.settings.splitBy = PARAMS.get('split');
-    if (PARAMS.has('power')) { state.settings.powerView = PARAMS.get('power') !== '0'; if (PARAMS.get('power') === 'noline') state.settings.powerLimit = false; }
+    if (PARAMS.get('power') === 'noline') state.settings.powerLimit = false;
+    if (PARAMS.get('power') === 'scroll') state.scrollTo = 'powerPanel';
     if (PARAMS.get('sel')) localStorage.setItem('nb.selection', JSON.stringify(PARAMS.get('sel') === 'all' ? 'all' : PARAMS.get('sel').split(',')));
     applyTheme();
     await doLogin('demo', 'demo', { demo: true });

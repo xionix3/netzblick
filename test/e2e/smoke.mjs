@@ -251,38 +251,46 @@ await scenario('Seite Strompreis mit Netzpreisen und Jahreskosten', {
     expect(/Steuern und Abgaben 2026/.test(s.text), 'Abgaben fehlen'),
   ],
 });
-await scenario('Leistung: Monat in Viertelstunden mit 10-kW-Grenze', {
-  query: '&period=month&date=2026-10-05&sel=all&power=1',
+await scenario('Leistung: eigenes Diagramm unter dem Verbrauch, Monat in Viertelstunden', {
+  query: '&period=month&date=2026-10-05&sel=all',
   shot: 'leistung-monat',
-  actions: async (page) => { await waitText(page, /Höchste Viertelstunde/); },
+  actions: async (page) => {
+    await waitText(page, /Höchste Viertelstunde/);
+    // Tarifklasse aus dem Kundenportal kommt nach: Übersicht wird neu gerechnet
+    await waitText(page, /Unterbrechbar: laut Entwurf ohne Leistungspreis/, 15000);
+    await page.evaluate(() => document.querySelector('#powerPanel').scrollIntoView());
+  },
   checks: async (s, page) => {
     const before = await page.evaluate(() => ({
-      box: !document.querySelector('#powerBox').hidden,
-      types: document.querySelector('#typeSeg').hidden,
-      chip: document.querySelector('#powerBox .chip')?.getAttribute('aria-pressed'),
-      unit: [...document.querySelectorAll('#unitSeg button')].map((b) => b.textContent + ':' + b.getAttribute('aria-pressed')).join(','),
+      panel: !document.querySelector('#powerPanel').hidden,
+      main: !!document.querySelector('#mainChart canvas'),
+      power: !!document.querySelector('#powerChart canvas'),
+      types: !document.querySelector('#typeSeg').hidden,
+      toggle: !!document.querySelector('#unitSeg'),
+      chip: document.querySelector('#powerTools .chip')?.getAttribute('aria-pressed'),
+      legend: document.querySelectorAll('#powerLegend .lg').length,
+      order: (() => { const k = [...document.querySelector('#content').children].map((e) => e.id); return k.indexOf('mainPanel') < k.indexOf('powerPanel') && k.indexOf('powerPanel') < k.indexOf('kpis'); })(),
     }));
-    await page.click('#powerBox .chip');
+    await page.evaluate(() => document.querySelector('#powerTools .chip').click());
     await sleep(300);
-    const chipOff = await page.$eval('#powerBox .chip', (b) => b.getAttribute('aria-pressed'));
-    await page.evaluate(() => [...document.querySelectorAll('#unitSeg button')].find((b) => b.textContent === 'kWh').click());
-    await sleep(400);
-    const after = await page.evaluate(() => ({ box: !document.querySelector('#powerBox').hidden, types: document.querySelector('#typeSeg').hidden }));
+    const chipOff = await page.$eval('#powerTools .chip', (b) => b.getAttribute('aria-pressed'));
     return [
-      expect(before.box && before.types, 'Leistungsansicht nicht aktiv'),
-      expect(before.chip === 'true' && chipOff === 'false', '10-kW-Grenze lässt sich nicht ausblenden'),
-      expect(before.unit === 'kWh:false,kW:true', `Umschalter falsch: ${before.unit}`),
+      expect(before.panel && before.main && before.power, 'Verbrauch und Leistung nicht beide sichtbar'),
+      expect(before.types && !before.toggle, 'Umschalter kWh/kW sollte weg sein'),
+      expect(before.order, 'Leistung steht nicht unter dem Verbrauch'),
+      expect(before.legend === 2, 'Legende je Zählpunkt fehlt'),
+      expect(before.chip === 'true' && chipOff === 'false', '10-kW-Linie lässt sich nicht ausblenden'),
       expect(/über 10 kW|Immer unter 10 kW/.test(s.text), 'Überschreitung fehlt'),
       expect(/je kW und Monat/.test(s.text), 'Hinweis zum Leistungspreis fehlt'),
-      expect(!after.box && !after.types, 'Zurück auf kWh klappt nicht'),
     ];
   },
 });
-await scenario('Leistung im Jahr: Monatsspitzen', {
-  query: '&period=year&date=2026-03-01&power=1',
-  actions: async (page) => { await waitText(page, /Höchste Viertelstunde/, 20000); },
-  checks: (s) => [
-    expect(/von 12 Monaten über 10 kW|Immer unter 10 kW/.test(s.text), 'Monatsspitzen fehlen'),
+await scenario('Leistung im Jahr: Monatsspitzen werden nachgeladen', {
+  query: '&period=year&date=2026-03-01',
+  actions: async (page) => { await waitText(page, /von 12 Monaten über 10 kW|Immer unter 10 kW/, 20000); },
+  checks: async (s, page) => [
+    expect(/Höchste Viertelstunde je Monat/.test(s.text), 'Untertitel Monatsspitzen fehlt'),
+    expect(await page.$$eval('#powerChart canvas', (l) => l.length === 1), 'Diagramm fehlt'),
   ],
 });
 await scenario('Seite Leistung: Monatsspitzen und Vergleich 2026/2027', {

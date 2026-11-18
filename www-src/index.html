@@ -116,14 +116,25 @@
               <div class="panel-tools">
                 <div class="legend" id="mainLegend"></div>
                 <div class="tool-segs">
-                  <div class="type-seg unit-seg" id="unitSeg" role="group" aria-label="Anzeigen als"></div>
                   <div class="type-seg" id="typeSeg" role="group" aria-label="Diagrammart"></div>
                 </div>
               </div>
               <div class="chart chart--main" id="mainChart"></div>
-              <div id="powerBox" class="power-box" hidden></div>
               <div id="splitBox" class="split" hidden></div>
               <p class="note" id="mainNote" hidden></p>
+            </section>
+
+            <section class="panel panel--power" id="powerPanel" aria-labelledby="powerTitle" hidden>
+              <div class="panel-head">
+                <div>
+                  <h2 id="powerTitle">Leistung</h2>
+                  <p class="panel-sub" id="powerSub"></p>
+                </div>
+                <div id="powerTools"></div>
+              </div>
+              <div class="legend legend--static" id="powerLegend" hidden></div>
+              <div class="chart chart--power" id="powerChart"></div>
+              <div id="powerBox" class="power-box"></div>
             </section>
 
             <section class="kpis" id="kpis" aria-label="Kennzahlen"></section>

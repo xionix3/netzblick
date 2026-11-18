@@ -80,8 +80,8 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
 
 | | |
 |---|---|
-| **kWh oder kW** | Über dem Diagramm umschalten. In kW zeigt Netzblick die mittlere Leistung jeder Viertelstunde, auch für einen ganzen Monat. Im Jahr und Gesamt die höchste Viertelstunde je Monat. |
-| **10-kW-Linie** | Ein- und ausblendbar. Ab 2027 kostet der Anteil der Monatsspitze über 10 kW mehr. Die höchste Spitze ist markiert, darunter steht je Zählpunkt, wie oft sie über 10 kW lag. |
+| **Leistungsdiagramm** | Eigenes Diagramm direkt unter dem Verbrauch: mittlere Leistung jeder Viertelstunde in kW, auch für einen ganzen Monat. Im Jahr und Gesamt die höchste Viertelstunde je Monat. |
+| **10-kW-Linie** | Oben rechts im Diagramm ein- und ausblendbar. Ab 2027 kostet der Anteil der Monatsspitze über 10 kW mehr. Die höchste Spitze ist markiert, darunter steht je Zählpunkt, wie oft sie über 10 kW lag. |
 | **Seite „Leistung“** | Monatsspitzen der letzten 13 Monate je Zählpunkt, Monate über 10 kW, Spitze im laufenden Monat, Leistungspreis pro Jahr, Netzkosten 2026 gegen ab 2027, Tipps. |
 | **Grundlage** | Entwurf der Tarifverordnung 2027 der E-Control (29.10.2026), Netzbereich Burgenland. Netz Burgenland kündigt die Umstellung für Jänner 2027 an. |
 
@@ -125,7 +125,7 @@ Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at]
 - **Zeitraum:** Leiste oben. Das Kalendersymbol öffnet einen eigenen Zeitraum mit Schnellwahl.
 - **Blättern:** Pfeile neben dem Datum oder auf der Summe wischen. Ein Tipp aufs Datum öffnet die Datumsauswahl.
 - **Zählpunkte:** Tipp auf den Namen oben (mehrere ankreuzen oder „nur dieser“), oder in der Diagrammlegende antippen.
-- **kWh oder kW:** Schalter rechts über dem Diagramm. In kW gibt es die Viertelstunden und unter dem Diagramm den Schalter für die 10-kW-Linie.
+- **Leistung:** eigenes Diagramm unter dem Verbrauch; die 10-kW-Linie schaltest du oben rechts darin ein und aus.
 - **Diagrammart:** Symbole rechts über dem Diagramm; die Wahl wird je Auflösung gemerkt.
 - **Vergleich und Filter:** Chips unter dem Datum. Aktive Filter erscheinen dunkel und lassen sich mit ✕ entfernen.
 - **Strompreis:** Preis des Lieferanten (brutto), Erinnerung an Rabatt- oder Bindungsende, Jahreskosten, Netzpreise.
@@ -276,7 +276,7 @@ flowchart LR
 Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 
 1. **Unit-Tests** (`test/unit/`, 81 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Leistungspreis 2027 mit Monatsspitzen und Winter-Niedertarif, Erinnerung und Kalenderdatei, Versionsnummern.
-2. **Oberflächentest** (`test/e2e/smoke.mjs`, 24 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsansicht mit 10-kW-Linie, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
+2. **Oberflächentest** (`test/e2e/smoke.mjs`, 24 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsdiagramm mit 10-kW-Linie, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
 3. **Android-Build**: baut die Debug-APK.
 
 ## Releases und Play Store

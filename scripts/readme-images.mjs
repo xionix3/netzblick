@@ -41,7 +41,13 @@ async function shot(name, query, { viewport = PHONE, scrollTo = null, waitText =
   await p.goto(base + '?demo=1' + query, { waitUntil: 'networkidle0' });
   await p.waitForFunction(() => !document.body.classList.contains('is-loading') && document.querySelector('#heroValue')?.textContent.trim(), { timeout: 20000 });
   if (waitText) await p.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 20000 }, waitText);
-  if (scrollTo) await p.evaluate((sel) => window.scrollTo(0, document.querySelector(sel).getBoundingClientRect().top + window.scrollY - 70), scrollTo);
+  if (scrollTo) {
+    await p.evaluate((sel) => {
+      const el = document.querySelector(sel);
+      const m = parseFloat(getComputedStyle(el).scrollMarginTop) || 70; // unter der festen Kopfzeile
+      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - m);
+    }, scrollTo);
+  }
   await new Promise((r) => setTimeout(r, after));
   const buf = await p.screenshot({ path: resolve(out, name + '.png') });
   await ctx.close();
@@ -56,7 +62,7 @@ shots.tag = await shot('tag', `&period=day&date=2026-10-07&sel=${M12345}&price=1
 shots.aufteilung = await shot('aufteilung', `&period=month&date=2026-10-01&sel=all&chart=pie&split=daypart`, { scrollTo: '#mainPanel' });
 shots.analyse = await shot('analyse', `&period=month&date=2026-10-01&sel=${M12345}`, { scrollTo: '#analysis' });
 shots.jahr = await shot('jahr-dunkel', `&period=year&date=2025-06-01&theme=dark&price=14.9`, { theme: 'dark' });
-shots.leistungMonat = await shot('leistung-monat', `&period=month&date=2026-07-01&sel=${M12345}&power=1`, { scrollTo: '#mainPanel', waitText: 'Höchste Viertelstunde' });
+shots.leistungMonat = await shot('leistung-monat', `&period=month&date=2026-07-01&sel=${M12345}`, { scrollTo: '#powerPanel', waitText: 'Höchste Viertelstunde' });
 shots.leistung = await shot('leistung', `&page=power`, { waitText: 'im Jahr fürs Netz' });
 shots.strompreis = await shot('strompreis', `&page=tariff&price=14.9&remind=${ISO(75)}`, { waitText: '€ im Jahr' });
 shots.abrechnung = await shot('abrechnung', `&page=billing&price=14.9`, { waitText: 'Hochrechnung' });
