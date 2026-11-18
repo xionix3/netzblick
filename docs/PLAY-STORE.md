@@ -50,8 +50,11 @@ Mit 12 Testern ist das private Konto der schnellste Weg. Das Organisationskonto 
 ## App-Inhalte (Play Console → Richtlinien → App-Inhalte)
 
 ### Datenschutzerklärung
-Benötigt wird eine **öffentlich erreichbare URL**. Der Text steht fertig in [DATENSCHUTZ.md](../DATENSCHUTZ.md).
-Solange das Repository privat ist, ist die Datei nicht öffentlich. Möglichkeiten:
+**URL für die Play Console:** https://gist.github.com/xionix3/f85c9898dc518f80e8a40bceea5199b2
+(öffentlicher Gist, angelegt am 18.11.2026, Inhalt wie [DATENSCHUTZ.md](../DATENSCHUTZ.md)). Die App verlinkt ihn auf der Seite „Info“ (`PRIVACY_URL` in `src/netzdaten.js`).
+**Bei jeder Änderung an `DATENSCHUTZ.md` den Gist mit aktualisieren** (Gist öffnen → Edit → Inhalt ersetzen). Die URL bleibt gleich.
+
+Andere Möglichkeiten, falls der Gist einmal nicht mehr passt:
 - **Einfachster Weg:** auf [gist.github.com](https://gist.github.com) einen öffentlichen Gist `Netzblick-Datenschutz.md` mit dem Inhalt von `DATENSCHUTZ.md` anlegen und dessen Link eintragen. Bei Änderungen den Gist mit aktualisieren.
 - Repository öffentlich machen und den Link auf `DATENSCHUTZ.md` verwenden (es enthält keine Geheimnisse; Schlüssel liegen nur in den GitHub-Secrets).
 - den Text auf der Website von geister-it ablegen

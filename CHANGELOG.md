@@ -5,6 +5,11 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.6.1] – 2026-11-18
+
+### Geändert
+- Seite „Info“: Datenschutz-Abschnitt nennt jetzt auch die Börsenpreise (Energy-Charts) und verlinkt die vollständige Datenschutzerklärung.
+
 ## [1.6.0] – 2026-11-18
 
 ### Neu

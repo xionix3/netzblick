@@ -107,6 +107,9 @@ export const OUTAGE = {
   source: 'https://netzburgenland.at/service/stoerungs-und-pannendienst/',
 };
 
+/** Vollständige Datenschutzerklärung (öffentlicher Gist, Inhalt wie DATENSCHUTZ.md) */
+export const PRIVACY_URL = 'https://gist.github.com/xionix3/f85c9898dc518f80e8a40bceea5199b2';
+
 export const CONTACT = {
   company: 'Netz Burgenland GmbH',
   address: 'Kasernenstraße 9, 7000 Eisenstadt',

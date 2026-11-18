@@ -4,7 +4,7 @@ import { meterLabel, firstDataDate } from './model.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { billingYearStatus, consumptionFor } from './billing.js';
 import { yearCost, meterCost, sumCosts, supplierFor, forYear, powerCharge, tariffClassOf } from './costs.js';
-import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, DYNAMIC_PROVIDERS, ecTypeLabel } from './netzdaten.js';
+import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, DYNAMIC_PROVIDERS, PRIVACY_URL, ecTypeLabel } from './netzdaten.js';
 import { dynamicPrice, SPOT_SOURCE } from './spot.js';
 import { currentFactor } from './kundenportal.js';
 import { reminderIcs, reminderTime } from './reminder.js';
@@ -350,12 +350,15 @@ export function renderInfo(body, ctx) {
     section('Woher die Daten kommen', null, list(
       'Messwerte und Zählerstände: Smart-Meter-Portal von Netz Burgenland (smartmeter.netzburgenland.at)',
       'Anlagen, Verträge und Abrechnungen: Kundenportal von Netz Burgenland (portal.netzburgenland.at)',
+      'Börsenpreise: Energy-Charts (Fraunhofer ISE), Daten Bundesnetzagentur | SMARD.de, CC BY 4.0',
     )),
     section('Datenschutz', null, list(
       'Zugangsdaten werden verschlüsselt im Android-Schlüsselspeicher dieses Geräts abgelegt.',
-      'Netzblick schickt Daten nur an die beiden Portale von Netz Burgenland. Es gibt keinen eigenen Server, keine Werbung und keine Analyse.',
+      'Deine Zugangsdaten und Messwerte gehen nur an die beiden Portale von Netz Burgenland. Für die Börsenpreise fragt Netzblick bei Energy-Charts nur Preiszone und Zeitraum ab, keine Daten über dich.',
+      'Es gibt keinen eigenen Server, keine Werbung und keine Analyse.',
       'Abmelden löscht Zugangsdaten und zwischengespeicherte Messwerte.',
-    )),
+    ),
+    h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(PRIVACY_URL) }, icon('external'), 'Vollständige Datenschutzerklärung')),
     section('Hinweis', null, h('p', { class: 'panel-text', text: 'Netzblick ist eine inoffizielle App und steht in keiner Verbindung zu Netz Burgenland oder den Herstellern der Portale. Kosten und Hochrechnungen sind Schätzungen; maßgeblich ist deine Rechnung.' })),
     section('Verwendete Bausteine', null, list(
       'Apache ECharts, Apache-Lizenz 2.0',
