@@ -310,8 +310,19 @@ export function demoSpot(t) {
   return Math.round(p * 100) / 100;
 }
 
+/** Nachbarländer in der Demo: gleiche Form, eigener Pegel */
+const ZONE_SHIFT = { 'DE-LU': [0.93, -4, 21], CH: [1.02, 5, 22], CZ: [0.95, -3, 23], HU: [1.07, 7, 24], SI: [1.01, 2, 25], 'IT-North': [1.04, 11, 26] };
+function zoneSpot(t, bzn) {
+  const p = demoSpot(t);
+  const z = ZONE_SHIFT[bzn];
+  if (!z) return p;
+  const day = Math.floor((t.getTime() + 3600000) / 86400000);
+  return Math.round((p * z[0] + z[1] + (rnd(day, z[2]) - 0.5) * 18) * 100) / 100;
+}
+
 function handleSpot(url) {
   const q = new URL(url).searchParams;
+  const bzn = q.get('bzn') || 'AT';
   const [ys, ms, ds] = q.get('start').split('-').map(Number);
   const [ye, me, de] = q.get('end').split('-').map(Number);
   const from = new Date(ys, ms - 1, ds).getTime();
@@ -322,7 +333,7 @@ function handleSpot(url) {
     const d = new Date(x);
     const step = x >= new Date(2025, 9, 1).getTime() ? 900000 : 3600000;
     t.push(x / 1000);
-    p.push(demoSpot(d));
+    p.push(zoneSpot(d, bzn));
     x += step;
   }
   return { status: 200, data: { license_info: 'Demo', unix_seconds: t, price: p, unit: 'EUR / MWh', deprecated: false } };

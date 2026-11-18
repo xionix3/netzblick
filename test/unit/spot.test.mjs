@@ -2,7 +2,7 @@
 import './setup.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SpotStore, parseSpot, dynamicPrice, SPOT_URL } from '../../src/spot.js';
+import { SpotStore, parseSpot, dynamicPrice, SPOT_URL, ZONES } from '../../src/spot.js';
 import { meterCost, supplierFor, sumCosts, yearCost, anyDynamic } from '../../src/costs.js';
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
@@ -61,7 +61,7 @@ test('Börsenpreise: eine Abfrage für alle fehlenden Monate, dann aus dem Speic
   assert.equal(calls.length, 1);
 });
 
-test('Börsenpreise: Dienst ausgelastet → Fehler, kein erneuter Versuch für 15 Minuten', async () => {
+test('Börsenpreise: Dienst ausgelastet → Fehler, kein sofortiger erneuter Versuch', async () => {
   localStorage.clear();
   let n = 0;
   const http = async () => { n++; return { status: 429, data: 'Too Many Requests' }; };
@@ -122,4 +122,40 @@ test('Börsenpreise: Stundenmittel aus vier Viertelstunden', async () => {
   near(s.at(new Date(2026, 10, 1, 9, 30), 60), 12.25);
   near(s.avg(new Date(2026, 10, 1), new Date(2026, 10, 2)), 12.25);
   assert.equal(s.series(new Date(2026, 10, 1, 9), new Date(2026, 10, 1, 10)).length, 4);
+});
+
+test('Börsenpreise: Wartezeit des Dienstes (Retry-After) wird übernommen', async () => {
+  localStorage.clear();
+  let n = 0;
+  const ok = fakeHttp();
+  const http = async (req) => { n++; return n === 1 ? { status: 429, data: '', headers: { 'retry-after': '1' } } : ok.http(req); };
+  const s = new SpotStore(http, { now: () => new Date(2026, 10, 18, 15) });
+  const err = await s.ensure(new Date(2026, 5, 1), new Date(2026, 6, 1)).catch((e) => e);
+  assert.equal(err.busy, true);
+  assert.equal(err.retryAfter, 1);
+  await s.ensure(new Date(2026, 5, 1), new Date(2026, 6, 1));
+  assert.equal(n, 1, 'vor Ablauf der Wartezeit nicht erneut fragen');
+  await new Promise((r) => setTimeout(r, 1100));
+  await s.ensure(new Date(2026, 5, 1), new Date(2026, 6, 1));
+  assert.equal(n, 2);
+  assert.ok(s.at(new Date(2026, 5, 3, 12)) != null);
+});
+
+test('Börsenpreise Nachbarländer: eigene Preiszone, eigener Speicher, nur wenige Monate', async () => {
+  localStorage.clear();
+  assert.deepEqual(ZONES.map((z) => z.id), ['AT', 'DE-LU', 'CH', 'CZ', 'HU', 'SI', 'IT-North']);
+  const { http, calls } = fakeHttp(900000, () => 50);
+  const now = () => new Date(2026, 10, 18, 15);
+  const at = new SpotStore(http, { now });
+  const de = new SpotStore(http, { now, bzn: 'DE-LU' });
+  await de.ensure(new Date(2026, 10, 18), new Date(2026, 10, 19));
+  assert.match(calls[0], /bzn=DE-LU&start=2026-11-01&end=2026-11-19$/);
+  near(de.at(new Date(2026, 10, 18, 9)), 5);
+  assert.equal(at.at(new Date(2026, 10, 18, 9)), null, 'Österreich bleibt getrennt');
+  assert.ok(localStorage.getItem('nb.spot.DE-LU.2026-11'));
+  assert.equal(localStorage.getItem('nb.spot.2026-11'), null);
+  // höchstens drei Monate je Nachbarland
+  for (const m of [7, 8, 9]) await de.ensure(new Date(2026, m, 5), new Date(2026, m, 6));
+  assert.deepEqual(JSON.parse(localStorage.getItem('nb.spot.DE-LU.index')), ['2026-08', '2026-09', '2026-10']);
+  assert.equal(localStorage.getItem('nb.spot.DE-LU.2026-11'), null);
 });

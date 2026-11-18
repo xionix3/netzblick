@@ -15,6 +15,7 @@ import { demoHttp } from './demo.js';
 import { cacheClear } from './cache.js';
 import { $, h, icon, fillIcons, reduceMotion, setCounter, countUp, openSheet, closeSheet, toast, brandMark, spinBrand } from './ui.js';
 import * as pages from './pages.js';
+import { renderSpotPage } from './spotpage.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { meterCost, sumCosts, supplierFor, tariffClassOf, projectCost, anyDynamic } from './costs.js';
 import { SpotStore } from './spot.js';
@@ -120,6 +121,7 @@ async function doLogin(username, password, { remember, demo = false, silent = fa
   state.accounts = accounts;
   state.store = new DataStore(state.api);
   state.spot = new SpotStore(demo ? demoHttp : http);
+  state.zoneStores = {};
   if (!demo) {
     if (remember) {
       await secure.set('username', username).catch(() => {});
@@ -266,6 +268,7 @@ const NAV = [
   { id: 'power', label: 'Leistung', icon: 'gauge' },
   { id: 'costs', label: 'Kosten', icon: 'wallet' },
   { id: 'tariff', label: 'Strompreis', icon: 'euro' },
+  { id: 'spot', label: 'Börsenpreis', icon: 'spot' },
   { id: 'billing', label: 'Abrechnung', icon: 'receipt' },
   { sep: true },
   { id: 'plants', label: 'Anlagen', icon: 'plant' },
@@ -331,7 +334,7 @@ function closeNav() {
   return true;
 }
 
-const PAGE_TITLES = { power: 'Leistung', costs: 'Kosten', plants: 'Anlagen', billing: 'Abrechnung', account: 'Konto', info: 'Info', tariff: 'Strompreis', community: 'Energiegemeinschaft', outage: 'Störung', contact: 'Kontakt' };
+const PAGE_TITLES = { power: 'Leistung', costs: 'Kosten', spot: 'Börsenpreis', plants: 'Anlagen', billing: 'Abrechnung', account: 'Konto', info: 'Info', tariff: 'Strompreis', community: 'Energiegemeinschaft', outage: 'Störung', contact: 'Kontakt' };
 function goto(page) {
   closeNav();
   if (state.page === page && page !== 'usage') { renderPage(); return; }
@@ -383,7 +386,7 @@ function renderPage() {
   body.querySelectorAll('.chart').forEach((c) => charts.dispose(c));
   body.textContent = '';
   const ctx = pageCtx();
-  const fn = { power: pages.renderPower, costs: pages.renderCostsPage, plants: pages.renderPlants, billing: pages.renderBilling, account: pages.renderAccount, info: pages.renderInfo, tariff: pages.renderTariff, community: pages.renderCommunity, outage: pages.renderOutage, contact: pages.renderContact }[state.page];
+  const fn = { power: pages.renderPower, costs: pages.renderCostsPage, spot: renderSpotPage, plants: pages.renderPlants, billing: pages.renderBilling, account: pages.renderAccount, info: pages.renderInfo, tariff: pages.renderTariff, community: pages.renderCommunity, outage: pages.renderOutage, contact: pages.renderContact }[state.page];
   if (fn) fn(body, ctx);
   fillIcons(body);
 }
@@ -456,16 +459,17 @@ function showWhatsNew() {
   const major = APP_VERSION.split('.').slice(0, 2).join('.');
   try { if (localStorage.getItem('nb.seenVersion') === major) return; localStorage.setItem('nb.seenVersion', major); } catch { return; }
   const items = [
-    ['euro', 'Dynamischer Stromtarif: Börsenpreis plus Aufschlag, mit Vorlagen für aWATTar, smartENERGY, VERBUND und oekostrom, und dein Strompreis für heute und morgen.'],
-    ['wallet', 'Kosten: eigene Seite mit allen Kosten Monat für Monat, je Zählpunkt und als Aufstellung, für die letzten 12 Monate oder ein Jahr.'],
-    ['gauge', 'Leistung: Unter dem Verbrauch zeigt ein eigenes Diagramm die Viertelstunden in kW mit einblendbarer 10-kW-Linie.'],
+    ['spot', 'Börsenpreis: die Day-Ahead-Preise für heute und morgen, die günstigsten und teuersten Zeiten, der Vergleich mit den Nachbarländern und wann Strom meist günstig ist.'],
+    ['euro', 'Dynamischer Stromtarif: Börsenpreis plus Aufschlag, mit Vorlagen für aWATTar, smartENERGY, VERBUND und oekostrom.'],
+    ['wallet', 'Kosten: eigene Seite mit allen Kosten Monat für Monat, je Zählpunkt und als Aufstellung.'],
+    ['gauge', 'Leistung: die Viertelstunden in kW mit einblendbarer 10-kW-Linie.'],
     ['menu', 'Alles im Menü über ☰ oben links.'],
   ];
   const body = h('div', { class: 'whatsnew' },
     h('ul', { class: 'whatsnew-list', role: 'list' }, ...items.map(([ic, text]) => h('li', {}, icon(ic), h('span', { text })))),
     h('div', { class: 'sheet-actions' },
       h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => closeSheet() }, 'Später'),
-      h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); goto('tariff'); } }, 'Strompreis ansehen')));
+      h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); goto('spot'); } }, 'Börsenpreis ansehen')));
   setTimeout(() => openSheet(`Neu in Netzblick ${major}`, body), 700);
 }
 
@@ -1728,6 +1732,7 @@ async function boot() {
           state.accounts = state.api.accounts;
           state.store = new DataStore(state.api, { offline: true });
           state.spot = new SpotStore(http);
+          state.zoneStores = {};
           enterDashboard();
           showBanner('Offline: Angezeigt werden die zuletzt geladenen Werte.', true);
           return;

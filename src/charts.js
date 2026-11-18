@@ -19,6 +19,8 @@ export function tokens() {
     s: [v('--series-1'), v('--series-2'), v('--series-3'), v('--series-4')],
     compare: v('--compare'), older: v('--older'),
     seq: v('--seq').split(',').map((x) => x.trim()),
+    div: v('--div').split(',').map((x) => x.trim()),
+    divBar: v('--div-bar').split(',').map((x) => x.trim()),
     font: v('--font-ui') || 'sans-serif',
   };
 }
@@ -395,6 +397,224 @@ export function spotOption(T, cfg) {
         label: { show: true, position: 'insideEndTop', color: T.ink2, fontFamily: T.font, fontSize: 11, fontWeight: 600, formatter: 'Jetzt' },
         data: [{ xAxis: nowIdx }],
       } : undefined,
+    }],
+  };
+}
+
+/** Unterschied zum Durchschnitt als Text */
+function vsAvg(v, mid) {
+  const d = v - mid;
+  if (Math.abs(d) < 0.05) return 'wie der Durchschnitt';
+  return `${num(Math.abs(d), 2)} ct ${d < 0 ? 'unter' : 'über'} dem Durchschnitt`;
+}
+
+/**
+ * Börsenpreise eines Tages als Säulen, gefärbt von günstig (blau) über den Tagesschnitt (grau) bis teuer (rot).
+ * cfg: {pts: [{t, v, spot}], step (ms), now: Date | null, scale: {mid, lo, hi}, label: 'Börse netto' | 'dein Preis brutto'}
+ */
+export function spotDayOption(T, cfg) {
+  const { pts, step, now, scale, label } = cfg;
+  const axis = pts.map((p) => p.t);
+  const nowIdx = now ? pts.findIndex((p) => p.t <= now && now < new Date(p.t.getTime() + step)) : -1;
+  const wide = pts.length <= 30; // Stundenwerte
+  return {
+    animationDuration: 350,
+    textStyle: { fontFamily: T.font },
+    grid: { left: 6, right: 12, top: 32, bottom: 6, containLabel: true },
+    tooltip: baseTooltip(T, {
+      axisPointer: { type: 'shadow', shadowStyle: { color: T.line, opacity: 0.45 } },
+      formatter: (params) => {
+        const p = pts[params[0].dataIndex];
+        if (p.v == null) return `<div class="tt-title">${esc(`${time(p.t)} Uhr`)}</div><div class="tt-sub">kein Preis</div>`;
+        const end = new Date(p.t.getTime() + step);
+        const color = p.v <= scale.mid ? T.divBar[0] : T.divBar[2];
+        let html = `<div class="tt-title">${esc(`${time(p.t)}–${time(end)} Uhr`)}</div>` + row(color, `${num(p.v, 2)} ct/kWh`, label);
+        if (p.spot != null && p.spot !== p.v) html += `<div class="tt-sub">Börse ${num(p.spot, 2)} ct netto</div>`;
+        else if (p.spot != null) html += `<div class="tt-sub">${num(p.spot * 10, 2)} €/MWh</div>`;
+        html += `<div class="tt-sub">${esc(vsAvg(p.v, scale.mid))}</div>`;
+        return html;
+      },
+    }),
+    visualMap: {
+      show: false, dimension: 1, seriesIndex: 0, min: scale.lo, max: scale.hi,
+      inRange: { color: T.divBar }, calculable: false,
+    },
+    xAxis: {
+      type: 'category',
+      data: axis.map((d) => d.getTime()),
+      axisLine: { lineStyle: { color: T.axis } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: T.muted, fontFamily: T.font, fontSize: 11, hideOverlap: true,
+        interval: (i) => { const d = axis[i]; return !!d && d.getMinutes() === 0 && d.getHours() % 3 === 0; },
+        formatter: (_, i) => `${axis[i].getHours()} Uhr`,
+      },
+    },
+    yAxis: yAxis(T, 'ct/kWh'),
+    series: [{
+      type: 'bar',
+      data: pts.map((p, i) => [i, p.v]),
+      barCategoryGap: wide ? '18%' : '12%',
+      itemStyle: { borderRadius: wide ? [3, 3, 0, 0] : [1, 1, 0, 0] },
+      emphasis: { itemStyle: { opacity: 0.85 } },
+      markPoint: {
+        symbol: 'circle', symbolSize: 7,
+        itemStyle: { color: T.ink, borderColor: T.surface, borderWidth: 2 },
+        label: { show: true, position: 'top', distance: 5, color: T.ink, fontFamily: T.font, fontSize: 11, fontWeight: 600, formatter: (p) => `${num(p.value, 1)} ct` },
+        data: [{ type: 'min', valueDim: 'y' }, { type: 'max', valueDim: 'y' }],
+        animation: false,
+      },
+      markLine: {
+        silent: true, symbol: 'none', animation: false,
+        data: [
+          { yAxis: scale.mid, lineStyle: { color: T.ink2, width: 1, type: [2, 3] }, label: { show: true, position: 'insideStartTop', color: T.ink2, fontFamily: T.font, fontSize: 11, formatter: `Ø ${num(scale.mid, 1)}` } },
+          ...(nowIdx >= 0 ? [{ xAxis: nowIdx, lineStyle: { color: T.ink, width: 1.5, type: [4, 3] }, label: { show: true, position: 'insideEndTop', color: T.ink, fontFamily: T.font, fontSize: 11, fontWeight: 600, formatter: 'Jetzt' } }] : []),
+        ],
+      },
+    }],
+  };
+}
+
+/**
+ * Teppich der Börsenpreise: Tage (waagrecht) × Stunden (senkrecht), gefärbt um den Durchschnitt des Zeitraums.
+ * cfg: {days: [Date], cells: [[tag, stunde, ct]], scale: {mid, lo, hi}, label}
+ */
+export function spotCarpetOption(T, cfg) {
+  const { days, cells, scale, label } = cfg;
+  const n = days.length;
+  const labelDay = (i) => {
+    const d = days[i];
+    if (!d) return false;
+    if (n <= 10) return true;
+    if (n <= 40) return d.getDay() === 1;
+    if (n <= 120) return d.getDate() === 1 || d.getDate() === 15;
+    return d.getDate() === 1 && d.getMonth() % 2 === 0;
+  };
+  return {
+    animation: false,
+    textStyle: { fontFamily: T.font },
+    grid: { left: 4, right: 8, top: 6, bottom: 4, containLabel: true },
+    tooltip: {
+      ...baseTooltip(T),
+      trigger: 'item',
+      formatter: (p) => {
+        const [di, h, v] = p.data;
+        return `<div class="tt-title">${esc(dateLong(days[di]))}, ${String(h).padStart(2, '0')}–${String(h + 1).padStart(2, '0')} Uhr</div>`
+          + row(v <= scale.mid ? T.divBar[0] : T.divBar[2], `${num(v, 2)} ct/kWh`, label)
+          + `<div class="tt-sub">${esc(vsAvg(v, scale.mid))}</div>`;
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: days.map((d) => d.getTime()),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitArea: { show: false },
+      axisLabel: {
+        color: T.muted, fontSize: 11, hideOverlap: true,
+        interval: (i) => labelDay(i),
+        formatter: (_, i) => {
+          const d = days[i];
+          if (n <= 10) return `${WEEKDAYS_SHORT[(d.getDay() + 6) % 7]} ${d.getDate()}.`;
+          if (n <= 120) return `${d.getDate()}.${d.getMonth() + 1}.`;
+          return MONTHS_SHORT[d.getMonth()];
+        },
+      },
+    },
+    yAxis: {
+      type: 'category',
+      inverse: true,
+      data: Array.from({ length: 24 }, (_, h) => h),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: T.muted, fontSize: 11, interval: 0, formatter: (h) => (Number(h) % 6 === 0 ? `${h} Uhr` : '') },
+    },
+    visualMap: { show: false, min: scale.lo, max: scale.hi, dimension: 2, inRange: { color: T.div }, calculable: false },
+    series: [{
+      type: 'heatmap',
+      data: cells,
+      itemStyle: n <= 45 ? { borderColor: T.surface, borderWidth: 1, borderRadius: 2 } : { borderWidth: 0 },
+      emphasis: { itemStyle: { borderColor: T.ink, borderWidth: 1.5 } },
+      progressive: 0,
+    }],
+  };
+}
+
+/** Typischer Tagesverlauf der Börsenpreise: Mittel je Stunde für Werktage und Wochenende */
+export function spotProfileOption(T, cfg) {
+  const { weekday, weekend, label } = cfg;
+  const axis = Array.from({ length: 24 }, (_, h) => h);
+  const s = [];
+  if (weekday) s.push({ name: 'Werktage', color: T.s[0], data: weekday });
+  if (weekend) s.push({ name: 'Wochenende', color: T.s[1], data: weekend });
+  return {
+    animationDuration: 350,
+    textStyle: { fontFamily: T.font },
+    grid: { left: 6, right: 14, top: 30, bottom: 6, containLabel: true },
+    tooltip: baseTooltip(T, {
+      axisPointer: { type: 'line', lineStyle: { color: T.axis, width: 1 } },
+      formatter: (params) => {
+        const h = params[0].dataIndex;
+        let html = `<div class="tt-title">${String(h).padStart(2, '0')}–${String(h + 1).padStart(2, '0')} Uhr, Durchschnitt</div>`;
+        s.forEach((x) => { html += row(x.color, x.data[h] == null ? '–' : `${num(x.data[h], 2)} ct/kWh`, x.name); });
+        return html + `<div class="tt-sub">${esc(label)}</div>`;
+      },
+    }),
+    xAxis: {
+      type: 'category', data: axis, boundaryGap: false,
+      axisLine: { lineStyle: { color: T.axis } }, axisTick: { show: false },
+      axisLabel: { color: T.muted, fontSize: 11, interval: (i) => i % 6 === 0, formatter: (h) => `${h} Uhr` },
+    },
+    yAxis: yAxis(T, 'ct/kWh'),
+    series: s.map((x) => ({
+      name: x.name, type: 'line', data: x.data, showSymbol: false, smooth: 0.2,
+      lineStyle: { color: x.color, width: 2 }, itemStyle: { color: x.color },
+      emphasis: { disabled: true },
+    })),
+  };
+}
+
+/**
+ * Tagesmittel der Börsenpreise je Land, günstigstes oben. Österreich in der ersten Reihenfarbe, die anderen grau.
+ * cfg: {rows: [{name, avg, min, max, home}]}
+ */
+export function zonesOption(T, cfg) {
+  const rows = cfg.rows;
+  const home = rows.find((r) => r.home);
+  return {
+    animationDuration: 350,
+    textStyle: { fontFamily: T.font },
+    grid: { left: 6, right: 62, top: 6, bottom: 6, containLabel: true },
+    tooltip: baseTooltip(T, {
+      axisPointer: { type: 'shadow', shadowStyle: { color: T.line, opacity: 0.45 } },
+      formatter: (params) => {
+        const r = rows[params[0].dataIndex];
+        let html = `<div class="tt-title">${esc(r.name)}</div>` + row(r.home ? T.s[0] : T.compare, `${num(r.avg, 2)} ct/kWh`, 'Tagesschnitt netto');
+        html += `<div class="tt-sub">${num(r.min, 2)} bis ${num(r.max, 2)} ct</div>`;
+        if (home && !r.home) {
+          const d = r.avg - home.avg;
+          html += `<div class="tt-sub">${num(Math.abs(d), 2)} ct ${d < 0 ? 'günstiger' : 'teurer'} als Österreich</div>`;
+        }
+        return html;
+      },
+    }),
+    xAxis: { type: 'value', show: false },
+    yAxis: {
+      type: 'category', inverse: true,
+      data: rows.map((r) => r.name),
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { color: T.ink2, fontFamily: T.font, fontSize: 13, fontWeight: 500 },
+    },
+    series: [{
+      type: 'bar',
+      barWidth: 14,
+      data: rows.map((r) => ({
+        value: r.avg,
+        itemStyle: { color: r.home ? T.s[0] : T.compare, borderRadius: r.avg < 0 ? [4, 0, 0, 4] : [0, 4, 4, 0] },
+        label: { fontWeight: r.home ? 700 : 500 },
+      })),
+      label: { show: true, position: 'right', distance: 6, color: T.ink, fontFamily: T.font, fontSize: 12, formatter: (p) => `${num(p.value, 2)} ct` },
+      emphasis: { itemStyle: { opacity: 0.85 } },
     }],
   };
 }

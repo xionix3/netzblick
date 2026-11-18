@@ -23,13 +23,17 @@ export async function http({ method = 'GET', url, headers = {}, data }) {
     if (typeof d === 'string') {
       try { d = JSON.parse(d); } catch { /* Text belassen */ }
     }
-    return { status: r.status, data: d };
+    const hs = {};
+    for (const [k, v] of Object.entries(r.headers || {})) hs[k.toLowerCase()] = v;
+    return { status: r.status, data: d, headers: hs };
   }
   const r = await fetch(url, { method, headers, body: data !== undefined ? JSON.stringify(data) : undefined });
   const t = await r.text();
   let d = t;
   try { d = JSON.parse(t); } catch { /* Text */ }
-  return { status: r.status, data: d };
+  const hs = {};
+  r.headers.forEach((v, k) => { hs[k.toLowerCase()] = v; });
+  return { status: r.status, data: d, headers: hs };
 }
 
 /* ------------------------------------------------------------ Sicherer Speicher */

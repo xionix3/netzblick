@@ -68,7 +68,7 @@ const shots = [
   ['?demo=1&period=month&price=14.9&sel=all', 'phone-1.png', null, PHONE],
   [`?demo=1&period=month&date=2026-07-01&sel=${M}`, 'phone-2.png', '#powerPanel', PHONE, 'Höchste Viertelstunde'],
   ['?demo=1&page=costs&price=14.9', 'phone-3.png', '.costs-out > .kpis--page', PHONE, 'Alle Monate'],
-  ['?demo=1&page=tariff&dyn=awattar', 'phone-4.png', 'section.panel:has(.chart--spot)', PHONE, 'Günstigste 2 Stunden'],
+  ['?demo=1&page=spot', 'phone-4.png', '#pageBody > section.panel', PHONE, 'Typischer Tagesverlauf'],
   ['?demo=1&page=power', 'phone-5.png', null, PHONE, 'im Jahr fürs Netz'],
   ['?demo=1&page=billing&price=14.9', 'phone-6.png', null, PHONE, 'Hochrechnung'],
   [`?demo=1&period=month&date=2026-10-01&sel=${M}`, 'phone-7.png', '#analysis', PHONE],

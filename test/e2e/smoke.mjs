@@ -384,6 +384,64 @@ await scenario('Kosten mit dynamischem Tarif', {
     expect(!/fehlen Börsenpreise/.test(s.text), 'Börsenpreise fehlen'),
   ],
 });
+await scenario('Seite Börsenpreis: Tag, Zeitfenster, Nachbarländer, Muster', {
+  query: '&page=spot',
+  shot: 'boersenpreis-seite',
+  actions: async (page) => {
+    await waitText(page, /Typischer Tagesverlauf/, 30000);
+    await page.waitForFunction(() => document.querySelector('.chart--zones')?.style.height === '254px' || document.querySelector('.zone-retry'), { timeout: 40000 });
+  },
+  checks: async (s, page) => {
+    const st = await page.evaluate(() => ({
+      nav: [...document.querySelectorAll('.nav-item')].some((b) => b.textContent.trim() === 'Börsenpreis'),
+      title: document.querySelector('#pageTitle').textContent,
+      day: document.querySelectorAll('.chart--spotday canvas').length,
+      carpet: document.querySelectorAll('.chart--spotcarpet canvas').length,
+      prof: document.querySelectorAll('.chart--spotprofile canvas').length,
+      zonesH: document.querySelector('.chart--zones')?.style.height,
+      winRows: document.querySelectorAll('.tbl--win tbody tr').length,
+      nextOff: document.querySelector('.spot-controls .icon-btn[aria-label="Nächster Tag"]').disabled,
+    }));
+    await page.click('.spot-controls .icon-btn[aria-label="Nächster Tag"]');
+    await waitText(page, /Am ganzen Tag/, 15000);
+    const tomorrow = await page.evaluate(() => ({ t: document.querySelector('.spot-controls .period-title').textContent, off: document.querySelector('.spot-controls .icon-btn[aria-label="Nächster Tag"]').disabled }));
+    return [
+      expect(st.nav && st.title === 'Börsenpreis', 'Seite Börsenpreis fehlt im Menü'),
+      expect(st.day >= 1 && st.carpet >= 1 && st.prof >= 1, `Diagramme fehlen: ${JSON.stringify(st)}`),
+      expect(st.zonesH === '254px', `nicht alle 7 Länder: ${st.zonesH}`),
+      expect(st.winRows === 4, `Zeitfenster fehlen (${st.winRows})`),
+      expect(/Am günstigsten/.test(s.text) && /Am teuersten/.test(s.text) && /Meist am günstigsten/.test(s.text), 'Kennzahlen fehlen'),
+      expect(await page.$$eval('.zone-table tbody tr', (r) => r.length) === 7, 'Nachbarländer fehlen in der Tabelle'),
+      expect(/Energy-Charts/.test(s.text) && /SMARD/.test(s.text), 'Quelle fehlt'),
+      expect(/Strompreis einstellen/.test(s.text), 'Hinweis auf dynamischen Tarif fehlt'),
+      expect(!st.nextOff, 'morgen nicht erreichbar'),
+      expect(/^Morgen, /.test(tomorrow.t) && tomorrow.off, `morgen falsch: ${JSON.stringify(tomorrow)}`),
+    ];
+  },
+});
+await scenario('Börsenpreis mit dynamischem Tarif, dunkel, 12 Monate', {
+  query: '&page=spot&dyn=verbund&theme=dark',
+  theme: 'dark',
+  actions: async (page) => {
+    await waitText(page, /Typischer Tagesverlauf/, 30000);
+  },
+  checks: async (s, page) => {
+    const mine = await page.evaluate(() => [...document.querySelectorAll('.spot-controls .seg button')].find((b) => b.classList.contains('on'))?.textContent);
+    await page.evaluate(() => [...document.querySelectorAll('.spot-controls .seg button')].find((b) => b.textContent === 'Börse netto').click());
+    await sleep(300);
+    const spotText = await page.evaluate(() => document.querySelector('#pageBody').innerText);
+    await page.evaluate(() => [...document.querySelectorAll('.chip-row--inline .chip')].find((b) => b.textContent === '12 Monate').click());
+    await waitText(page, /Meist am günstigsten/, 30000);
+    await sleep(500);
+    const year = await page.evaluate(() => ({ on: document.querySelector('.chip-row--inline .chip--active')?.textContent, carpet: document.querySelectorAll('.chart--spotcarpet canvas').length }));
+    return [
+      expect(mine === 'Dein Preis', `Ansicht „Dein Preis“ nicht aktiv: ${mine}`),
+      expect(/Dein Energiepreis brutto/.test(s.text) && /VERBUND V-Strom Spot/.test(s.text), 'dein Preis fehlt'),
+      expect(/Börsenpreis netto ohne USt/.test(spotText), 'Umschalten auf Börse netto klappt nicht'),
+      expect(year.on === '12 Monate' && year.carpet >= 1, `12 Monate fehlen: ${JSON.stringify(year)}`),
+    ];
+  },
+});
 await scenario('Seite Energiegemeinschaft mit Teilnahmefaktoren', {
   query: '&page=community',
   shot: 'energiegemeinschaft',

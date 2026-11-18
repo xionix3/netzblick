@@ -17,6 +17,20 @@ export const SPOT_SOURCE = {
 /** Ab hier gibt es die Preiszone Österreich (Trennung von Deutschland) */
 export const SPOT_SINCE = new Date(2018, 9, 1);
 
+/**
+ * Preiszonen zum Vergleich: Österreich und die Nachbarn, deren Preise Energy-Charts frei (CC BY 4.0) weitergibt.
+ * Die Slowakei fehlt: Für sie gibt es dort nur Daten zur privaten Nutzung.
+ */
+export const ZONES = [
+  { id: 'AT', name: 'Österreich', short: 'AT' },
+  { id: 'DE-LU', name: 'Deutschland', short: 'DE' },
+  { id: 'CH', name: 'Schweiz', short: 'CH' },
+  { id: 'CZ', name: 'Tschechien', short: 'CZ' },
+  { id: 'HU', name: 'Ungarn', short: 'HU' },
+  { id: 'SI', name: 'Slowenien', short: 'SI' },
+  { id: 'IT-North', name: 'Italien Nord', short: 'IT' },
+];
+
 const PREFIX = 'nb.spot.';
 const MAX_MONTHS = 40;
 const DAY = 86400000;
@@ -27,7 +41,13 @@ const monthStart = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
 const nextMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 1);
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
-export class SpotError extends Error {}
+export class SpotError extends Error {
+  constructor(msg, { busy = false, retryAfter = null } = {}) {
+    super(msg);
+    this.busy = busy;
+    this.retryAfter = retryAfter; // Sekunden, laut Antwort des Dienstes
+  }
+}
 
 /**
  * Preis einer Kilowattstunde Energie im dynamischen Tarif, brutto in Cent.
@@ -60,10 +80,16 @@ export function parseSpot(data) {
 }
 
 export class SpotStore {
-  /** http: wie platform.http ({method, url}) → {status, data} */
-  constructor(http, { now = () => new Date() } = {}) {
+  /**
+   * http: wie platform.http ({method, url}) → {status, data, headers}
+   * bzn: Preiszone; Österreich behält den alten Speicherplatz, Nachbarländer halten nur wenige Monate vor.
+   */
+  constructor(http, { now = () => new Date(), bzn = 'AT', maxMonths } = {}) {
     this.http = http;
     this.now = now;
+    this.bzn = bzn;
+    this.prefix = bzn === 'AT' ? PREFIX : `${PREFIX}${bzn}.`;
+    this.maxMonths = maxMonths || (bzn === 'AT' ? MAX_MONTHS : 3);
     this.months = new Map(); // 'JJJJ-MM' → {start, step, p, at, full}
     this.tried = new Map(); // 'JJJJ-MM' → Zeitpunkt der letzten Abfrage
     this.pending = null;
@@ -83,7 +109,7 @@ export class SpotStore {
   read(key) {
     if (this.months.has(key)) return this.months.get(key);
     try {
-      const raw = localStorage.getItem(PREFIX + key);
+      const raw = localStorage.getItem(this.prefix + key);
       if (raw) {
         const m = JSON.parse(raw);
         this.months.set(key, m);
@@ -96,11 +122,15 @@ export class SpotStore {
   write(key, m) {
     this.months.set(key, m);
     try {
-      let idx = JSON.parse(localStorage.getItem(PREFIX + 'index') || '[]').filter((k) => k !== key);
+      let idx = JSON.parse(localStorage.getItem(this.prefix + 'index') || '[]').filter((k) => k !== key);
       idx.push(key);
-      while (idx.length > MAX_MONTHS) localStorage.removeItem(PREFIX + idx.shift());
-      localStorage.setItem(PREFIX + key, JSON.stringify(m));
-      localStorage.setItem(PREFIX + 'index', JSON.stringify(idx));
+      while (idx.length > this.maxMonths) {
+        const old = idx.shift();
+        localStorage.removeItem(this.prefix + old);
+        this.months.delete(old);
+      }
+      localStorage.setItem(this.prefix + key, JSON.stringify(m));
+      localStorage.setItem(this.prefix + 'index', JSON.stringify(idx));
     } catch { /* Speicher voll: nur im Speicher behalten */ }
   }
 
@@ -134,9 +164,16 @@ export class SpotStore {
     const b = new Date(Math.min(nextMonth(missing[missing.length - 1]).getTime() - DAY, lastDay.getTime()));
     for (const m of missing) this.tried.set(monthKey(m), Date.now());
     this.pending = (async () => {
-      const url = `${SPOT_URL}?bzn=AT&start=${ymd(a)}&end=${ymd(startOfDay(b))}`;
+      const url = `${SPOT_URL}?bzn=${encodeURIComponent(this.bzn)}&start=${ymd(a)}&end=${ymd(startOfDay(b))}`;
       const r = await this.http({ method: 'GET', url });
-      if (r.status === 429) throw new SpotError('Der Dienst für Börsenpreise ist gerade ausgelastet. Bitte später erneut versuchen.');
+      if (r.status === 429) {
+        const ra = Number((r.headers && r.headers['retry-after']) || NaN);
+        const retryAfter = Number.isFinite(ra) && ra >= 0 ? ra : null;
+        // nach der Wartezeit des Dienstes wieder fragen dürfen, nicht erst nach 15 Minuten
+        const again = Date.now() - 15 * 60000 + Math.max(1, retryAfter ?? 60) * 1000;
+        for (const m of missing) this.tried.set(monthKey(m), again);
+        throw new SpotError('Der Dienst für Börsenpreise ist gerade ausgelastet. Bitte später erneut versuchen.', { busy: true, retryAfter });
+      }
       if (r.status !== 200 || !r.data || !Array.isArray(r.data.unix_seconds)) throw new SpotError(`Börsenpreise nicht verfügbar (HTTP ${r.status}).`);
       const months = parseSpot(r.data);
       const at = Date.now();

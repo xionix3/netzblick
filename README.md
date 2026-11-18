@@ -56,7 +56,7 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
     <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Störungsdienst und Stromnotruf zum Anrufen" /><br /><sub><b>Störung</b><br />direkt anrufen</sub></td>
     <td align="center"><img src="docs/readme/jahr-dunkel.png" width="200" alt="Jahresansicht im Dunkelmodus" /><br /><sub><b>Dunkelmodus</b><br />Jahr im Vergleich</sub></td>
     <td align="center"><img src="docs/readme/menue.png" width="200" alt="Menü mit allen Seiten" /><br /><sub><b>Menü</b><br />alles mit einem Tipp</sub></td>
-    <td align="center"><img src="docs/readme/boersenpreis.png" width="200" alt="Dynamischer Tarif: Strompreis heute und morgen" /><br /><sub><b>Dynamischer Tarif</b><br />Börsenpreis heute und morgen</sub></td>
+    <td align="center"><img src="docs/readme/boersenpreis.png" width="200" alt="Börsenpreise des Tages, günstig blau, teuer rot" /><br /><sub><b>Börsenpreis</b><br />günstig und teuer, Nachbarländer</sub></td>
   </tr>
 </table>
 
@@ -85,6 +85,16 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
 | **10-kW-Linie** | Oben rechts im Diagramm ein- und ausblendbar. Ab 2027 kostet der Anteil der Monatsspitze über 10 kW mehr. Die höchste Spitze ist markiert, darunter steht je Zählpunkt, wie oft sie über 10 kW lag. |
 | **Seite „Leistung“** | Monatsspitzen der letzten 13 Monate je Zählpunkt, Monate über 10 kW, Spitze im laufenden Monat, Leistungspreis pro Jahr, Netzkosten 2026 gegen ab 2027, Tipps. |
 | **Grundlage** | Entwurf der Tarifverordnung 2027 der E-Control (29.10.2026), Netzbereich Burgenland. Netz Burgenland kündigt die Umstellung für Jänner 2027 an. |
+
+### Börsenpreis
+
+| | |
+|---|---|
+| **Day-Ahead-Preise** | Eigene Seite mit den Börsenpreisen EPEX Spot Österreich für jeden Tag seit Oktober 2018, heute und ab etwa 13 Uhr auch morgen. Säulen je Viertelstunde: blau günstiger, rot teurer als der Tagesschnitt. Durchschnitt, günstigste und teuerste Viertelstunde, Preis jetzt. |
+| **Günstigste und teuerste Zeiten** | Die besten und die teuersten 1, 2, 3 und 4 Stunden am Stück, heute ab jetzt. Für Waschmaschine, Geschirrspüler, Wärmepumpe oder das Laden des Autos. |
+| **Wo ist es günstiger?** | Tagesschnitt in Österreich, Deutschland, der Schweiz, Tschechien, Ungarn, Slowenien und Norditalien, mit Tabelle. |
+| **Wann ist es meist günstig?** | Über 7 Tage bis 12 Monate: jeder Tag Stunde für Stunde als Teppich, typischer Tagesverlauf für Werktage und Wochenende, negative Preise. |
+| **Dein Preis** | Mit dynamischem Tarif zeigt die Seite auf Wunsch deinen Endpreis mit Aufschlag und USt statt des Börsenpreises. |
 
 ### Kosten und Abrechnung
 
@@ -155,7 +165,7 @@ Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at]
 
 ## Datenschutz und Sicherheit
 
-- Netzblick spricht mit `smartmeter.netzburgenland.at` und `api.portal.netzburgenland.at` (HTTPS). Nur bei einem dynamischen Stromtarif kommen die öffentlichen Börsenpreise von `api.energy-charts.info` dazu, ohne Daten über dich. Kein eigener Server, keine Werbung, kein Tracking.
+- Netzblick spricht mit `smartmeter.netzburgenland.at` und `api.portal.netzburgenland.at` (HTTPS). Für die Seite „Börsenpreis“ und einen dynamischen Stromtarif kommen die öffentlichen Börsenpreise von `api.energy-charts.info` dazu, ohne Daten über dich. Kein eigener Server, keine Werbung, kein Tracking.
 - Vom Kundenportal werden Daten nur **gelesen**.
 - **Zugangsdaten** werden nur bei „Angemeldet bleiben“ gespeichert, verschlüsselt mit AES-256-GCM; der Schlüssel liegt im Android Keystore.
 - **Messwerte** werden für die Offline-Anzeige zwischengespeichert. „Abmelden“ löscht Zugangsdaten und Zwischenspeicher.
@@ -226,7 +236,9 @@ netzblick/
 │   ├── model.js         Laden, Zwischenspeichern, Filtern, Kennzahlen, Aufteilung
 │   ├── costs.js         Kostenmodell: Lieferant, Netz, Abgaben, Niedertarife, Leistungspreis ab 2027
 │   ├── costview.js      Kostenaufstellung für Übersicht und Seite „Kosten“
-│   ├── spot.js          Börsenpreise EPEX Spot AT (Energy-Charts) für dynamische Tarife
+│   ├── spot.js          Börsenpreise EPEX Spot AT und Nachbarländer (Energy-Charts)
+│   ├── spotstats.js     Auswertung der Börsenpreise: Zeitfenster, Tagesverlauf, Teppich
+│   ├── spotpage.js      Seite „Börsenpreis“
 │   ├── netzdaten.js     Netzpreise, Abgaben, Störungs- und Kontaktdaten (mit Quellen)
 │   ├── billing.js       Laufendes Abrechnungsjahr und Hochrechnung
 │   ├── reminder.js      Erinnerung: Zeitpunkt und Kalenderdatei
@@ -257,7 +269,7 @@ flowchart LR
   H -- "App" --> N["CapacitorHttp (nativ)"]
   N --> P[("smartmeter.netzburgenland.at")]
   N --> Q[("api.portal.netzburgenland.at")]
-  N -. "nur bei dynamischem Tarif" .-> S[("api.energy-charts.info<br/>Börsenpreise")]
+  N -. "Börsenpreise, ohne Nutzerdaten" .-> S[("api.energy-charts.info<br/>Börsenpreise")]
   H -- "Demo" --> D["demo.js"]
   M --> R["netzdaten.js<br/>Preisblatt, Abgaben"]
 ```
@@ -281,8 +293,8 @@ flowchart LR
 
 Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 
-1. **Unit-Tests** (`test/unit/`, 88 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Leistungspreis 2027 mit Monatsspitzen und Winter-Niedertarif, Börsenpreise und dynamischer Tarif, Erinnerung und Kalenderdatei, Versionsnummern.
-2. **Oberflächentest** (`test/e2e/smoke.mjs`, 29 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsdiagramm mit 10-kW-Linie, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
+1. **Unit-Tests** (`test/unit/`, 96 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Leistungspreis 2027 mit Monatsspitzen und Winter-Niedertarif, Börsenpreise und dynamischer Tarif, Zeitfenster und Tagesverlauf der Börsenpreise, Erinnerung und Kalenderdatei, Versionsnummern.
+2. **Oberflächentest** (`test/e2e/smoke.mjs`, 31 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsdiagramm mit 10-kW-Linie, Kosten und Erinnerung, Börsenpreise mit Nachbarländern, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
 3. **Android-Build**: baut die Debug-APK.
 
 ## Releases und Play Store

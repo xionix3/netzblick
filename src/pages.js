@@ -720,7 +720,8 @@ async function renderSpotToday(box, sup, ctx) {
       kpiTile('Günstigste 2 Stunden heute', rest.length >= 2 ? win(cheapest(rest)).split(',')[0] : '–', rest.length >= 2 ? `ab jetzt, ${win(cheapest(rest)).split(', ')[1]}` : 'heute nichts mehr'),
       kpiTile('Morgen', tom.length ? ct(avg(tom)) : 'ab etwa 13 Uhr', tom.length ? `günstigste 2 Stunden ${win(cheapest(tom))}` : 'werden die Preise veröffentlicht')),
     chart,
-    h('p', { class: 'note', text: `Börsenpreis EPEX Spot Österreich + ${sup.pct ? `${num(sup.pct, 1)} % + ` : ''}${num(sup.ct, 2)} ct Aufschlag, inklusive USt. Quelle der Börsenpreise: ${SPOT_SOURCE.label}.` }));
+    h('p', { class: 'note', text: `Börsenpreis EPEX Spot Österreich + ${sup.pct ? `${num(sup.pct, 1)} % + ` : ''}${num(sup.ct, 2)} ct Aufschlag, inklusive USt. Quelle der Börsenpreise: ${SPOT_SOURCE.label}.` }),
+    h('div', { class: 'panel-actions' }, h('button', { class: 'btn btn--small', type: 'button', onclick: () => ctx.goto('spot') }, icon('spot'), 'Alle Börsenpreise')));
   charts.render(chart, charts.spotOption(charts.tokens(), { pts, step, now }));
 }
 

@@ -5,6 +5,21 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.6.0] – 2026-11-18
+
+### Neu
+- **Seite „Börsenpreis“** im Menü mit den Day-Ahead-Preisen EPEX Spot Österreich:
+  - jeder Tag seit Oktober 2018, heute und ab etwa 13 Uhr auch morgen; Säulen je Viertelstunde, blau günstiger und rot teurer als der Tagesschnitt
+  - Durchschnitt, günstigste und teuerste Viertelstunde, Preis jetzt, negative Preise
+  - die günstigsten und teuersten 1, 2, 3 und 4 Stunden am Stück, heute ab jetzt
+  - **Wo ist es günstiger?** Tagesschnitt in Österreich und den Nachbarländern Deutschland, Schweiz, Tschechien, Ungarn, Slowenien und Norditalien, als Diagramm und Tabelle
+  - **Wann ist es meist günstig?** Teppich mit jedem Tag Stunde für Stunde und typischer Tagesverlauf für Werktage und Wochenende, über 7 Tage bis 12 Monate
+  - mit dynamischem Tarif wahlweise dein Endpreis mit Aufschlag und USt
+- Seite „Strompreis“: Schaltfläche „Alle Börsenpreise“.
+
+### Geändert
+- Bremst der Dienst für Börsenpreise, wartet Netzblick die angegebene Zeit und versucht es dann erneut, statt 15 Minuten zu pausieren.
+
 ## [1.5.0] – 2026-11-18
 
 ### Neu

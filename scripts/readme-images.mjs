@@ -65,7 +65,7 @@ shots.jahr = await shot('jahr-dunkel', `&period=year&date=2025-06-01&theme=dark&
 shots.leistungMonat = await shot('leistung-monat', `&period=month&date=2026-07-01&sel=${M12345}`, { scrollTo: '#powerPanel', waitText: 'Höchste Viertelstunde' });
 shots.leistung = await shot('leistung', `&page=power`, { waitText: 'im Jahr fürs Netz' });
 shots.kostenSeite = await shot('kosten-seite', `&page=costs&price=14.9`, { waitText: 'Alle Monate', scrollTo: '.costs-out > .kpis--page' });
-shots.boerse = await shot('boersenpreis', `&page=tariff&dyn=awattar`, { waitText: 'Günstigste 2 Stunden', scrollTo: 'section.panel:has(.chart--spot)' });
+shots.boerse = await shot('boersenpreis', `&page=spot`, { waitText: 'Typischer Tagesverlauf', scrollTo: '#pageBody > section.panel', after: 1200 });
 shots.strompreis = await shot('strompreis', `&page=tariff&price=14.9&remind=${ISO(75)}`, { waitText: '€ im Jahr' });
 shots.abrechnung = await shot('abrechnung', `&page=billing&price=14.9`, { waitText: 'Hochrechnung' });
 shots.gemeinschaft = await shot('energiegemeinschaft', `&page=community`, { waitText: 'Teilnahmefaktor im Verlauf' });

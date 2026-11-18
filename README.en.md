@@ -58,7 +58,7 @@ All images show demo mode with made-up sample data.
     <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Fault service and emergency line to call" /><br /><sub><b>Power outage</b><br />call directly</sub></td>
     <td align="center"><img src="docs/readme/jahr-dunkel.png" width="200" alt="Year view in dark mode" /><br /><sub><b>Dark mode</b><br />year comparison</sub></td>
     <td align="center"><img src="docs/readme/menue.png" width="200" alt="Menu with all pages" /><br /><sub><b>Menu</b><br />everything one tap away</sub></td>
-    <td align="center"><img src="docs/readme/boersenpreis.png" width="200" alt="Dynamic tariff: price today and tomorrow" /><br /><sub><b>Dynamic tariff</b><br />exchange price today and tomorrow</sub></td>
+    <td align="center"><img src="docs/readme/boersenpreis.png" width="200" alt="Exchange prices of the day, cheap in blue, expensive in red" /><br /><sub><b>Exchange price</b><br />cheap and expensive, neighbours</sub></td>
   </tr>
 </table>
 
@@ -87,6 +87,16 @@ All images show demo mode with made-up sample data.
 | **10 kW line** | Shown or hidden at the top right of the chart. From 2027, the part of the monthly peak above 10 kW costs more. The highest peak is marked, and below the chart each meter shows how often it went above 10 kW. |
 | **"Leistung" page** | Monthly peaks of the last 13 months per meter, months above 10 kW, the peak so far this month, yearly power price, grid costs 2026 vs. from 2027, tips. |
 | **Basis** | E-Control's draft tariff regulation 2027 (29 Oct 2026), Burgenland grid area. Netz Burgenland has announced the switch for January 2027. |
+
+### Exchange price
+
+| | |
+|---|---|
+| **Day-ahead prices** | A page of its own with the EPEX Spot Austria prices for every day since October 2018, today and, from about 1 pm, tomorrow. Bars per quarter hour: blue is cheaper, red more expensive than the day's average. Average, cheapest and most expensive quarter hour, price right now. |
+| **Cheapest and most expensive times** | The best and the most expensive 1, 2, 3 and 4 hours in a row, today from now on. For the washing machine, dishwasher, heat pump or charging the car. |
+| **Where is it cheaper?** | Daily average in Austria, Germany, Switzerland, Czechia, Hungary, Slovenia and northern Italy, with a table. |
+| **When is it usually cheap?** | Over 7 days up to 12 months: every day hour by hour as a carpet, the typical day for weekdays and weekends, negative prices. |
+| **Your price** | With a dynamic tariff the page can show your final price with markup and VAT instead of the exchange price. |
 
 ### Costs and billing
 
@@ -157,7 +167,7 @@ No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgen
 
 ## Privacy and security
 
-- Netzblick talks to `smartmeter.netzburgenland.at` and `api.portal.netzburgenland.at` (HTTPS). Only with a dynamic tariff does it also fetch public exchange prices from `api.energy-charts.info`, without any data about you. No own server, no ads, no tracking.
+- Netzblick talks to `smartmeter.netzburgenland.at` and `api.portal.netzburgenland.at` (HTTPS). For the exchange price page and a dynamic tariff it also fetches public exchange prices from `api.energy-charts.info`, without any data about you. No own server, no ads, no tracking.
 - Data from the customer portal is **read only**.
 - **Credentials** are stored only with "Angemeldet bleiben" (stay signed in), encrypted with AES-256-GCM; the key lives in the Android Keystore.
 - **Values** are cached for offline display. Signing out deletes credentials and cache.
@@ -230,7 +240,9 @@ netzblick/
 │   ├── model.js         loading, caching, filters, figures, breakdowns
 │   ├── costs.js         cost model: supplier, grid, levies, low tariffs, power price from 2027
 │   ├── costview.js      cost breakdown for the overview and the costs page
-│   ├── spot.js          EPEX Spot AT exchange prices (Energy-Charts) for dynamic tariffs
+│   ├── spot.js          EPEX Spot exchange prices for Austria and neighbours (Energy-Charts)
+│   ├── spotstats.js     exchange price analysis: time windows, typical day, carpet
+│   ├── spotpage.js      "Börsenpreis" page
 │   ├── netzdaten.js     grid prices, levies, outage and contact data (with sources)
 │   ├── billing.js       current billing year and forecast
 │   ├── reminder.js      reminder date and calendar file
@@ -268,7 +280,7 @@ netzblick/
 
 Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
 
-1. **Unit tests** (`test/unit/`, 88 cases):
+1. **Unit tests** (`test/unit/`, 96 cases):
    - periods incl. daylight saving time, number formats
    - API clients with error cases and re-login
    - data model and filters, cache
@@ -277,10 +289,11 @@ Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
    - cost model, checked against Netz Burgenland's comparison chart
    - power price 2027 with monthly peaks and winter low tariff
    - exchange prices and dynamic tariff (quarter hour, hourly mean, daily mean, missing prices)
+   - exchange price analysis: neighbouring zones, wait times of the service, time windows, typical day
    - reminder and calendar file, version numbers
-2. **UI test** (`test/e2e/smoke.mjs`, 29 scenarios):
+2. **UI test** (`test/e2e/smoke.mjs`, 31 scenarios):
    - all periods, dark mode, filters, multi-select, chart types, power chart with 10 kW line
-   - costs and reminder, every page
+   - costs and reminder, exchange prices with neighbouring countries, every page
    - tablet, landscape, tall status bar, sign-out
    - checks for console errors, empty views and broken text
 3. **Android build:** builds the debug APK.

@@ -9,7 +9,7 @@ Diese Erklärung beschreibt, welche Daten die App verarbeitet und wohin sie flie
 
 - Netzblick hat **keinen eigenen Server**. Der Entwickler erhält keinerlei Daten von dir.
 - Die App verbindet sich mit den Portalen von Netz Burgenland, **smartmeter.netzburgenland.at** und **api.portal.netzburgenland.at**, und zwar verschlüsselt über HTTPS.
-- Nur wenn du einen **dynamischen Stromtarif** einträgst, lädt die App zusätzlich die öffentlichen Börsenpreise von **api.energy-charts.info** (Fraunhofer ISE). Dabei wird nur der gewünschte Zeitraum abgefragt, keine Daten über dich.
+- Wenn du die Seite **Börsenpreis** öffnest oder einen **dynamischen Stromtarif** einträgst, lädt die App zusätzlich die öffentlichen Börsenpreise von **api.energy-charts.info** (Fraunhofer ISE), für Österreich und für den Vergleich auch für Nachbarländer. Dabei werden nur Preiszone und Zeitraum abgefragt, keine Daten über dich.
 - Vom Kundenportal werden Daten nur **gelesen**. Die App ändert dort nichts.
 - Es gibt **keine Werbung, kein Tracking, keine Analyse- oder Absturzdienste** von Dritten.
 
@@ -23,7 +23,7 @@ Diese Erklärung beschreibt, welche Daten die App verarbeitet und wohin sie flie
 | Zählpunkte, Adresse, Messwerte, Zählerstände | Anzeige, Diagramme, Auswertungen | Zwischenspeicher auf deinem Gerät für die Offline-Anzeige |
 | Aus dem Kundenportal: Name, Kundennummer, E-Mail, Adresse, Zählernummer, Lieferant, Verträge, abgerechnete Verbräuche, Rechnungsbeträge, Teilbeträge | Anzeige auf den Seiten Anlagen, Abrechnung und Konto, Hochrechnung des Abrechnungsjahres | nur im Arbeitsspeicher, bis die App beendet wird |
 | Einstellungen (Lieferant, Strompreis oder Aufschlag beim dynamischen Tarif, Namen der Zählpunkte, Darstellung) und das Datum für die Erinnerung | Berechnung der Kosten, Anzeige, Erinnerung | auf deinem Gerät |
-| Börsenpreise EPEX Spot Österreich (öffentliche Marktdaten, nur bei dynamischem Tarif) | Kosten beim dynamischen Tarif, Preisanzeige für heute und morgen | Zwischenspeicher auf deinem Gerät |
+| Börsenpreise EPEX Spot Österreich und Nachbarländer (öffentliche Marktdaten) | Seite Börsenpreis, Kosten beim dynamischen Tarif, Preisanzeige für heute und morgen | Zwischenspeicher auf deinem Gerät |
 
 Die Zugangsdaten werden nur an die Portale von Netz Burgenland übertragen, genauso wie bei der Anmeldung im Web-Portal.
 Bei der Abfrage der Börsenpreise sieht der Betreiber von api.energy-charts.info (Fraunhofer-Institut für Solare Energiesysteme ISE) wie jeder Webserver deine IP-Adresse; Zugangsdaten, Zählpunkte oder Messwerte werden dorthin nicht übertragen.
