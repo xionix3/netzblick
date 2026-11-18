@@ -423,6 +423,26 @@ function enterDashboard() {
   refresh();
   loadReadings();
   ensureKp().catch(() => {}); // Zusatzinfos im Hintergrund
+  showWhatsNew();
+}
+
+/** Einmal pro Version zeigen, was neu ist (nicht in Demo-Links und Web-Vorschau) */
+function showWhatsNew() {
+  if (PREVIEW || PARAMS.has('demo') || APP_VERSION === 'dev') return;
+  const major = APP_VERSION.split('.').slice(0, 2).join('.');
+  try { if (localStorage.getItem('nb.seenVersion') === major) return; localStorage.setItem('nb.seenVersion', major); } catch { return; }
+  const items = [
+    ['menu', 'Menü über ☰ oben links oder vom linken Rand wischen: Anlagen, Abrechnung, Konto, Info und Abmelden.'],
+    ['meter', 'Mehrere Zählpunkte: oben auf den Namen tippen und ankreuzen, oder im Diagramm die Legende antippen.'],
+    ['pie', 'Diagrammart wählen: Balken, Linien, Fläche oder Kreis, über die Symbole rechts über dem Diagramm.'],
+    ['receipt', 'Daten aus dem Kundenportal: Seiten „Anlagen“ und „Abrechnung“. Andere Zugangsdaten trägst du unter „Konto“ ein.'],
+  ];
+  const body = h('div', { class: 'whatsnew' },
+    h('ul', { class: 'whatsnew-list', role: 'list' }, ...items.map(([ic, text]) => h('li', {}, icon(ic), h('span', { text })))),
+    h('div', { class: 'sheet-actions' },
+      h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => closeSheet() }, 'Später'),
+      h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); setTimeout(openNav, 240); } }, 'Menü öffnen')));
+  setTimeout(() => openSheet(`Neu in Netzblick ${major}`, body), 700);
 }
 
 async function loadReadings() {

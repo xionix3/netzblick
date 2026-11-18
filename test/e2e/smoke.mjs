@@ -57,7 +57,7 @@ const browser = await puppeteer.launch({ executablePath: chrome, headless: true,
 const results = [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function scenario(name, { query = '', theme = 'light', viewport, actions, checks, shot }) {
+async function scenario(name, { query = '', theme = 'light', viewport, sat, actions, checks, shot }) {
   const page = await browser.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -68,6 +68,7 @@ async function scenario(name, { query = '', theme = 'light', viewport, actions, 
   const started = Date.now();
   try {
     await page.goto(base + '?demo=1' + query, { waitUntil: 'networkidle0' });
+    if (sat) await page.evaluate((v) => document.documentElement.style.setProperty('--safe-area-inset-top', v + 'px'), sat);
     await page.waitForFunction(() => document.querySelector('#heroValue')?.textContent.trim().length > 0 && !document.body.classList.contains('is-loading'), { timeout: 20000 });
     if (actions) await actions(page);
     await sleep(600);
@@ -168,6 +169,28 @@ const openMenuItem = async (page, id) => {
 };
 const waitText = (page, re, timeout = 8000) => page.waitForFunction((src) => new RegExp(src).test(document.body.innerText), { timeout }, re.source);
 
+await scenario('Hohe Statusleiste: Kopfzeile mit Menü bleibt sichtbar', {
+  query: '&period=month&sel=all',
+  theme: 'dark',
+  sat: 48,
+  checks: async (s, page) => {
+    const g = await page.evaluate(async () => {
+      const at = (el) => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); };
+      const name = document.querySelector('#meterName');
+      const menu = document.querySelector('#pageUsage .menu-btn');
+      const free = { name: document.querySelector('#meterBtn').contains(at(name)), menu: menu.contains(at(menu)) };
+      window.scrollTo(0, 600);
+      await new Promise((r) => setTimeout(r, 200));
+      const c = document.querySelector('#controls').getBoundingClientRect();
+      return { ...free, stuckTop: Math.round(c.top) };
+    });
+    return [
+      expect(g.name, 'Zählpunkt-Name ist verdeckt'),
+      expect(g.menu, 'Menü-Knopf ist verdeckt'),
+      expect(g.stuckTop === 48, `Steuerung klebt nicht unter der Statusleiste (${g.stuckTop})`),
+    ];
+  },
+});
 await scenario('Menü: Einstellungen und Zählpunktwahl öffnen', {
   query: '&period=month',
   actions: async (page) => {

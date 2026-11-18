@@ -241,12 +241,15 @@ h1, h2, h3, p { margin: 0; }
 
 /* ------------------------------------------------------------ Steuerung (klebt oben) */
 .controls {
-  position: sticky; top: 0; z-index: 10;
+  position: sticky; top: var(--sat); z-index: 10;
   background: var(--paper);
   padding: calc(var(--sat) * 0) calc(var(--sar) + 14px) 8px calc(var(--sal) + 14px);
 }
-.controls::before { /* Statusleiste beim Scrollen abdecken */
-  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: var(--sat); background: var(--paper);
+/* Statusleiste abdecken: feste Fläche in Höhe der Statusleiste, die Steuerung klebt darunter.
+   (Früher ein ::before an der Steuerung; das hat bei hoher Statusleiste die Kopfzeile verdeckt.) */
+body::after {
+  content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--sat);
+  background: var(--paper); z-index: 20; pointer-events: none;
 }
 .seg { display: flex; gap: 2px; padding: 3px; background: var(--line); border-radius: 12px; margin-top: 8px; }
 .seg button { flex: 1 1 auto; height: 36px; border-radius: 9px; font-weight: 500; font-size: 15px; color: var(--ink-2); display: inline-grid; place-items: center; }
@@ -517,6 +520,11 @@ h1, h2, h3, p { margin: 0; }
 .kp-extra[open] summary::after { content: '–'; }
 .kp-extra .field { margin-top: 10px; }
 
+/* Neuigkeiten */
+.whatsnew-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.whatsnew-list li { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start; font-size: 15px; }
+.whatsnew-list .ic { color: var(--series-1); margin-top: 1px; }
+
 /* ------------------------------------------------------------ Weitere Seiten */
 .page-title { flex: 1; min-width: 0; font: 600 23px/1.2 var(--font-num); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 2px; }
 .top--page { padding-bottom: 4px; }
@@ -591,7 +599,6 @@ h1, h2, h3, p { margin: 0; }
 /* ------------------------------------------------------------ Querformat am Handy */
 @media (orientation: landscape) and (max-height: 560px) {
   .controls { position: static; }
-  .controls::before { display: none; }
   .top { padding-top: calc(var(--sat) + 4px); }
   .reading { margin-top: 2px; }
   .counter .roll { width: 18px; height: 26px; font-size: 19px; line-height: 26px; }
