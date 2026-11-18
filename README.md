@@ -56,7 +56,7 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
     <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Störungsdienst und Stromnotruf zum Anrufen" /><br /><sub><b>Störung</b><br />direkt anrufen</sub></td>
     <td align="center"><img src="docs/readme/jahr-dunkel.png" width="200" alt="Jahresansicht im Dunkelmodus" /><br /><sub><b>Dunkelmodus</b><br />Jahr im Vergleich</sub></td>
     <td align="center"><img src="docs/readme/menue.png" width="200" alt="Menü mit allen Seiten" /><br /><sub><b>Menü</b><br />alles mit einem Tipp</sub></td>
-    <td align="center"><img src="docs/readme/kontakt.png" width="200" alt="Kontakt mit Servicezentren" /><br /><sub><b>Kontakt</b><br />Telefon, E-Mail, Servicezentren</sub></td>
+    <td align="center"><img src="docs/readme/boersenpreis.png" width="200" alt="Dynamischer Tarif: Strompreis heute und morgen" /><br /><sub><b>Dynamischer Tarif</b><br />Börsenpreis heute und morgen</sub></td>
   </tr>
 </table>
 
@@ -90,7 +90,8 @@ Alle Bilder zeigen den Demo-Modus mit erfundenen Beispieldaten.
 
 | | |
 |---|---|
-| **Strompreis** | Arbeitspreis und Grundpreis deines Lieferanten eintragen, auf Wunsch je Zählpunkt (z. B. Wärmepumpe). |
+| **Strompreis** | Fixpreis (Arbeitspreis und Grundpreis) oder **dynamischer Tarif**: Börsenpreis EPEX Spot Österreich plus Aufschlag in Cent und/oder Prozent, je Viertelstunde oder Stunde. Vorlagen für aWATTar, smartENERGY, VERBUND und oekostrom. Eigener Fixpreis je Zählpunkt (z. B. Wärmepumpe) möglich. |
+| **Börsenpreis heute und morgen** | Bei dynamischem Tarif: dein Energiepreis jetzt, im Schnitt, die günstigsten zwei Stunden heute und morgen, als Diagramm. Börsenpreise von Energy-Charts (Fraunhofer ISE), Daten Bundesnetzagentur/SMARD, CC BY 4.0. |
 | **Netzkosten** | Rechnet Netzblick selbst nach dem Preisblatt von Netz Burgenland, samt Sommer-Niedertarif (1. April bis 30. September, 10–16 Uhr) aus den Viertelstundenwerten. Ab 2027 mit Leistungspreis aus der Monatsspitze und Winter-Niedertarif (ab Oktober 2027, 23–5 Uhr). Haushalt oder unterbrechbar kommt aus dem Kundenportal. |
 | **Steuern und Abgaben** | Elektrizitätsabgabe, Erneuerbaren-Förderpauschale und -Förderbeitrag, 20 % USt. |
 | **Kostenaufstellung** | In der Übersicht mit Anteilen; Kosten pro Tag und Hochrechnung auf den Zeitraum. „Was dich ein Jahr kostet“ aus den letzten 12 Monaten. |
@@ -154,7 +155,7 @@ Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at]
 
 ## Datenschutz und Sicherheit
 
-- Netzblick spricht **ausschließlich** mit `smartmeter.netzburgenland.at` und `api.portal.netzburgenland.at` (HTTPS). Kein eigener Server, keine Werbung, kein Tracking.
+- Netzblick spricht mit `smartmeter.netzburgenland.at` und `api.portal.netzburgenland.at` (HTTPS). Nur bei einem dynamischen Stromtarif kommen die öffentlichen Börsenpreise von `api.energy-charts.info` dazu, ohne Daten über dich. Kein eigener Server, keine Werbung, kein Tracking.
 - Vom Kundenportal werden Daten nur **gelesen**.
 - **Zugangsdaten** werden nur bei „Angemeldet bleiben“ gespeichert, verschlüsselt mit AES-256-GCM; der Schlüssel liegt im Android Keystore.
 - **Messwerte** werden für die Offline-Anzeige zwischengespeichert. „Abmelden“ löscht Zugangsdaten und Zwischenspeicher.
@@ -225,6 +226,7 @@ netzblick/
 │   ├── model.js         Laden, Zwischenspeichern, Filtern, Kennzahlen, Aufteilung
 │   ├── costs.js         Kostenmodell: Lieferant, Netz, Abgaben, Niedertarife, Leistungspreis ab 2027
 │   ├── costview.js      Kostenaufstellung für Übersicht und Seite „Kosten“
+│   ├── spot.js          Börsenpreise EPEX Spot AT (Energy-Charts) für dynamische Tarife
 │   ├── netzdaten.js     Netzpreise, Abgaben, Störungs- und Kontaktdaten (mit Quellen)
 │   ├── billing.js       Laufendes Abrechnungsjahr und Hochrechnung
 │   ├── reminder.js      Erinnerung: Zeitpunkt und Kalenderdatei
@@ -255,6 +257,7 @@ flowchart LR
   H -- "App" --> N["CapacitorHttp (nativ)"]
   N --> P[("smartmeter.netzburgenland.at")]
   N --> Q[("api.portal.netzburgenland.at")]
+  N -. "nur bei dynamischem Tarif" .-> S[("api.energy-charts.info<br/>Börsenpreise")]
   H -- "Demo" --> D["demo.js"]
   M --> R["netzdaten.js<br/>Preisblatt, Abgaben"]
 ```
@@ -278,8 +281,8 @@ flowchart LR
 
 Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 
-1. **Unit-Tests** (`test/unit/`, 82 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Leistungspreis 2027 mit Monatsspitzen und Winter-Niedertarif, Erinnerung und Kalenderdatei, Versionsnummern.
-2. **Oberflächentest** (`test/e2e/smoke.mjs`, 26 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsdiagramm mit 10-kW-Linie, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
+1. **Unit-Tests** (`test/unit/`, 88 Fälle): Zeiträume inkl. Zeitumstellung, Zahlenformate, API-Clients mit Fehlerfällen und Neuanmeldung, Datenmodell und Filter, Zwischenspeicher, Kundenportal und Energiegemeinschaften, Abrechnungsjahr inkl. Zwischenabrechnung, Kostenmodell (geprüft gegen die Vergleichsgrafik von Netz Burgenland), Leistungspreis 2027 mit Monatsspitzen und Winter-Niedertarif, Börsenpreise und dynamischer Tarif, Erinnerung und Kalenderdatei, Versionsnummern.
+2. **Oberflächentest** (`test/e2e/smoke.mjs`, 29 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsdiagramm mit 10-kW-Linie, Kosten und Erinnerung, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
 3. **Android-Build**: baut die Debug-APK.
 
 ## Releases und Play Store

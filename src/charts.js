@@ -335,6 +335,71 @@ export function powerOption(T, cfg) {
 }
 
 /**
+ * Energiepreis im dynamischen Tarif (brutto, Cent/kWh) für heute und morgen als Treppenlinie.
+ * cfg: {pts: [{t: Date, v: ct brutto, spot: ct netto}], step (ms), now: Date}
+ */
+export function spotOption(T, cfg) {
+  const { pts, step, now } = cfg;
+  const axis = pts.map((p) => p.t);
+  const nowIdx = pts.findIndex((p) => p.t <= now && now < new Date(p.t.getTime() + step));
+  const dayName = (d) => {
+    const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - t0) / 86400000);
+    return diff === 0 ? 'Heute' : diff === 1 ? 'Morgen' : WEEKDAYS_SHORT[(d.getDay() + 6) % 7];
+  };
+  return {
+    animationDuration: 400,
+    textStyle: { fontFamily: T.font },
+    grid: { left: 6, right: 12, top: 30, bottom: 6, containLabel: true },
+    tooltip: baseTooltip(T, {
+      axisPointer: { type: 'line', lineStyle: { color: T.axis, width: 1 } },
+      formatter: (params) => {
+        const p = pts[params[0].dataIndex];
+        const end = new Date(p.t.getTime() + step);
+        return `<div class="tt-title">${esc(`${dayName(p.t)}, ${time(p.t)}–${time(end)} Uhr`)}</div>` +
+          row(T.s[0], `${num(p.v, 2)} ct/kWh`, 'dein Energiepreis') +
+          `<div class="tt-sub">Börse ${num(p.spot, 2)} ct netto</div>`;
+      },
+    }),
+    xAxis: {
+      type: 'category',
+      data: axis.map((d) => d.getTime()),
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: T.axis } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: T.muted, fontFamily: T.font, fontSize: 11, hideOverlap: true,
+        interval: (i) => { const d = axis[i]; return !!d && d.getMinutes() === 0 && d.getHours() % 6 === 0; },
+        formatter: (_, i) => { const d = axis[i]; return d.getHours() === 0 ? dayName(d) : `${d.getHours()} Uhr`; },
+      },
+    },
+    yAxis: yAxis(T, 'ct/kWh'),
+    series: [{
+      type: 'line',
+      step: 'end',
+      data: pts.map((p) => p.v),
+      showSymbol: false,
+      lineStyle: { color: T.s[0], width: 2 },
+      areaStyle: { color: T.s[0], opacity: 0.12 },
+      emphasis: { disabled: true },
+      markPoint: {
+        symbol: 'circle', symbolSize: 8,
+        itemStyle: { color: T.s[0], borderColor: T.surface, borderWidth: 2 },
+        label: { show: true, position: 'top', distance: 6, color: T.ink, fontFamily: T.font, fontSize: 11, fontWeight: 600, formatter: (p) => `${num(p.value, 1)} ct` },
+        data: [{ type: 'min' }, { type: 'max' }],
+        animation: false,
+      },
+      markLine: nowIdx >= 0 ? {
+        silent: true, symbol: 'none', animation: false,
+        lineStyle: { color: T.ink2, width: 1.5, type: [4, 3] },
+        label: { show: true, position: 'insideEndTop', color: T.ink2, fontFamily: T.font, fontSize: 11, fontWeight: 600, formatter: 'Jetzt' },
+        data: [{ xAxis: nowIdx }],
+      } : undefined,
+    }],
+  };
+}
+
+/**
  * Kosten je Monat, gestapelt nach Energie, Netz, Steuern und Abgaben (brutto).
  * cfg: {axis:[Date], parts:[{name, color, data:[€|null]}], kwh:[kWh|null]}
  */

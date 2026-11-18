@@ -82,8 +82,8 @@ test('Kosten: Tage je Jahr, Summen über Zählpunkte, Lieferantenpreise je Zähl
   near(s.snapSaving, b.snapSaving);
   assert.equal(sumCosts([a, meterCost([], {})]).supplier, null);
   const settings = { supplier: { all: { ap: 20, gp: 5 }, meters: { X: { ap: 15 } } } };
-  assert.deepEqual(supplierFor(settings, 'X'), { ap: 15, gp: 5 });
-  assert.deepEqual(supplierFor(settings, 'Y'), { ap: 20, gp: 5 });
+  assert.deepEqual(supplierFor(settings, 'X'), { kind: 'fixed', ap: 15, gp: 5 });
+  assert.deepEqual(supplierFor(settings, 'Y'), { kind: 'fixed', ap: 20, gp: 5 });
   assert.equal(supplierFor({}, 'Y'), null);
   assert.equal(tariffClassOf({ tariffClass: 'U' }), 'u');
   assert.equal(tariffClassOf({ tariffClass: 'N' }), 'nm');

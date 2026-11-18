@@ -16,8 +16,9 @@ import { cacheClear } from './cache.js';
 import { $, h, icon, fillIcons, reduceMotion, setCounter, countUp, openSheet, closeSheet, toast, brandMark, spinBrand } from './ui.js';
 import * as pages from './pages.js';
 import { parseBillingPeriod } from './kundenportal.js';
-import { meterCost, sumCosts, supplierFor, tariffClassOf, projectCost } from './costs.js';
-import { STAND, TARIFF_CALCULATOR, POWER_TARIFF, GRID } from './netzdaten.js';
+import { meterCost, sumCosts, supplierFor, tariffClassOf, projectCost, anyDynamic } from './costs.js';
+import { SpotStore } from './spot.js';
+import { STAND, TARIFF_CALCULATOR, POWER_TARIFF, GRID, DYNAMIC_PROVIDERS } from './netzdaten.js';
 import { costParts, costTotal, costTable, costNotes } from './costview.js';
 
 // Web-Vorschau (ohne native Schicht): nur Demo-Daten möglich, da der Browser die Portal-API blockiert
@@ -118,6 +119,7 @@ async function doLogin(username, password, { remember, demo = false, silent = fa
   const accounts = await state.api.login(username, password);
   state.accounts = accounts;
   state.store = new DataStore(state.api);
+  state.spot = new SpotStore(demo ? demoHttp : http);
   if (!demo) {
     if (remember) {
       await secure.set('username', username).catch(() => {});
@@ -366,7 +368,12 @@ function pageCtx() {
     },
     saveSettings: () => saveSettings(state.settings),
     costOptions,
-    refreshUsage: () => { if (state.view) renderAll(); },
+    ensureSpot,
+    refreshUsage: async () => {
+      if (!state.view) return;
+      await ensureSpot(state.view.period.start, state.view.period.end, state.view.perMp.map((x) => x.mp.id));
+      renderAll();
+    },
   };
 }
 
@@ -449,16 +456,16 @@ function showWhatsNew() {
   const major = APP_VERSION.split('.').slice(0, 2).join('.');
   try { if (localStorage.getItem('nb.seenVersion') === major) return; localStorage.setItem('nb.seenVersion', major); } catch { return; }
   const items = [
+    ['euro', 'Dynamischer Stromtarif: Börsenpreis plus Aufschlag, mit Vorlagen für aWATTar, smartENERGY, VERBUND und oekostrom, und dein Strompreis für heute und morgen.'],
     ['wallet', 'Kosten: eigene Seite mit allen Kosten Monat für Monat, je Zählpunkt und als Aufstellung, für die letzten 12 Monate oder ein Jahr.'],
     ['gauge', 'Leistung: Unter dem Verbrauch zeigt ein eigenes Diagramm die Viertelstunden in kW mit einblendbarer 10-kW-Linie.'],
-    ['chart', 'Ab 2027 zählt fürs Netz die höchste Viertelstunde jedes Monats. Die Seite „Leistung“ zeigt deine Monatsspitzen und was du 2027 zahlst.'],
     ['menu', 'Alles im Menü über ☰ oben links.'],
   ];
   const body = h('div', { class: 'whatsnew' },
     h('ul', { class: 'whatsnew-list', role: 'list' }, ...items.map(([ic, text]) => h('li', {}, icon(ic), h('span', { text })))),
     h('div', { class: 'sheet-actions' },
       h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => closeSheet() }, 'Später'),
-      h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); goto('costs'); } }, 'Kosten ansehen')));
+      h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); goto('tariff'); } }, 'Strompreis ansehen')));
   setTimeout(() => openSheet(`Neu in Netzblick ${major}`, body), 700);
 }
 
@@ -595,6 +602,8 @@ async function refresh({ force = false } = {}) {
       peaksFrom: state.flow === 'consumption' ? POWER_TARIFF.since : null,
     }, { force });
     if (seq !== state.loadSeq) return;
+    if (state.flow === 'consumption') await ensureSpot(state.period.start, state.period.end, viewMps().map((m) => m.id));
+    if (seq !== state.loadSeq) return;
     state.view = view;
     state.error = null;
     renderAll();
@@ -682,9 +691,34 @@ function costOptions(mp) {
   return {
     tariffClass: tariffClassOf(pod),
     household: !pod || !pod.loadProfileCode || pod.loadProfileCode === 'H0',
-    supplier: supplierFor(state.settings, mp.id),
+    supplier: supplierForMeter(mp),
     meterType: state.settings.meterType || 'three',
+    // dynamischer Tarif: Börsenpreise (vorher mit ensureSpot laden)
+    spotAt: state.spot ? (t, iv) => state.spot.at(t, iv) : null,
   };
+}
+
+/** Lieferantenpreis je Zählpunkt; Grundgebühr auf Wunsch nur einmal je Adresse (beim ersten Zählpunkt) */
+function supplierForMeter(mp) {
+  const sup = supplierFor(state.settings, mp.id);
+  const s = state.settings.supplier || {};
+  const own = (s.meters && s.meters[mp.id]) || {};
+  const first = state.mps.find((m) => m.flows.consumption);
+  if (sup && s.all && s.all.gpOnce && first && mp.id !== first.id && own.gp == null) return { ...sup, gp: 0 };
+  return sup;
+}
+
+/** Börsenpreise für einen Zeitraum laden, falls ein Zählpunkt einen dynamischen Tarif hat */
+async function ensureSpot(from, to, ids = state.mps.map((m) => m.id)) {
+  if (!state.spot || !anyDynamic(state.settings, ids)) return true;
+  try {
+    await state.spot.ensure(from, to);
+    state.spotError = null;
+    return true;
+  } catch (e) {
+    state.spotError = e;
+    return false;
+  }
 }
 
 function periodCosts(d) {
@@ -795,7 +829,7 @@ function renderCosts(d) {
   const total = costTotal(c);
   const sup = c.supplier ? supplierFor(state.settings, (d.per[0] || {}).mp?.id) : null;
   const community = !!(state.kpData && state.kpData.pods.some((p) => p.communities && p.communities.some((x) => x.status === 'aktiv')));
-  const notes = costNotes(c, { filtered: !!c.filtered, community });
+  const notes = costNotes(c, { filtered: !!c.filtered, community, spotError: state.spotError });
 
   panel.append(...[
     h('div', { class: 'panel-head' }, h('h2', { text: 'Kosten' }),
@@ -806,7 +840,7 @@ function renderCosts(d) {
     h('div', { class: 'stackbar', role: 'img', 'aria-label': parts.map((p) => `${p.name} ${pct(p.value / total)}`).join(', ') },
       ...parts.map((p) => h('span', { style: `flex:${Math.max(p.value, 0.0001)};background:${p.color}` }))),
     h('div', { class: 'stackbar-legend' }, ...parts.map((p) => h('span', { class: 'lg' }, h('span', { class: 'lg-key', style: `background:${p.color}` }), `${p.name} ${pct(p.value / total)}`))),
-    costTable(c, T, { apSub: d.per.length === 1 && sup ? `${num(c.kwh, 0)} kWh × ${num(sup.ap, 2)} ct` : null, meters: d.per.length }),
+    costTable(c, T, { apSub: d.per.length === 1 && sup && sup.kind === 'fixed' ? `${num(c.kwh, 0)} kWh × ${num(sup.ap, 2)} ct` : null, meters: d.per.length }),
     !c.supplier ? h('button', { class: 'pill pill--link', type: 'button', onclick: () => goto('tariff') }, 'Preis deines Lieferanten eintragen, dann rechnet Netzblick auch die Energie mit') : null,
     h('p', { class: 'note', text: notes.join(' ') }),
   ].filter(Boolean));
@@ -1658,6 +1692,11 @@ async function boot() {
     if (PARAMS.get('chart')) state.settings.chartTypes = { quarter: PARAMS.get('chart'), day: PARAMS.get('chart'), month: PARAMS.get('chart'), year: PARAMS.get('chart') };
     if (PARAMS.get('split')) state.settings.splitBy = PARAMS.get('split');
     if (PARAMS.get('power') === 'noline') state.settings.powerLimit = false;
+    if (PARAMS.get('dyn')) {
+      const pv = DYNAMIC_PROVIDERS.find((x) => x.id === PARAMS.get('dyn')) || DYNAMIC_PROVIDERS[0];
+      state.settings.supplier = { all: { kind: 'dynamic', provider: pv.id, ct: pv.ct ?? 1.8, pct: pv.pct, dgp: pv.gp ?? 4.99, interval: pv.interval, gpOnce: !!pv.gpOnce }, meters: {} };
+      state.settings.contract = { supplier: pv.name };
+    }
     if (PARAMS.get('power') === 'scroll') state.scrollTo = 'powerPanel';
     if (PARAMS.get('sel')) localStorage.setItem('nb.selection', JSON.stringify(PARAMS.get('sel') === 'all' ? 'all' : PARAMS.get('sel').split(',')));
     applyTheme();
@@ -1688,6 +1727,7 @@ async function boot() {
           state.api.useAccounts(JSON.parse(meta));
           state.accounts = state.api.accounts;
           state.store = new DataStore(state.api, { offline: true });
+          state.spot = new SpotStore(http);
           enterDashboard();
           showBanner('Offline: Angezeigt werden die zuletzt geladenen Werte.', true);
           return;

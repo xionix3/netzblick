@@ -58,7 +58,7 @@ All images show demo mode with made-up sample data.
     <td align="center"><img src="docs/readme/stoerung.png" width="200" alt="Fault service and emergency line to call" /><br /><sub><b>Power outage</b><br />call directly</sub></td>
     <td align="center"><img src="docs/readme/jahr-dunkel.png" width="200" alt="Year view in dark mode" /><br /><sub><b>Dark mode</b><br />year comparison</sub></td>
     <td align="center"><img src="docs/readme/menue.png" width="200" alt="Menu with all pages" /><br /><sub><b>Menu</b><br />everything one tap away</sub></td>
-    <td align="center"><img src="docs/readme/kontakt.png" width="200" alt="Contact with service centres" /><br /><sub><b>Contact</b><br />phone, e-mail, service centres</sub></td>
+    <td align="center"><img src="docs/readme/boersenpreis.png" width="200" alt="Dynamic tariff: price today and tomorrow" /><br /><sub><b>Dynamic tariff</b><br />exchange price today and tomorrow</sub></td>
   </tr>
 </table>
 
@@ -92,7 +92,8 @@ All images show demo mode with made-up sample data.
 
 | | |
 |---|---|
-| **Electricity price** | Enter your supplier's energy price per kWh and monthly base fee, optionally per meter (e.g. a heat pump). |
+| **Electricity price** | Fixed price (energy price and base fee) or a **dynamic tariff**: EPEX Spot Austria exchange price plus a markup in cents and/or percent, per quarter hour or hour. Presets for aWATTar, smartENERGY, VERBUND and oekostrom. A fixed price per meter (e.g. a heat pump) is possible. |
+| **Exchange price today and tomorrow** | With a dynamic tariff: your energy price now, on average, and the cheapest two hours today and tomorrow, as a chart. Exchange prices from Energy-Charts (Fraunhofer ISE), data Bundesnetzagentur/SMARD, CC BY 4.0. |
 | **Grid costs** | Calculated from Netz Burgenland's price sheet, including the summer low tariff (1 April to 30 September, 10 am–4 pm) taken from the quarter-hour values. From 2027 including the power price from the monthly peak and the winter low tariff (from October 2027, 11 pm–5 am). Whether a meter is a household or interruptible tariff comes from the customer portal. |
 | **Taxes and levies** | Electricity tax, renewable energy flat fee and renewable energy contribution, 20 % VAT. |
 | **Cost breakdown** | In the overview with shares; cost per day and forecast for the period. "What a year costs you" based on the last 12 months. |
@@ -156,7 +157,7 @@ No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgen
 
 ## Privacy and security
 
-- Netzblick talks **only** to `smartmeter.netzburgenland.at` and `api.portal.netzburgenland.at` (HTTPS). No own server, no ads, no tracking.
+- Netzblick talks to `smartmeter.netzburgenland.at` and `api.portal.netzburgenland.at` (HTTPS). Only with a dynamic tariff does it also fetch public exchange prices from `api.energy-charts.info`, without any data about you. No own server, no ads, no tracking.
 - Data from the customer portal is **read only**.
 - **Credentials** are stored only with "Angemeldet bleiben" (stay signed in), encrypted with AES-256-GCM; the key lives in the Android Keystore.
 - **Values** are cached for offline display. Signing out deletes credentials and cache.
@@ -229,6 +230,7 @@ netzblick/
 │   ├── model.js         loading, caching, filters, figures, breakdowns
 │   ├── costs.js         cost model: supplier, grid, levies, low tariffs, power price from 2027
 │   ├── costview.js      cost breakdown for the overview and the costs page
+│   ├── spot.js          EPEX Spot AT exchange prices (Energy-Charts) for dynamic tariffs
 │   ├── netzdaten.js     grid prices, levies, outage and contact data (with sources)
 │   ├── billing.js       current billing year and forecast
 │   ├── reminder.js      reminder date and calendar file
@@ -266,7 +268,7 @@ netzblick/
 
 Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
 
-1. **Unit tests** (`test/unit/`, 82 cases):
+1. **Unit tests** (`test/unit/`, 88 cases):
    - periods incl. daylight saving time, number formats
    - API clients with error cases and re-login
    - data model and filters, cache
@@ -274,8 +276,9 @@ Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
    - billing year incl. interim bills
    - cost model, checked against Netz Burgenland's comparison chart
    - power price 2027 with monthly peaks and winter low tariff
+   - exchange prices and dynamic tariff (quarter hour, hourly mean, daily mean, missing prices)
    - reminder and calendar file, version numbers
-2. **UI test** (`test/e2e/smoke.mjs`, 26 scenarios):
+2. **UI test** (`test/e2e/smoke.mjs`, 29 scenarios):
    - all periods, dark mode, filters, multi-select, chart types, power chart with 10 kW line
    - costs and reminder, every page
    - tablet, landscape, tall status bar, sign-out

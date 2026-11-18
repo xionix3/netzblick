@@ -343,6 +343,47 @@ await scenario('Übersicht: „Alle Kosten“ öffnet die Seite Kosten', {
     expect(await page.$eval('#pageTitle', (e) => e.textContent === 'Kosten'), 'Seite Kosten nicht geöffnet'),
   ],
 });
+await scenario('Strompreis: Lieferant nicht aus dem Portal vorbelegt', {
+  query: '&page=tariff',
+  actions: async (page) => { await waitText(page, /Bei Netz Burgenland als Lieferant gemeldet/); },
+  checks: async (s, page) => {
+    const v = await page.evaluate(() => [...document.querySelectorAll('.field')].find((f) => /Lieferant \(optional\)/.test(f.textContent))?.querySelector('input')?.value);
+    return [
+      expect(v === '', `Lieferant ist vorbelegt: ${v}`),
+      expect(/gemeldet: Musterstrom GmbH/.test(s.text), 'Hinweis auf gemeldeten Lieferanten fehlt'),
+      expect(!/Dein Strompreis heute und morgen/.test(s.text), 'Börsenpreise ohne dynamischen Tarif'),
+    ];
+  },
+});
+await scenario('Strompreis: dynamischer Tarif mit Börsenpreis heute und morgen', {
+  query: '&page=tariff&dyn=awattar',
+  shot: 'strompreis-dynamisch',
+  actions: async (page) => { await waitText(page, /Günstigste 2 Stunden/, 20000); },
+  checks: async (s, page) => {
+    const st = await page.evaluate(() => ({
+      on: [...document.querySelectorAll('#pageBody .seg button.on')].map((b) => b.textContent).find((t) => /Fixpreis|Dynamisch/.test(t)),
+      prov: document.querySelector('select.select')?.value,
+      chart: document.querySelectorAll('.chart--spot canvas').length,
+    }));
+    await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent === 'Fixpreis').click());
+    await sleep(200);
+    const fixedVisible = await page.evaluate(() => !!document.querySelector('input[placeholder="z. B. 14,9"]')?.offsetParent);
+    return [
+      expect(st.on === 'Dynamisch (Börse)' && st.prov === 'awattar', `Tarifwahl falsch: ${st.on}/${st.prov}`),
+      expect(st.chart === 1, 'Preisdiagramm fehlt'),
+      expect(/Energy-Charts/.test(s.text) && /SMARD/.test(s.text), 'Quelle der Börsenpreise fehlt'),
+      expect(/Was dich ein Jahr kostet/.test(s.text), 'Jahreskosten fehlen'),
+      expect(fixedVisible, 'Umschalten auf Fixpreis klappt nicht'),
+    ];
+  },
+});
+await scenario('Kosten mit dynamischem Tarif', {
+  query: '&period=month&date=2026-10-01&dyn=smartenergy',
+  checks: (s) => [
+    expect(/Börsenpreis und Aufschlag/.test(s.text) && /Ø Börse/.test(s.text), 'dynamische Energiekosten fehlen'),
+    expect(!/fehlen Börsenpreise/.test(s.text), 'Börsenpreise fehlen'),
+  ],
+});
 await scenario('Seite Energiegemeinschaft mit Teilnahmefaktoren', {
   query: '&page=community',
   shot: 'energiegemeinschaft',

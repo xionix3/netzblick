@@ -1,5 +1,6 @@
 // Kostenmodell Strom: Energie (Lieferant, brutto eingegeben) + Netz Burgenland + Steuern und Abgaben + USt
 import { GRID, SNAP_WINDOW, WINAP_WINDOW, POWER_TARIFF, LEVIES, VAT } from './netzdaten.js';
+import { dynamicPrice } from './spot.js';
 
 const DAY = 86400000;
 
@@ -93,7 +94,10 @@ const daysInYear = (y) => (new Date(y + 1, 0, 1) - new Date(y, 0, 1)) / DAY;
  * @param o.from, o.to  Zeitraum für Fixkosten; ohne from/to keine Fixkosten (z. B. bei Filtern)
  * @param o.tariffClass 'nm' | 'u'
  * @param o.household   Haushalt (Lastprofil H0): ermäßigte Elektrizitätsabgabe 2026
- * @param o.supplier    {ap: Cent/kWh brutto, gp: Euro/Monat brutto} oder null
+ * @param o.supplier    Fixpreis {kind: 'fixed', ap: Cent/kWh brutto, gp: Euro/Monat brutto}
+ *                      dynamisch {kind: 'dynamic', ct: Aufschlag Cent/kWh brutto, pct: Aufschlag %, gp, interval: 15|60} oder null
+ * @param o.spotAt      (t, interval|'day') → Börsenpreis Cent/kWh netto oder null (für dynamische Tarife)
+ * @param o.spotFlat    fester Börsenpreis Cent/kWh netto statt spotAt (Hochrechnungen)
  * @param o.meterType   'three' (Drehstrom) | 'single' (Wechselstrom)
  * @param o.peaks       Map 'JJJJ-MM' → kW (höchste Viertelstunde), für den Leistungspreis ohne Viertelstundenwerte
  * @param o.finePeaks   false: Spitzen nicht aus den Punkten ableiten (z. B. eine Jahresmenge als ein Punkt)
@@ -101,7 +105,9 @@ const daysInYear = (y) => (new Date(y + 1, 0, 1) - new Date(y, 0, 1)) / DAY;
 export function meterCost(points, o = {}) {
   const cls = o.tariffClass === 'u' ? 'u' : 'nm';
   const household = o.household !== false;
-  const r = emptyCost(o.supplier && isFinite(o.supplier.ap));
+  const sup = o.supplier && (o.supplier.kind === 'dynamic' || isFinite(o.supplier.ap)) ? o.supplier : null;
+  const r = emptyCost(!!sup);
+  if (sup && sup.kind === 'dynamic') r.supplier.dynamic = true;
   const finePeaks = new Map();
   for (const p of points) {
     if (p.v == null) continue;
@@ -143,7 +149,17 @@ export function meterCost(points, o = {}) {
     r.levies.eAbgabe += (p.v * (household ? l.data.eAbgabe.household : l.data.eAbgabe.other)) / 100;
     const b = l.data.beitrag[cls];
     r.levies.beitrag += (p.v * (b.ap + b.loss)) / 100;
-    if (r.supplier) r.supplier.energy += (p.v * o.supplier.ap) / 100;
+    if (sup && sup.kind === 'dynamic') {
+      const spot = o.spotFlat != null ? o.spotFlat : o.spotAt ? o.spotAt(p.t, o.fine ? sup.interval || 15 : 'day') : null;
+      if (spot == null) r.supplier.missingKwh += p.v;
+      else {
+        r.supplier.energy += (p.v * dynamicPrice(spot, sup, VAT)) / 100;
+        r.supplier.spotKwh += p.v;
+        r.supplier.spotSum += p.v * spot;
+        if (!o.fine && o.spotFlat == null) r.supplier.spotApprox = true;
+        if (o.spotFlat != null) r.supplier.spotFlat = true;
+      }
+    } else if (sup) r.supplier.energy += (p.v * sup.ap) / 100;
   }
   if (o.from && o.to && o.to > o.from) {
     for (const [y, days] of daysByYear(o.from, o.to)) {
@@ -161,7 +177,7 @@ export function meterCost(points, o = {}) {
       r.levies.pauschale += pauschale;
       r.levies.beitrag += beitragYear;
       r.fixedNet += base + metering + pauschale + beitragYear;
-      if (r.supplier) r.supplier.base += ((o.supplier.gp || 0) * 12) * share;
+      if (r.supplier) r.supplier.base += ((sup.gp || 0) * 12) * share;
     }
     // Leistungspreis: je Monat die höchste Viertelstunde, anteilig nach Tagen im Zeitraum
     for (const m of monthsIn(o.from, o.to)) {
@@ -185,7 +201,7 @@ function emptyCost(withSupplier) {
     kwh: 0, snapKwh: 0, snapSaving: 0, winapKwh: 0, winapSaving: 0,
     grid: { usage: 0, loss: 0, base: 0, metering: 0, power: 0 },
     levies: { eAbgabe: 0, pauschale: 0, beitrag: 0 },
-    supplier: withSupplier ? { energy: 0, base: 0 } : null,
+    supplier: withSupplier ? { energy: 0, base: 0, dynamic: false, spotKwh: 0, spotSum: 0, missingKwh: 0, spotApprox: false, spotFlat: false } : null,
     approx: false, draft: false, snapUnknown: false, winapUnknown: false, peakUnknown: false,
     peakKw: null, powerMonths: [], years: new Set(), fixedNet: 0,
   };
@@ -216,7 +232,13 @@ export function sumCosts(list) {
     r.winapKwh += x.winapKwh; r.winapSaving += x.winapSaving / (1 + VAT);
     for (const k of Object.keys(r.grid)) r.grid[k] += x.grid[k];
     for (const k of Object.keys(r.levies)) r.levies[k] += x.levies[k];
-    if (r.supplier) { r.supplier.energy += x.supplier.energy; r.supplier.base += x.supplier.base; }
+    if (r.supplier) {
+      const a = r.supplier, b = x.supplier;
+      a.energy += b.energy; a.base += b.base;
+      a.dynamic = a.dynamic || !!b.dynamic;
+      a.spotKwh += b.spotKwh || 0; a.spotSum += b.spotSum || 0; a.missingKwh += b.missingKwh || 0;
+      a.spotApprox = a.spotApprox || !!b.spotApprox; a.spotFlat = a.spotFlat || !!b.spotFlat;
+    }
     r.approx = r.approx || x.approx;
     r.snapUnknown = r.snapUnknown || x.snapUnknown;
     r.winapUnknown = r.winapUnknown || x.winapUnknown;
@@ -251,10 +273,18 @@ export function supplierFor(settings, id) {
   const s = settings.supplier || {};
   const all = s.all || {};
   const own = (s.meters && s.meters[id]) || {};
-  const ap = own.ap != null ? own.ap : all.ap;
-  const gp = own.gp != null ? own.gp : all.gp;
-  return ap != null && isFinite(ap) ? { ap, gp: gp != null && isFinite(gp) ? gp : 0 } : null;
+  const num = (x) => (x != null && isFinite(x) ? Number(x) : null);
+  // Eigener Fixpreis je Zählpunkt (z. B. Wärmepumpe) geht vor
+  if (num(own.ap) != null) return { kind: 'fixed', ap: num(own.ap), gp: num(own.gp) ?? num(all.gp) ?? 0 };
+  if (all.kind === 'dynamic') {
+    return { kind: 'dynamic', provider: all.provider || 'other', ct: num(all.ct) ?? 0, pct: num(all.pct) ?? 0, gp: num(all.dgp) ?? num(all.gp) ?? 0, interval: all.interval === 60 ? 60 : 15 };
+  }
+  const ap = num(all.ap);
+  return ap != null ? { kind: 'fixed', ap, gp: num(own.gp) ?? num(all.gp) ?? 0 } : null;
 }
+
+/** Hat irgendein Zählpunkt einen dynamischen Tarif? */
+export const anyDynamic = (settings, ids) => ids.some((id) => { const x = supplierFor(settings, id); return x && x.kind === 'dynamic'; });
 
 /** Kosten auf einen längeren Zeitraum hochrechnen: Menge skaliert, Fixkosten nach Tagen */
 export function projectCost(c, { kwh, days, coveredDays }) {

@@ -74,7 +74,7 @@ Fakten für das Formular (die Zuordnung zu Googles Kategorien vor dem Absenden m
 
 | Frage | Fakten zu Netzblick |
 |---|---|
-| Welche Daten verlassen das Gerät? | Benutzername/E-Mail und Passwort, Sitzungs-Token und die Datenabrufe, und zwar ausschließlich an `smartmeter.netzburgenland.at` und `api.portal.netzburgenland.at` (beide Netz Burgenland) zur Anmeldung und zum Laden der eigenen Daten |
+| Welche Daten verlassen das Gerät? | Benutzername/E-Mail und Passwort, Sitzungs-Token und die Datenabrufe, und zwar nur an `smartmeter.netzburgenland.at` und `api.portal.netzburgenland.at` (beide Netz Burgenland) zur Anmeldung und zum Laden der eigenen Daten. Bei dynamischem Tarif zusätzlich eine Abfrage öffentlicher Börsenpreise bei `api.energy-charts.info` (nur ein Zeitraum, keine Nutzerdaten) |
 | Welche Daten lädt die App? | Messwerte, Zählerstände, Zählpunkte; aus dem Kundenportal Name, Kundennummer, E-Mail, Adresse, Zählernummer, Lieferant, Verträge, abgerechnete Verbräuche, Rechnungs- und Teilbeträge. Nur Anzeige, keine Weitergabe; Kundenportal-Daten nur im Arbeitsspeicher |
 | Erhält der Entwickler Daten? | Nein, es gibt keinen eigenen Server |
 | Werden Daten an Dritte weitergegeben, verkauft, für Werbung oder Analyse genutzt? | Nein |
@@ -103,6 +103,7 @@ Melde dich mit deinem gewohnten Portal-Zugang an und sieh sofort:
 • eine Hochrechnung und die Kosten: Energie deines Lieferanten, Netzkosten von Netz Burgenland und Abgaben
 • alle Kosten Monat für Monat und je Zählpunkt, für die letzten 12 Monate oder ein ganzes Jahr
 • eine Erinnerung, bevor Neukundenrabatt oder Vertragsbindung enden
+• dynamische Stromtarife: Börsenpreis plus Aufschlag, mit den Preisen für heute und morgen
 • deine Energiegemeinschaften mit Teilnahmefaktor
 • Störungsdienst und Kontakt zum direkten Anrufen
 • die Leistungskurve in 15-Minuten-Schritten, auch für einen ganzen Monat, mit 10-kW-Linie
@@ -115,7 +116,7 @@ Melde dich mit deinem gewohnten Portal-Zugang an und sieh sofort:
 
 Filter nach Wochentagen und Uhrzeit zeigen zum Beispiel, was nachts oder am Wochenende verbraucht wird. Mehrere Zählpunkte lassen sich beliebig kombinieren und benennen. Diagramme als Balken, Linien, Fläche oder Kreis. Optimiert für Handy und Tablet, im Hoch- und Querformat. Alle Werte gibt es auch als Tabelle und als CSV-Export.
 
-Datenschutz: Netzblick verbindet sich ausschließlich mit den Portalen von Netz Burgenland und liest dort nur. Kein eigener Server, keine Werbung, kein Tracking. Zugangsdaten werden auf Wunsch verschlüsselt auf dem Gerät gespeichert.
+Datenschutz: Netzblick verbindet sich mit den Portalen von Netz Burgenland und liest dort nur; bei dynamischem Tarif kommen öffentliche Börsenpreise dazu. Kein eigener Server, keine Werbung, kein Tracking. Zugangsdaten werden auf Wunsch verschlüsselt auf dem Gerät gespeichert.
 
 Ohne Konto ausprobieren: Auf der Anmeldeseite „Demo mit Beispieldaten ansehen“ tippen.
 

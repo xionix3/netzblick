@@ -293,9 +293,45 @@ function handleKp(method, path, data) {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* ------------------------------------------------------------ Börsenpreise (erfunden, Form wie Energy-Charts) */
+/** Börsenpreis in EUR/MWh: teurer im Winter und am Abend, billig nachts und mittags im Sommer */
+export function demoSpot(t) {
+  const m = t.getMonth();
+  const h = t.getHours() + t.getMinutes() / 60;
+  const winter = Math.cos(((m + 0.5) / 12) * 2 * Math.PI); // Jänner +1, Juli −1
+  const summer = Math.max(0, -winter);
+  const day = Math.floor((t.getTime() + 3600000) / 86400000);
+  let p = 95 + 30 * winter;
+  p += 35 * Math.exp(-((h - 8) ** 2) / 2) + 55 * Math.exp(-((h - 19) ** 2) / 4);
+  p -= 25 * Math.exp(-((h - 3) ** 2) / 4);
+  p -= 90 * summer * Math.exp(-((h - 13) ** 2) / 6);
+  if ([0, 6].includes(t.getDay())) p -= 15;
+  p += (rnd(day, 11) - 0.5) * 50 + (rnd(day * 96 + Math.floor(h * 4), 12) - 0.5) * 14;
+  return Math.round(p * 100) / 100;
+}
+
+function handleSpot(url) {
+  const q = new URL(url).searchParams;
+  const [ys, ms, ds] = q.get('start').split('-').map(Number);
+  const [ye, me, de] = q.get('end').split('-').map(Number);
+  const from = new Date(ys, ms - 1, ds).getTime();
+  const to = new Date(ye, me - 1, de + 1).getTime();
+  const tomorrowEnd = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 2).getTime();
+  const t = [], p = [];
+  for (let x = from; x < Math.min(to, tomorrowEnd);) {
+    const d = new Date(x);
+    const step = x >= new Date(2025, 9, 1).getTime() ? 900000 : 3600000;
+    t.push(x / 1000);
+    p.push(demoSpot(d));
+    x += step;
+  }
+  return { status: 200, data: { license_info: 'Demo', unix_seconds: t, price: p, unit: 'EUR / MWh', deprecated: false } };
+}
+
 /** Ersatz für http() im Demo-Modus */
 export async function demoHttp({ method = 'GET', url, data }) {
   await wait(120 + Math.random() * 260);
+  if (url.startsWith('https://api.energy-charts.info/')) return handleSpot(url);
   if (url.startsWith(KP_BASE)) return handleKp(method, url.slice(KP_BASE.length).split('?')[0], data);
   const path = url.replace(API_BASE, '').split('?')[0];
   if (method === 'POST' && path === 'api/account/login') {

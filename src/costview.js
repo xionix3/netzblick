@@ -3,6 +3,7 @@
 import { h } from './ui.js';
 import { euro, num, kw } from './format.js';
 import { STAND, POWER_TARIFF, VAT } from './netzdaten.js';
+import { SPOT_SOURCE } from './spot.js';
 
 /** Summe brutto: Energie (falls Lieferantenpreis) + Netz + Steuern und Abgaben */
 export const costTotal = (c) => (c.supplier ? c.supplier.total : 0) + c.gridGross + c.leviesGross;
@@ -28,8 +29,16 @@ export function costTable(c, T, { apSub = null, meters = 1 } = {}) {
   const rows = [];
   if (c.supplier) {
     rows.push(head('Energie (Lieferant)', c.supplier.total, T.s[0]));
-    rows.push(row('Arbeitspreis', c.supplier.energy, apSub || `${num(c.kwh, 0)} kWh`));
-    if (c.supplier.base) rows.push(row('Grundpreis', c.supplier.base, null));
+    if (c.supplier.dynamic) {
+      const sp = c.supplier;
+      const avgSpot = sp.spotKwh > 0 ? sp.spotSum / sp.spotKwh : null;
+      const avgPrice = sp.spotKwh > 0 ? (sp.energy / sp.spotKwh) * 100 : null;
+      rows.push(row('Börsenpreis und Aufschlag', sp.energy,
+        avgSpot == null ? `${num(c.kwh, 0)} kWh` : `${num(sp.spotKwh, 0)} kWh · Ø Börse ${num(avgSpot, 2)} ct netto, Ø Energiepreis ${num(avgPrice, 2)} ct`));
+    } else {
+      rows.push(row('Arbeitspreis', c.supplier.energy, apSub || `${num(c.kwh, 0)} kWh`));
+    }
+    if (c.supplier.base) rows.push(row(c.supplier.dynamic ? 'Grundgebühr' : 'Grundpreis', c.supplier.base, null));
   }
   rows.push(head('Netz Burgenland', c.gridGross, T.s[1]));
   const lowParts = [];
@@ -49,9 +58,16 @@ export function costTable(c, T, { apSub = null, meters = 1 } = {}) {
 }
 
 /** Hinweise zur Rechnung */
-export function costNotes(c, { filtered = false, community = false } = {}) {
+export function costNotes(c, { filtered = false, community = false, spotError = null } = {}) {
   const years = [...c.years].sort().join(', ');
   const notes = [`Alle Beträge inklusive 20 % USt (${euro(c.vat)} auf Netz und Abgaben). Netzpreise laut Preisblatt von Netz Burgenland ${years}, Stand ${STAND}.`];
+  const sp = c.supplier;
+  if (sp && sp.dynamic) {
+    notes.push(`Dynamischer Tarif: Börsenpreis EPEX Spot AT plus dein Aufschlag. Börsenpreise: ${SPOT_SOURCE.label}.`);
+    if (sp.spotApprox) notes.push('Wo Viertelstundenwerte fehlen, rechnet Netzblick mit dem Tagesmittel des Börsenpreises.');
+    if (sp.spotFlat) notes.push('Hochrechnung mit dem mittleren Börsenpreis der letzten 12 Monate.');
+    if (sp.missingKwh > 0.05) notes.push(`Für ${num(sp.missingKwh, 0)} kWh fehlen Börsenpreise${spotError ? ` (${spotError.message})` : ''}; diese Energie ist nicht enthalten.`);
+  }
   if (filtered) notes.push('Mit Filter nur die mengenabhängigen Kosten, ohne Pauschalen.');
   if (c.snapUnknown) notes.push('Den Sommer-Niedertarif (April bis September, 10–16 Uhr) kann Netzblick nur mit Viertelstundenwerten rechnen; wo sie fehlen, gilt der normale Arbeitspreis.');
   if (c.winapUnknown) notes.push('Den Winter-Niedertarif (ab Oktober 2027, 23–5 Uhr) rechnet Netzblick nur mit Viertelstundenwerten.');

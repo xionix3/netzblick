@@ -5,6 +5,18 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.5.0] – 2026-11-18
+
+### Neu
+- **Dynamischer Stromtarif:** Auf der Seite „Strompreis“ zwischen Fixpreis und dynamisch wählen. Dynamisch: Börsenpreis EPEX Spot Österreich plus Aufschlag in Cent und/oder Prozent (wie bei den Anbietern auf den Betrag des Börsenpreises), Grundgebühr, Preis je Viertelstunde oder Stunde. Vorlagen für aWATTar HOURLY, smartENERGY smartCONTROL, VERBUND V-Strom Spot und oekostrom oekoSpot+; alle Werte änderbar.
+- Die Börsenpreise holt Netzblick von Energy-Charts (Fraunhofer ISE, Daten Bundesnetzagentur/SMARD, CC BY 4.0): seit Oktober 2025 in Viertelstunden, davor in Stunden. Fehlende Monate kommen in einer einzigen Abfrage und bleiben im Gerät gespeichert.
+- **Dein Strompreis heute und morgen:** Energiepreis jetzt, Tagesschnitt, günstigste zwei Stunden heute und morgen, Diagramm.
+- Alle Kosten (Übersicht, Seite „Kosten“, Jahreskosten, Abrechnung) rechnen den dynamischen Tarif mit; in der Aufstellung stehen der mittlere Börsenpreis und der mittlere Energiepreis.
+- Grundgebühr auf Wunsch nur einmal für die Adresse statt je Zählpunkt (z. B. aWATTar).
+
+### Behoben
+- Das Feld „Lieferant“ ist nicht mehr mit dem Lieferanten aus dem Kundenportal vorbelegt (z. B. VERBUND). Der dort gemeldete Lieferant steht nur noch als Hinweis darunter.
+
 ## [1.4.0] – 2026-11-18
 
 ### Neu

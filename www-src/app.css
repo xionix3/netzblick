@@ -766,3 +766,11 @@ body::after {
   .meter-costs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chart--costs { height: 300px; }
 }
+
+/* ------------------------------------------------------------ 1.5: dynamischer Tarif */
+.form-sub { display: grid; gap: 10px; }
+.form-sub[hidden], .field-row[hidden] { display: none; }
+.chart--spot { height: 240px; margin-top: 10px; }
+@container page (min-width: 700px) { .chart--spot { height: 280px; } }
+.check-row { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--ink-2); min-height: 44px; }
+.check-row input { width: 20px; height: 20px; accent-color: var(--series-1); flex: 0 0 auto; }

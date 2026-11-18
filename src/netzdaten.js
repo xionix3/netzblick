@@ -145,3 +145,33 @@ export const EC_TYPES = {
   GC: 'Gemeinschaftliche Erzeugungsanlage',
 };
 export const ecTypeLabel = (t) => EC_TYPES[t] || EC_TYPES[String(t || '').split('_')[0]] || (t ? `Gemeinschaft (${t})` : 'Gemeinschaft');
+
+/* ------------------------------------------------------------------ Dynamische Tarife (Vorlagen)
+ * Energiepreis brutto = (Börsenpreis EPEX Spot AT + |Börsenpreis| × pct %) × 1,2 + ct
+ * ct: Aufschlag in Cent/kWh brutto, gp: Grundgebühr in Euro/Monat brutto, interval: Preisraster in Minuten.
+ * Werte laut Preisblättern und Tarifseiten der Anbieter (Stand siehe stand); die App zeigt sie nur als Vorlage,
+ * alle Felder sind änderbar. Bei Änderungen der Anbieter hier anpassen.
+ */
+export const DYNAMIC_PROVIDERS = [
+  {
+    id: 'awattar', name: 'aWATTar HOURLY', ct: 1.8, pct: 0, gp: 4.58, interval: 60, gpOnce: true,
+    info: 'Börsenpreis als Stundenmittel + 1,50 ct netto',
+    stand: 'November 2026', url: 'https://www.awattar.at/tariffs/hourly',
+  },
+  {
+    id: 'smartenergy', name: 'smartENERGY smartCONTROL', ct: 1.44, pct: 0, gp: 2.99, interval: 60,
+    info: 'Börsenpreis stündlich + Abwicklungsgebühr 1,20 ct netto',
+    stand: 'Preisblatt ab Februar 2024', url: 'https://www.smartenergy.at/smartcontrol',
+  },
+  {
+    id: 'verbund', name: 'VERBUND V-Strom Spot', ct: 1.56, pct: 4, gp: null, interval: 15,
+    info: 'Börsenpreis + 4 % des Betrags + 1,30 ct netto; Grundpreis laut deinem Vertrag',
+    stand: 'Produktblatt 2025', url: 'https://www.verbund.com/de-at/privatkunden/strom',
+  },
+  {
+    id: 'oekostrom', name: 'oekostrom oekoSpot+', ct: 1.8, pct: 0, gp: 2.16, interval: 60,
+    info: 'Börsenpreis stündlich + Abwicklungsgebühr 1,50 ct netto',
+    stand: 'Produktblatt Oktober 2024', url: 'https://oekostrom.at/spot-preis/',
+  },
+  { id: 'other', name: 'Anderer Anbieter', ct: null, pct: 0, gp: null, interval: 15, info: 'Werte aus deinem Preisblatt eintragen' },
+];

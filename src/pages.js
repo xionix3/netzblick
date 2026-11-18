@@ -4,7 +4,8 @@ import { meterLabel, firstDataDate } from './model.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { billingYearStatus, consumptionFor } from './billing.js';
 import { yearCost, meterCost, sumCosts, supplierFor, forYear, powerCharge, tariffClassOf } from './costs.js';
-import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, ecTypeLabel } from './netzdaten.js';
+import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, DYNAMIC_PROVIDERS, ecTypeLabel } from './netzdaten.js';
+import { dynamicPrice, SPOT_SOURCE } from './spot.js';
 import { currentFactor } from './kundenportal.js';
 import { reminderIcs, reminderTime } from './reminder.js';
 import { makePeriod, addDays, startOfDay, daysBetween } from './time.js';
@@ -130,7 +131,16 @@ export function renderBilling(body, ctx) {
     const box = h('div', { class: 'billing-year' }, h('p', { class: 'hint', text: 'Rechne …' }));
     const panel = section(`Abrechnungsjahr seit ${monthYear(last.to)}`, `${meterLabel(mp, names, { compact: !names[mp.id] })}. Letzte Abrechnung: ${pod.lastBillingPeriod}.`, box);
     body.append(panel);
-    billingYearStatus(state.store, mp, last).then((st) => {
+    billingYearStatus(state.store, mp, last).then(async (st) => {
+      // dynamischer Tarif: Hochrechnung mit dem mittleren Börsenpreis der letzten 12 Monate
+      let spotFlat = null;
+      const sup0 = ctx.costOptions(mp).supplier;
+      if (sup0 && sup0.kind === 'dynamic') {
+        const t1 = startOfDay(new Date());
+        await ctx.ensureSpot(addDays(t1, -365), t1, [mp.id]);
+        spotFlat = state.spot ? state.spot.avg(addDays(t1, -365), t1) : null;
+      }
+      if (!box.isConnected) return;
       box.textContent = '';
       if (!st || st.sum == null) { box.append(h('p', { class: 'empty', text: 'Für das laufende Abrechnungsjahr liegen noch keine Messwerte vor.' })); return; }
       const endLabel = dateLong(addDays(st.curEnd, -1));
@@ -153,13 +163,13 @@ export function renderBilling(body, ctx) {
       const opts = ctx.costOptions(mp);
       const legacy = state.settings.pricePerKwh != null && !opts.supplier;
       if (st.projection) {
-        const yc = yearCost(st.projection, { year: st.curStart.getFullYear(), ...opts });
+        const yc = yearCost(st.projection, { year: st.curStart.getFullYear(), ...opts, spotFlat });
         const cost = legacy ? st.projection * state.settings.pricePerKwh + (state.settings.feePerMonth || 0) * 12 : yc.total != null ? yc.total : yc.withoutSupplier;
         const plan = billingEntry && billingEntry.partPayments && !billingEntry.partPayments.external ? billingEntry.partPayments.installments : [];
         const inYear = plan.filter((x) => x.due && x.due >= st.curStart && x.due < st.curEnd);
         const paid = inYear.reduce((a, x) => a + (x.amount || 0), 0);
         box.append(dl(
-          row(yc.total != null || legacy ? 'Kosten hochgerechnet' : 'Netz und Abgaben hochgerechnet', `${euro(cost)} für 12 Monate${legacy ? '' : ', mit Netzpreisen von Netz Burgenland, ohne Sommer-Niedertarif'}`),
+          row(yc.total != null || legacy ? 'Kosten hochgerechnet' : 'Netz und Abgaben hochgerechnet', `${euro(cost)} für 12 Monate${legacy ? '' : ', mit Netzpreisen von Netz Burgenland, ohne Sommer-Niedertarif'}${spotFlat != null ? `, Energie mit dem mittleren Börsenpreis der letzten 12 Monate (${num(spotFlat, 1)} ct netto)` : ''}`),
           inYear.length && (yc.total != null || legacy) ? row('Teilbeträge im Jahr', `${euro(paid)} (${inYear.length} × ${euro(inYear[0].amount)})`) : null,
           inYear.length && (yc.total != null || legacy) ? row(cost > paid ? 'Nachzahlung ca.' : 'Guthaben ca.', euro(Math.abs(cost - paid))) : null,
         ));
@@ -378,12 +388,81 @@ export function renderTariff(body, ctx) {
   const kpSupplier = (pods.find((p) => p.supplier) || {}).supplier || '';
   body.append(h('p', { class: 'page-lead', text: 'Deine Stromrechnung hat drei Teile: Energie vom Lieferanten, Netzkosten von Netz Burgenland sowie Steuern und Abgaben. Den Energiepreis trägst du ein, den Rest rechnet Netzblick nach den offiziellen Preisen.' }));
 
-  /* ---- 1) Lieferant */
-  const numIn = (val, ph) => h('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.01', min: '0', placeholder: ph, value: val != null ? String(val) : '' });
+  /* ---- 1) Lieferant: Fixpreis oder dynamisch (Börsenpreis + Aufschlag) */
+  const numIn = (val, ph) => h('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.01', placeholder: ph, value: val != null ? String(val) : '' });
   const contract = s.contract || {};
-  const nameIn = h('input', { class: 'input', type: 'text', maxlength: '60', placeholder: kpSupplier || 'Name deines Lieferanten', value: contract.supplier || kpSupplier });
-  const apIn = numIn(s.supplier.all.ap, 'z. B. 14,9');
-  const gpIn = numIn(s.supplier.all.gp, 'z. B. 3,9');
+  const all = s.supplier.all;
+  // Name nur, wenn du ihn selbst eingetragen hast; der Lieferant laut Netz Burgenland steht als Hinweis darunter
+  const nameIn = h('input', { class: 'input', type: 'text', maxlength: '60', placeholder: 'z. B. Burgenland Energie', value: contract.supplier || '' });
+  const apIn = numIn(all.ap, 'z. B. 14,9');
+  const gpIn = numIn(all.gp, 'z. B. 3,9');
+  let tariffKind = all.kind === 'dynamic' ? 'dynamic' : 'fixed';
+  let provider = all.provider || 'awattar';
+  let interval = all.interval === 60 ? 60 : all.interval === 15 ? 15 : (DYNAMIC_PROVIDERS.find((p) => p.id === provider) || {}).interval || 15;
+  const ctIn = numIn(all.ct, 'z. B. 1,8');
+  const pctIn = numIn(all.pct, '0');
+  const dgpIn = numIn(all.dgp, 'z. B. 4,58');
+  const onceIn = h('input', { type: 'checkbox', checked: all.gpOnce ? true : null });
+  const provSel = h('select', { class: 'select' }, ...DYNAMIC_PROVIDERS.map((p) => h('option', { value: p.id, selected: p.id === provider ? true : null }, p.name)));
+  const provInfo = h('p', { class: 'hint' });
+  const ivBtns = [[15, 'Viertelstunde'], [60, 'Stunde']].map(([id, label]) => h('button', {
+    type: 'button', class: interval === id ? 'on' : '', 'aria-pressed': interval === id ? 'true' : 'false',
+    onclick: () => setInterval_(id),
+  }, label));
+  const setInterval_ = (id) => { interval = id; ivBtns.forEach((b, i) => { const on = [15, 60][i] === id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); };
+  const showProvInfo = () => {
+    const p = DYNAMIC_PROVIDERS.find((x) => x.id === provider) || {};
+    provInfo.textContent = p.id === 'other' ? 'Trag die Werte aus deinem Preisblatt ein.' : `${p.info}. Vorlage laut Anbieter (${p.stand}); vergleiche sie mit deinem Vertrag.`;
+  };
+  provSel.addEventListener('change', () => {
+    const prev = DYNAMIC_PROVIDERS.find((x) => x.id === provider);
+    provider = provSel.value;
+    const p = DYNAMIC_PROVIDERS.find((x) => x.id === provider);
+    if (p.id !== 'other') {
+      ctIn.value = p.ct != null ? String(p.ct) : '';
+      pctIn.value = p.pct ? String(p.pct) : '0';
+      dgpIn.value = p.gp != null ? String(p.gp) : '';
+      setInterval_(p.interval);
+      onceIn.checked = !!p.gpOnce;
+      if (!nameIn.value.trim() || (prev && nameIn.value.trim() === prev.name)) nameIn.value = p.name;
+    }
+    showProvInfo();
+  });
+  if (all.kind !== 'dynamic' && all.ct == null) { // noch nie dynamisch gespeichert: Vorlage eintragen
+    const p = DYNAMIC_PROVIDERS.find((x) => x.id === provider);
+    ctIn.value = p.ct != null ? String(p.ct) : '';
+    pctIn.value = String(p.pct || 0);
+    dgpIn.value = p.gp != null ? String(p.gp) : '';
+    onceIn.checked = !!p.gpOnce;
+  }
+  showProvInfo();
+
+  const fixedBox = h('div', { class: 'field-row' },
+    h('label', { class: 'field' }, h('span', { text: 'Arbeitspreis (Cent pro kWh)' }), apIn),
+    h('label', { class: 'field' }, h('span', { text: 'Grundpreis (Euro pro Monat)' }), gpIn));
+  const dynBox = h('div', { class: 'form-sub' },
+    h('label', { class: 'field' }, h('span', { text: 'Anbieter (Vorlage)' }), provSel),
+    provInfo,
+    h('div', { class: 'field-row' },
+      h('label', { class: 'field' }, h('span', { text: 'Aufschlag (Cent pro kWh)' }), ctIn),
+      h('label', { class: 'field' }, h('span', { text: 'Aufschlag (% auf den Börsenpreis)' }), pctIn)),
+    h('div', { class: 'field-row' },
+      h('label', { class: 'field' }, h('span', { text: 'Grundgebühr (Euro pro Monat)' }), dgpIn),
+      h('div', { class: 'field' }, h('span', { text: 'Preis gilt je' }), h('div', { class: 'seg seg--small' }, ...ivBtns))),
+    state.mps.filter((m) => m.flows.consumption).length > 1 ? h('label', { class: 'check-row' }, onceIn, h('span', { text: 'Grundgebühr nur einmal für die Adresse, nicht je Zählpunkt' })) : null,
+    h('p', { class: 'hint', text: 'Energiepreis = (Börsenpreis + Prozent-Aufschlag) + 20 % USt + Cent-Aufschlag. Den Börsenpreis (EPEX Spot Österreich) holt Netzblick selbst. Brauchst du nur einen Aufschlag, lass den anderen auf 0.' }));
+  const tariffBtns = [['fixed', 'Fixpreis'], ['dynamic', 'Dynamisch (Börse)']].map(([id, label]) => h('button', {
+    type: 'button', class: tariffKind === id ? 'on' : '', 'aria-pressed': tariffKind === id ? 'true' : 'false',
+    onclick: () => setTariffKind(id),
+  }, label));
+  const setTariffKind = (id) => {
+    tariffKind = id;
+    tariffBtns.forEach((b, i) => { const on = ['fixed', 'dynamic'][i] === id; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+    fixedBox.hidden = id !== 'fixed';
+    dynBox.hidden = id !== 'dynamic';
+  };
+  setTariffKind(tariffKind);
+
   const perMeter = state.mps.length > 1 ? state.mps.map((mp) => {
     const m = s.supplier.meters[mp.id] || {};
     return { mp, ap: numIn(m.ap, 'wie oben'), gp: numIn(m.gp, 'wie oben') };
@@ -393,30 +472,38 @@ export function renderTariff(body, ctx) {
     type: 'button', class: meterType === id ? 'on' : '', 'aria-pressed': meterType === id ? 'true' : 'false',
     onclick: (e) => { meterType = id; typeBtns.forEach((b) => { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); },
   }, label));
-  const saveSupplier = () => {
-    const all = { ap: parseInput(apIn), gp: parseInput(gpIn) };
+  const saveSupplier = async () => {
+    const next = {
+      kind: tariffKind,
+      ap: parseInput(apIn), gp: parseInput(gpIn),
+      provider, ct: parseInput(ctIn), pct: parseInput(pctIn), dgp: parseInput(dgpIn), interval,
+      gpOnce: tariffKind === 'dynamic' && onceIn.checked,
+    };
+    if (tariffKind === 'fixed' && next.ap == null) { toast('Bitte den Arbeitspreis eintragen.'); return; }
+    if (tariffKind === 'dynamic' && next.ct == null && !next.pct) { toast('Bitte den Aufschlag eintragen (Cent oder Prozent).'); return; }
     const meters = {};
     for (const x of perMeter) {
       const a = parseInput(x.ap), g = parseInput(x.gp);
       if (a != null || g != null) meters[x.mp.id] = { ...(a != null ? { ap: a } : {}), ...(g != null ? { gp: g } : {}) };
     }
-    s.supplier = { all, meters };
+    s.supplier = { all: next, meters };
     s.contract = { ...(s.contract || {}), supplier: nameIn.value.trim() };
     s.meterType = meterType;
-    if (all.ap != null || Object.keys(meters).length) { delete s.pricePerKwh; delete s.feePerMonth; }
+    if (next.ap != null || tariffKind === 'dynamic' || Object.keys(meters).length) { delete s.pricePerKwh; delete s.feePerMonth; }
     ctx.saveSettings();
     toast('Strompreis gespeichert');
-    ctx.refreshUsage();
+    await ctx.refreshUsage();
     ctx.renderPage();
   };
-  body.append(section('Dein Stromlieferant', 'Preise brutto, so wie sie im Vertrag oder auf dem Preisblatt deines Lieferanten stehen. Nur der Energiepreis, ohne Netzkosten.',
+  body.append(section('Dein Stromlieferant', 'Nur der Energiepreis, ohne Netzkosten. Preise brutto, so wie sie im Vertrag oder auf dem Preisblatt stehen.',
     s.pricePerKwh != null ? h('p', { class: 'note note--warn', text: `Bisher war ein Gesamtpreis von ${num(s.pricePerKwh * 100, 2)} ct/kWh eingetragen. Netzblick rechnet die Netzkosten jetzt selbst; trag hier nur noch den Preis deines Lieferanten ein.` }) : null,
     h('div', { class: 'form form--inline' },
-      h('label', { class: 'field' }, h('span', { text: 'Lieferant' }), nameIn),
-      h('div', { class: 'field-row' },
-        h('label', { class: 'field' }, h('span', { text: 'Arbeitspreis (Cent pro kWh)' }), apIn),
-        h('label', { class: 'field' }, h('span', { text: 'Grundpreis (Euro pro Monat)' }), gpIn)),
-      perMeter.length ? h('details', { class: 'more more--inline' }, h('summary', {}, 'Eigene Preise je Zählpunkt, z. B. für eine Wärmepumpe'),
+      h('div', { class: 'field' }, h('span', { text: 'Tarif' }), h('div', { class: 'seg seg--small' }, ...tariffBtns)),
+      h('label', { class: 'field' }, h('span', { text: 'Lieferant (optional)' }), nameIn),
+      kpSupplier ? h('p', { class: 'hint', text: `Bei Netz Burgenland als Lieferant gemeldet: ${kpSupplier}. Stimmt das nicht mehr, läuft ein Wechsel oft noch.` }) : null,
+      fixedBox,
+      dynBox,
+      perMeter.length ? h('details', { class: 'more more--inline' }, h('summary', {}, 'Eigener Fixpreis je Zählpunkt, z. B. für eine Wärmepumpe'),
         ...perMeter.map((x) => h('div', { class: 'field-group' },
           h('p', { class: 'field-title' }, h('span', { class: 'lg-key', style: `background:${ctx.meterColor(x.mp)}` }), ' ', meterLabel(x.mp, names, { compact: !names[x.mp.id] })),
           h('div', { class: 'field-row' },
@@ -425,6 +512,14 @@ export function renderTariff(body, ctx) {
       h('div', { class: 'field' }, h('span', { text: 'Zähler (für das Messentgelt)' }), h('div', { class: 'seg seg--small' }, ...typeBtns)),
       h('p', { class: 'hint', text: `Messentgelt laut Netz Burgenland: Drehstrom ${euro(METERING.three * (1 + VAT))}, Wechselstrom ${euro(METERING.single * (1 + VAT))} pro Monat (brutto). Im Zweifel Drehstrom.` }),
       h('button', { class: 'btn btn--primary', type: 'button', onclick: saveSupplier }, 'Speichern'))));
+
+  /* ---- 1b) Börsenpreis heute und morgen (nur bei dynamischem Tarif) */
+  const dynSup = supplierFor(s, (state.mps[0] || {}).id);
+  if (all.kind === 'dynamic' && dynSup && dynSup.kind === 'dynamic') {
+    const spotBox = h('div', {}, h('p', { class: 'hint' }, h('span', { class: 'spinner', 'aria-hidden': 'true' }), ' Lade Börsenpreise …'));
+    body.append(section('Dein Strompreis heute und morgen', `Energiepreis mit deinem Aufschlag, brutto, je ${dynSup.interval === 60 ? 'Stunde' : 'Viertelstunde'}. Ohne Netzkosten und Abgaben.`, spotBox));
+    renderSpotToday(spotBox, dynSup, ctx);
+  }
 
   /* ---- 2) Erinnerung */
   let kind = contract.kind || 'rabatt';
@@ -504,6 +599,10 @@ export function renderTariff(body, ctx) {
     const today = startOfDay(new Date());
     const from = addDays(today, -365);
     const list = [];
+    // Dynamischer Tarif: Börsenpreise derselben 12 Monate. Die Tage werden unten ins laufende Jahr gelegt
+    // (für die aktuellen Netzpreise), der Börsenpreis kommt aber vom echten Tag.
+    await ctx.ensureSpot(from, addDays(today, 1));
+    const realDay = (t) => (t > today ? new Date(t.getFullYear() - 1, t.getMonth(), t.getDate(), t.getHours(), t.getMinutes()) : t);
     for (const mp of state.mps.filter((m) => m.flows.consumption)) {
       const r = await state.store.load(mp, 'consumption', from, today, 'daily');
       const pts = r.points.filter((p) => p.v != null);
@@ -514,7 +613,9 @@ export function renderTariff(body, ctx) {
         const mp12 = await state.store.monthlyPeaks(mp, 'consumption', new Date(from.getFullYear(), from.getMonth() + 1, 1), today).catch(() => []);
         peaks = new Map(mp12.filter((m) => m.kw != null).map((m) => [`${today.getFullYear()}-${String(m.start.getMonth() + 1).padStart(2, '0')}`, m.kw]));
       }
-      list.push(meterCost(pts.map((p) => ({ ...p, t: new Date(today.getFullYear(), p.t.getMonth(), p.t.getDate()) })), { fine: false, peaks, from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), ...ctx.costOptions(mp) }));
+      const opts = ctx.costOptions(mp);
+      const spotAt = opts.spotAt ? (t, iv) => opts.spotAt(realDay(t), iv) : null;
+      list.push(meterCost(pts.map((p) => ({ ...p, t: new Date(today.getFullYear(), p.t.getMonth(), p.t.getDate()) })), { fine: false, peaks, from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear() + 1, 0, 1), ...opts, spotAt }));
     }
     yearBox.textContent = '';
     if (!list.length) { yearBox.append(h('p', { class: 'empty', text: 'Noch keine Messwerte.' })); return; }
@@ -528,7 +629,7 @@ export function renderTariff(body, ctx) {
         row('Netz Burgenland', euro(c.gridGross)),
         row('Steuern und Abgaben', euro(c.leviesGross)),
         row('Durchschnitt je kWh', c.total != null && c.kwh ? ct((c.total / c.kwh) * 100, 1) : null)),
-      h('p', { class: 'note', text: `Mit den Preisen von ${forYear(GRID, today.getFullYear()).year}, brutto. Aus Tageswerten, daher ohne Niedertarife${c.peakUnknown ? ' und ohne Leistungspreis' : ''}; die Übersicht rechnet sie mit Viertelstundenwerten genau.` }));
+      h('p', { class: 'note', text: `Mit den Netzpreisen von ${forYear(GRID, today.getFullYear()).year}, brutto. Aus Tageswerten, daher ohne Niedertarife${c.peakUnknown ? ' und ohne Leistungspreis' : ''}${c.supplier && c.supplier.dynamic ? ', die Energie mit dem Tagesmittel des Börsenpreises' : ''}; genau rechnet die Seite „Kosten“ mit Viertelstundenwerten.${c.supplier && c.supplier.missingKwh > 1 ? ` Für ${num(c.supplier.missingKwh, 0)} kWh fehlen Börsenpreise.` : ''}` }));
   })().catch(() => { yearBox.textContent = ''; yearBox.append(h('p', { class: 'empty', text: 'Messwerte konnten nicht geladen werden.' })); });
 
   /* ---- 4) Netzpreise */
@@ -565,6 +666,62 @@ export function renderTariff(body, ctx) {
       row('Umsatzsteuer', '20 % auf Netz und Abgaben; im Preis deines Lieferanten schon enthalten')),
     h('p', { class: 'note', text: `Stand ${STAND}. Neue Preisblätter gelten meist ab 1. Jänner.` }),
     h('ul', { class: 'plain-list' }, ...PRICE_SOURCES.map((src) => h('li', {}, h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(src.url) }, src.label))))));
+}
+
+/* ---- Strompreis heute und morgen (dynamischer Tarif) */
+async function renderSpotToday(box, sup, ctx) {
+  const { state } = ctx;
+  const now = new Date();
+  const today = startOfDay(now);
+  const tomorrow = addDays(today, 1);
+  await ctx.ensureSpot(today, addDays(today, 2));
+  if (!box.isConnected) return;
+  box.textContent = '';
+  const raw = state.spot ? state.spot.series(today, addDays(today, 2)).filter((x) => x.p != null) : [];
+  if (!raw.length) {
+    box.append(h('p', { class: 'empty', text: state.spotError ? state.spotError.message : 'Für heute gibt es noch keine Börsenpreise.' }));
+    return;
+  }
+  // Preisraster des Tarifs: Stundenmittel oder Viertelstunden
+  let step = raw[0].step || 900000;
+  let pts = raw.map((x) => ({ t: x.t, spot: x.p }));
+  if (sup.interval === 60 && step === 900000) {
+    const by = new Map();
+    for (const x of pts) {
+      const k = new Date(x.t.getFullYear(), x.t.getMonth(), x.t.getDate(), x.t.getHours()).getTime();
+      if (!by.has(k)) by.set(k, []);
+      by.get(k).push(x.spot);
+    }
+    pts = [...by].map(([k, a]) => ({ t: new Date(k), spot: a.reduce((x, y) => x + y, 0) / a.length }));
+    step = 3600000;
+  }
+  pts = pts.map((x) => ({ ...x, v: dynamicPrice(x.spot, sup, VAT) }));
+  const per = (step === 3600000 ? 'Stunde' : 'Viertelstunde');
+  const cur = pts.find((x) => x.t <= now && now < new Date(x.t.getTime() + step));
+  const cheapest = (list, hours = 2) => {
+    const n = Math.round((hours * 3600000) / step);
+    let best = null;
+    for (let i = 0; i + n <= list.length; i++) {
+      const avg = list.slice(i, i + n).reduce((a, x) => a + x.v, 0) / n;
+      if (!best || avg < best.avg) best = { from: list[i].t, to: new Date(list[i + n - 1].t.getTime() + step), avg };
+    }
+    return best;
+  };
+  const avg = (list) => list.reduce((a, x) => a + x.v, 0) / list.length;
+  const rest = pts.filter((x) => x.t >= (cur ? cur.t : now) && x.t < tomorrow);
+  const tom = pts.filter((x) => x.t >= tomorrow);
+  const todayAll = pts.filter((x) => x.t < tomorrow);
+  const win = (w) => (w ? `${time(w.from)}–${time(w.to)} Uhr, Ø ${ct(w.avg)}` : '–');
+  const chart = h('div', { class: 'chart chart--spot' });
+  box.append(
+    h('div', { class: 'kpis kpis--page' },
+      kpiTile('Jetzt', cur ? ct(cur.v) : '–', cur ? `bis ${time(new Date(cur.t.getTime() + step))} Uhr` : `je ${per}`),
+      kpiTile('Heute im Schnitt', todayAll.length ? ct(avg(todayAll)) : '–', todayAll.length ? `${ct(Math.min(...todayAll.map((x) => x.v)))} bis ${ct(Math.max(...todayAll.map((x) => x.v)))}` : ''),
+      kpiTile('Günstigste 2 Stunden heute', rest.length >= 2 ? win(cheapest(rest)).split(',')[0] : '–', rest.length >= 2 ? `ab jetzt, ${win(cheapest(rest)).split(', ')[1]}` : 'heute nichts mehr'),
+      kpiTile('Morgen', tom.length ? ct(avg(tom)) : 'ab etwa 13 Uhr', tom.length ? `günstigste 2 Stunden ${win(cheapest(tom))}` : 'werden die Preise veröffentlicht')),
+    chart,
+    h('p', { class: 'note', text: `Börsenpreis EPEX Spot Österreich + ${sup.pct ? `${num(sup.pct, 1)} % + ` : ''}${num(sup.ct, 2)} ct Aufschlag, inklusive USt. Quelle der Börsenpreise: ${SPOT_SOURCE.label}.` }));
+  charts.render(chart, charts.spotOption(charts.tokens(), { pts, step, now }));
 }
 
 /* ================================================================ Kosten */
@@ -624,6 +781,8 @@ export function renderCostsPage(body, ctx) {
       const next = new Date(m.getFullYear(), m.getMonth() + 1, 1);
       months.push({ start: m < r.from ? r.from : m, monthStart: m, next, end: next < r.to ? next : r.to });
     }
+    await ctx.ensureSpot(r.from, r.to);
+    if (my !== token || !body.isConnected) return;
     const per = mps.map((mp) => ({ mp, name: meterLabel(mp, names, { compact: true }), color: ctx.meterColor(mp), months: [] }));
     const total = months.length * per.length;
     let done = 0;
@@ -727,7 +886,7 @@ function renderCostResult(out, { r, months, per, ctx }) {
 
   /* ---- Aufstellung */
   const community = !!(ctx.state.kpData && ctx.state.kpData.pods.some((p) => p.communities && p.communities.some((x) => x.status === 'aktiv')));
-  const notes = costNotes(sum, { community });
+  const notes = costNotes(sum, { community, spotError: ctx.state.spotError });
   if (!anyCoarse) notes.unshift('Gerechnet aus Viertelstundenwerten, die Niedertarife also genau.');
   out.append(section('Aufstellung', null, costTable(sum, T, { meters: per.length }), h('p', { class: 'note', text: notes.join(' ') })));
 
