@@ -1,9 +1,9 @@
 # Releases
 
 Netzblick verwendet [semantische Versionsnummern](https://semver.org/lang/de/) (`MAJOR.MINOR.PATCH`).
-Ein Git-Tag `vX.Y.Z` löst den [Release-Workflow](../.github/workflows/release.yml) aus. Er:
+Der [Release-Workflow](../.github/workflows/release.yml) startet, sobald auf `main` eine Version in `package.json` ankommt, für die es noch kein Release gibt (alternativ per Tag `vX.Y.Z` oder *Actions → Release → Run workflow*). Er:
 
-1. leitet aus dem Tag `versionName` (`X.Y.Z`) und `versionCode` (`X·10000 + Y·100 + Z`) ab,
+1. leitet aus der Version `versionName` (`X.Y.Z`) und `versionCode` (`X·10000 + Y·100 + Z`) ab,
 2. führt die Unit-Tests aus,
 3. baut die signierte **APK** (zum Installieren) und das **App-Bundle (AAB)** für den Play Store,
 4. legt beide samt `SHA256SUMS.txt` als GitHub-Release ab, mit dem passenden Abschnitt aus `CHANGELOG.md` als Beschreibung.
@@ -11,17 +11,13 @@ Ein Git-Tag `vX.Y.Z` löst den [Release-Workflow](../.github/workflows/release.y
 ## Neue Version veröffentlichen
 
 1. In `CHANGELOG.md` einen Abschnitt `## [X.Y.Z] – JJJJ-MM-TT` anlegen.
-2. In `package.json` die `version` anpassen (für lokale Builds).
-3. Committen und pushen, warten, bis die CI grün ist.
-4. Tag setzen und pushen:
-   ```bash
-   git tag v1.1.0
-   git push origin v1.1.0
-   ```
-5. Nach etwa 5 Minuten steht das Release unter **Releases**.
+2. In `package.json` die `version` auf `X.Y.Z` setzen (und in `android/app/build.gradle` die Standardwerte, das prüft ein Unit-Test).
+3. Committen und nach `main` pushen.
+4. Nach etwa 5 Minuten steht das Release unter **Releases**. Der Workflow setzt den Tag `vX.Y.Z` selbst.
 
+Ohne neue Version passiert nichts; ein bestehendes Release wird nie überschrieben.
 Ein fehlerhaftes Release löschst du unter *Releases → … → Delete* und entfernst den Tag:
-`git push --delete origin v1.1.0 && git tag -d v1.1.0`
+`git push --delete origin v1.1.0 && git tag -d v1.1.0`. Danach *Actions → Release → Run workflow* baut es neu.
 
 ## Release-Schlüssel einrichten (einmalig)
 

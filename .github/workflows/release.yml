@@ -1,20 +1,77 @@
-# Erstellt ein GitHub-Release, sobald ein Versions-Tag gepusht wird:
-#   git tag v1.0.0
-#   git push origin v1.0.0
-# Ergebnis unter „Releases“: signierte APK (zum Installieren) und AAB (für den Play Store).
+# Erstellt ein GitHub-Release mit signierter APK (zum Installieren) und AAB (für den Play Store).
+# Auslöser, jeweils nur wenn es für die Version noch kein Release gibt:
+#   1. Neue Version in package.json (und CHANGELOG.md) nach main pushen: Release entsteht automatisch.
+#   2. Tag pushen: git tag v1.2.0 && git push origin v1.2.0
+#   3. Auf GitHub: Actions → Release → Run workflow (Version aus package.json).
 name: Release
 
 on:
   push:
+    branches: [main]
+    paths: ['package.json', '.github/workflows/release.yml']
     tags: ['v*.*.*']
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+# Nie zwei Releases gleichzeitig bauen (z. B. Push auf main und Tag zur selben Zeit).
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  version:
+    name: Version prüfen
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      version: ${{ steps.v.outputs.version }}
+      code: ${{ steps.v.outputs.code }}
+      release: ${{ steps.v.outputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: v
+        name: Version bestimmen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then TAG="$GITHUB_REF_NAME"; else TAG="v$PKG"; fi
+          VERSION="${TAG#v}"
+          if ! [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Version muss die Form X.Y.Z haben (ist: $VERSION)"
+            exit 1
+          fi
+          CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
+          if [ "$VERSION" != "$PKG" ]; then
+            echo "::warning::Tag $TAG passt nicht zu package.json ($PKG)."
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG gibt es schon, nichts zu tun."
+            RELEASE=false
+          else
+            echo "Neues Release $TAG (versionCode $CODE)"
+            RELEASE=true
+          fi
+          {
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+            echo "code=$CODE"
+            echo "release=$RELEASE"
+          } >> "$GITHUB_OUTPUT"
+
   release:
     name: Release bauen
+    needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      VERSION: ${{ needs.version.outputs.version }}
+      VERSION_CODE: ${{ needs.version.outputs.code }}
     steps:
       - uses: actions/checkout@v7
 
@@ -28,18 +85,6 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: gradle
-
-      - name: Version aus dem Tag ableiten
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          if ! [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "::error::Tag muss die Form vX.Y.Z haben (ist: $GITHUB_REF_NAME)"
-            exit 1
-          fi
-          CODE=$(( BASH_REMATCH[1] * 10000 + BASH_REMATCH[2] * 100 + BASH_REMATCH[3] ))
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "VERSION_CODE=$CODE" >> "$GITHUB_ENV"
-          echo "Version $VERSION (versionCode $CODE)"
 
       - run: npm ci
 
@@ -90,10 +135,12 @@ jobs:
       - name: GitHub-Release veröffentlichen
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           FLAGS=""
           if [ "$SIGNING" = "debug" ]; then FLAGS="--prerelease"; fi
-          gh release create "$GITHUB_REF_NAME" dist/* \
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
             --title "Netzblick $VERSION" \
             --notes-file release-notes.md \
             $FLAGS

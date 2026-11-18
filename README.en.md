@@ -264,7 +264,7 @@ Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
 
 ## Releases and Google Play
 
-- **New version:** add an entry to [CHANGELOG.md](CHANGELOG.md), then `git tag v1.2.0` and `git push origin v1.2.0`. GitHub builds a signed APK and AAB and publishes them under **Releases**.
+- **New version:** add an entry to [CHANGELOG.md](CHANGELOG.md), bump the version in `package.json` and push to `main`. GitHub builds a signed APK and AAB, sets the tag and publishes both under **Releases**.
 - **Release key** (one-time setup): [docs/RELEASE.md](docs/RELEASE.md).
 - **Google Play:** checklist, store texts and data safety in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), tester guide in [docs/TESTER.md](docs/TESTER.md).
 

@@ -265,7 +265,7 @@ Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 
 ## Releases und Play Store
 
-- **Neue Version:** Eintrag in [CHANGELOG.md](CHANGELOG.md), dann `git tag v1.2.0` und `git push origin v1.2.0`. GitHub baut signierte APK und AAB und legt sie unter **Releases** ab.
+- **Neue Version:** Eintrag in [CHANGELOG.md](CHANGELOG.md), Version in `package.json` erhöhen und nach `main` pushen. GitHub baut signierte APK und AAB, setzt den Tag und legt beides unter **Releases** ab.
 - **Release-Schlüssel** (einmalig): [docs/RELEASE.md](docs/RELEASE.md).
 - **Play Store:** Checkliste, Store-Texte und Datensicherheit in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), Anleitung für Tester in [docs/TESTER.md](docs/TESTER.md).
 
