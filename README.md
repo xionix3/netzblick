@@ -29,7 +29,7 @@
 - [Fehlerbehebung](#fehlerbehebung)
 - [Entwicklung](#entwicklung)
 - [Tests](#tests)
-- [Releases und Play Store](#releases-und-play-store)
+- [Releases](#releases)
 - [Lizenz](#lizenz)
 
 ## So sieht es aus
@@ -257,7 +257,7 @@ netzblick/
 ├── test/unit/           Unit-Tests (node:test)
 ├── test/e2e/            Oberflächentest im echten Chrome
 ├── scripts/             Build-, Release- und Bild-Skripte
-└── docs/                API, Releases, Play Store, Tester, Bilder
+└── docs/                Bilder für README und Store, Screenshots
 ```
 
 ```mermaid
@@ -290,7 +290,6 @@ flowchart LR
 | `npm run apk` | Debug-APK über die Kommandozeile |
 
 **Im Browser:** `npm run build`, dann `www/` mit einem lokalen Webserver ausliefern (z. B. `npx serve www`) und `?demo=1` anhängen. Die echte Anmeldung geht nur in der App; der Browser blockiert die Portal-APIs (CORS).
-**Schnittstellen:** [docs/API.md](docs/API.md).
 
 ## Tests
 
@@ -300,13 +299,11 @@ Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 2. **Oberflächentest** (`test/e2e/smoke.mjs`, 31 Szenarien): alle Zeiträume, Dunkelmodus, Filter, Mehrfachauswahl, Diagrammarten, Leistungsdiagramm mit 10-kW-Linie, Kosten und Erinnerung, Börsenpreise mit Nachbarländern, alle Seiten, Tablet, Querformat, hohe Statusleiste, Abmelden. Prüft auf Konsolenfehler, leere Ansichten und kaputte Texte.
 3. **Android-Build**: baut die Debug-APK.
 
-## Releases und Play Store
+## Releases
 
-- **Neue Version:** Eintrag in [CHANGELOG.md](CHANGELOG.md), Version in `package.json` erhöhen und nach `main` pushen. GitHub baut signierte APK und AAB, setzt den Tag und legt beides unter **Releases** ab.
-- **Release-Schlüssel** (einmalig): [docs/RELEASE.md](docs/RELEASE.md).
-- **Play Store:** alle Eingaben zum Kopieren in [docs/PLAY-CONSOLE.md](docs/PLAY-CONSOLE.md), Hintergründe und Checkliste in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), Anleitung für Tester in [docs/TESTER.md](docs/TESTER.md).
+Neue Version: Eintrag in [CHANGELOG.md](CHANGELOG.md), Version in `package.json` erhöhen und nach `main` pushen. GitHub baut signierte APK und AAB, setzt den Tag und legt beides unter **Releases** ab.
 
 ## Lizenz
 
-[MIT](LICENSE), © 2026 Patrick Schlögl (geister-it), patrick-schloegl@gmx.at. Netzblick steht in keiner Verbindung zu Netz Burgenland oder VIVAVIS; genannte Namen gehören ihren Inhabern.
+[MIT](LICENSE), © 2026 Patrick Schlögl (geister-it). Netzblick steht in keiner Verbindung zu Netz Burgenland oder VIVAVIS; genannte Namen gehören ihren Inhabern.
 Verwendet [Capacitor](https://capacitorjs.com) (MIT), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) und die Schrift [Barlow](https://github.com/jpt/barlow) (SIL OFL 1.1).

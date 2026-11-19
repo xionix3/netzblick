@@ -28,6 +28,6 @@ const parts = [body, '', '### Installation', '',
   '3. Ein Update installierst du einfach über die vorhandene App.',
   '', '`netzblick-' + version + '.aab` ist das App-Bundle für den Play Store, `SHA256SUMS.txt` enthält die Prüfsummen.'];
 if (signing === 'debug') {
-  parts.push('', '> **Vorabversion:** mit dem Entwicklungsschlüssel signiert, weil noch kein Release-Schlüssel hinterlegt ist (siehe docs/RELEASE.md). Spätere, richtig signierte Versionen lassen sich nicht darüber installieren; vorher deinstallieren.');
+  parts.push('', '> **Vorabversion:** mit dem Entwicklungsschlüssel signiert, weil noch kein Release-Schlüssel hinterlegt ist. Spätere, richtig signierte Versionen lassen sich nicht darüber installieren; vorher deinstallieren.');
 }
 console.log(parts.join('\n'));

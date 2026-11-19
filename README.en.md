@@ -31,7 +31,7 @@
 - [Troubleshooting](#troubleshooting)
 - [Development](#development)
 - [Tests](#tests)
-- [Releases and Google Play](#releases-and-google-play)
+- [Releases](#releases)
 - [License](#license)
 
 ## Screenshots
@@ -261,7 +261,7 @@ netzblick/
 ├── test/unit/           unit tests (node:test)
 ├── test/e2e/            UI test in real Chrome
 ├── scripts/             build, release and image scripts
-└── docs/                API, releases, Google Play, testers, images
+└── docs/                images for README and store, screenshots
 ```
 
 | Command | Purpose |
@@ -277,7 +277,6 @@ netzblick/
 | `npm run apk` | debug APK from the command line |
 
 **In the browser:** `npm run build`, serve `www/` with a local web server (e.g. `npx serve www`) and append `?demo=1`. Real sign-in only works in the app, because the browser blocks the portal APIs (CORS).
-**Interfaces:** [docs/API.md](docs/API.md) (German).
 
 ## Tests
 
@@ -301,13 +300,11 @@ Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
    - checks for console errors, empty views and broken text
 3. **Android build:** builds the debug APK.
 
-## Releases and Google Play
+## Releases
 
-- **New version:** add an entry to [CHANGELOG.md](CHANGELOG.md), bump the version in `package.json` and push to `main`. GitHub builds a signed APK and AAB, sets the tag and publishes both under **Releases**.
-- **Release key** (one-time setup): [docs/RELEASE.md](docs/RELEASE.md).
-- **Google Play:** every entry ready to copy in [docs/PLAY-CONSOLE.md](docs/PLAY-CONSOLE.md), background and checklist in [docs/PLAY-STORE.md](docs/PLAY-STORE.md), tester guide in [docs/TESTER.md](docs/TESTER.md) (all German).
+New version: add an entry to [CHANGELOG.md](CHANGELOG.md), raise the version in `package.json` and push to `main`. GitHub builds a signed APK and AAB, sets the tag and publishes both under **Releases**.
 
 ## License
 
-[MIT](LICENSE), © 2026 Patrick Schlögl (geister-it), patrick-schloegl@gmx.at. Netzblick is not affiliated with Netz Burgenland or VIVAVIS; names belong to their owners.
+[MIT](LICENSE), © 2026 Patrick Schlögl (geister-it). Netzblick is not affiliated with Netz Burgenland or VIVAVIS; names belong to their owners.
 Uses [Capacitor](https://capacitorjs.com) (MIT), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) and the [Barlow](https://github.com/jpt/barlow) typeface (SIL OFL 1.1).

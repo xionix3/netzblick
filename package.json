@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Inoffizielle Android-App für die Verbrauchsdaten aus dem Smart-Meter-Portal von Netz Burgenland",
-  "author": "Patrick Schlögl (geister-it) <patrick-schloegl@gmx.at>",
+  "author": "Patrick Schlögl (geister-it)",
   "license": "MIT",
   "repository": {
     "type": "git",
