@@ -14,7 +14,7 @@
 
 **Netzblick** zeigt deine Smart-Meter-Daten von Netz Burgenland übersichtlich auf Handy und Tablet: Verbrauch in Viertelstunden, Tagen, Monaten und Jahren, deine Leistungsspitzen für den Leistungspreis ab 2027, was dich der Strom kostet, deine Anlagen, Abrechnungen und Energiegemeinschaften. Du meldest dich mit deinem gewohnten Zugang an. Das [Smart-Meter-Portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) und das [Kundenportal](https://portal.netzburgenland.at/) verwenden dieselbe Anmeldung, Netzblick verbindet beide.
 
-> Netzblick ist ein privates Projekt von Patrick Schlögl (geister-it) und **keine offizielle App** von Netz Burgenland. Es nutzt dieselben Schnittstellen wie die Web-Portale. Ändert Netz Burgenland diese, kann die App vorübergehend ausfallen.
+> Netzblick ist ein privates Projekt von geister-it und **keine offizielle App** von Netz Burgenland. Es nutzt dieselben Schnittstellen wie die Web-Portale. Ändert Netz Burgenland diese, kann die App vorübergehend ausfallen.
 
 ## Inhalt
 
@@ -305,5 +305,5 @@ Neue Version: Eintrag in [CHANGELOG.md](CHANGELOG.md), Version in `package.json`
 
 ## Lizenz
 
-[MIT](LICENSE), © 2026 Patrick Schlögl (geister-it). Netzblick steht in keiner Verbindung zu Netz Burgenland oder VIVAVIS; genannte Namen gehören ihren Inhabern.
+[MIT](LICENSE), © 2026 geister-it. Netzblick steht in keiner Verbindung zu Netz Burgenland oder VIVAVIS; genannte Namen gehören ihren Inhabern.
 Verwendet [Capacitor](https://capacitorjs.com) (MIT), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) und die Schrift [Barlow](https://github.com/jpt/barlow) (SIL OFL 1.1).

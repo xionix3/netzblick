@@ -14,7 +14,7 @@
 
 **Netzblick** shows your smart meter data from Netz Burgenland, the distribution grid operator in Burgenland (Austria), clearly on phone and tablet. It covers consumption in quarter hours, days, months and years, and your power peaks for the power-based grid price from 2027. It also shows what your electricity costs, plus your installations, bills and energy communities. You sign in with your usual account. The [smart meter portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) and the [customer portal](https://portal.netzburgenland.at/) share the same login, and Netzblick combines both.
 
-> Netzblick is a private project by Patrick Schlögl (geister-it) and **not an official app** of Netz Burgenland. It uses the same interfaces as the web portals. If Netz Burgenland changes them, the app may stop working for a while.
+> Netzblick is a private project by geister-it and **not an official app** of Netz Burgenland. It uses the same interfaces as the web portals. If Netz Burgenland changes them, the app may stop working for a while.
 >
 > **The app itself is in German**, as are the detailed documents in `docs/`. This page summarises everything in English.
 
@@ -306,5 +306,5 @@ New version: add an entry to [CHANGELOG.md](CHANGELOG.md), raise the version in 
 
 ## License
 
-[MIT](LICENSE), © 2026 Patrick Schlögl (geister-it). Netzblick is not affiliated with Netz Burgenland or VIVAVIS; names belong to their owners.
+[MIT](LICENSE), © 2026 geister-it. Netzblick is not affiliated with Netz Burgenland or VIVAVIS; names belong to their owners.
 Uses [Capacitor](https://capacitorjs.com) (MIT), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) and the [Barlow](https://github.com/jpt/barlow) typeface (SIL OFL 1.1).

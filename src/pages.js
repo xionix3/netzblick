@@ -348,7 +348,7 @@ export function renderInfo(body, ctx) {
       h('div', { class: 'maker' },
         h('img', { class: 'maker-logo maker-logo--sm', src: 'brand/geister-it.webp', alt: 'Logo von geister-it', width: '56', height: '56' }),
         h('div', {},
-          h('p', { class: 'panel-text' }, 'Patrick Schlögl, geister-it'),
+          h('p', { class: 'panel-text' }, 'geister-it'),
           h('p', { class: 'panel-text' }, h('a', { href: 'mailto:patrick-schloegl@gmx.at', class: 'link' }, 'patrick-schloegl@gmx.at')),
           h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal('https://www.geister-it.at') }, icon('external'), 'www.geister-it.at')))),
     section('Woher die Daten kommen', null, list(
@@ -369,7 +369,7 @@ export function renderInfo(body, ctx) {
       'Capacitor, MIT-Lizenz',
       'Schrift Barlow, SIL Open Font License 1.1',
     )),
-    h('p', { class: 'fineprint fineprint--page', text: '© 2026 Patrick Schlögl (geister-it). Netzblick steht unter der MIT-Lizenz.' }),
+    h('p', { class: 'fineprint fineprint--page', text: '© 2026 geister-it. Netzblick steht unter der MIT-Lizenz.' }),
   );
 }
 

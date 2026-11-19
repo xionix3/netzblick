@@ -492,7 +492,7 @@ await scenario('Seite Abrechnung: laufendes Jahr und Hochrechnung', {
 await scenario('Seite Konto und Info', {
   query: '&page=account',
   actions: async (page) => { await waitText(page, /Verbunden über die Smart-Meter-Anmeldung/); await openMenuItem(page, 'info'); },
-  checks: (s) => [expect(/geister-it/.test(s.text) && /Patrick Schlögl/.test(s.text), 'Info ohne Marke'), expect(/Version/.test(s.text), 'Version fehlt')],
+  checks: (s) => [expect(/geister-it/.test(s.text), 'Info ohne Marke'), expect(/Version/.test(s.text), 'Version fehlt')],
 });
 await scenario('Tablet quer: Menü fest, Summe neben dem Diagramm', {
   query: '&period=month&sel=all',
