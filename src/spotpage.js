@@ -160,7 +160,9 @@ export function renderSpotPage(body, ctx) {
     body.append(h('p', { class: 'note note--page', text: `Dein Preis: Börsenpreis${sup.pct ? ` + ${num(sup.pct, 1)} %` : ''}, plus 20 % USt und ${num(sup.ct, 2)} ct Aufschlag${pv && pv.id !== 'other' ? ` (${pv.name})` : ''}, je ${sup.interval === 60 ? 'Stunde' : 'Viertelstunde'}. Ohne Netzkosten und Abgaben.` }));
   }
   body.append(h('p', { class: 'note note--page' },
-    'Quelle: ', h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(SPOT_SOURCE.url) }, SPOT_SOURCE.label)));
+    'Quelle: ', h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(SPOT_SOURCE.url) }, SPOT_SOURCE.label),
+    ', Originaldaten: ', h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal('https://www.smard.de/home') }, 'SMARD.de (Bundesnetzagentur)'),
+    '. Netzblick vertritt keine Behörde.'));
 
   const hasDay = (d) => state.spot.series(d, addDays(d, 1)).some((x) => x.p != null);
   const syncNav = () => {

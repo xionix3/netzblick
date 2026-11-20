@@ -5,6 +5,12 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.7.2] – 2026-11-20
+
+### Geändert
+- **Amtliche Quellen und Hinweis**, gefordert von Google Play für Behördeninformationen: Die Seiten „Info“ und „Kosten“ verlinken die Originalquellen der Netzentgelte (Systemnutzungsentgelte-Verordnung im RIS, E-Control), der Abgaben (Bundesministerium für Finanzen, Bundesministerium für Wirtschaft, Energie und Tourismus) und der Börsenpreise (SMARD.de der Bundesnetzagentur). Dazu der Hinweis, dass Netzblick keine Behörde vertritt, auch auf der Anmeldeseite und bei den Börsenpreisen.
+- Die Seite „Info“ nennt statt des Namens nur noch geister-it.
+
 ## [1.7.1] – 2026-11-18
 
 ### Geändert

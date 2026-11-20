@@ -4,7 +4,7 @@ import { meterLabel, firstDataDate } from './model.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { billingYearStatus, consumptionFor } from './billing.js';
 import { yearCost, meterCost, sumCosts, supplierFor, forYear, powerCharge, tariffClassOf } from './costs.js';
-import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, DYNAMIC_PROVIDERS, PRIVACY_URL, ecTypeLabel } from './netzdaten.js';
+import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, DYNAMIC_PROVIDERS, PRIVACY_URL, OFFICIAL_SOURCES, GOV_DISCLAIMER, ecTypeLabel } from './netzdaten.js';
 import { dynamicPrice, SPOT_SOURCE } from './spot.js';
 import { currentFactor } from './kundenportal.js';
 import { reminderIcs, reminderTime } from './reminder.js';
@@ -363,7 +363,9 @@ export function renderInfo(body, ctx) {
       'Abmelden löscht Zugangsdaten und zwischengespeicherte Messwerte.',
     ),
     h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(PRIVACY_URL) }, icon('external'), 'Vollständige Datenschutzerklärung')),
-    section('Hinweis', null, h('p', { class: 'panel-text', text: 'Netzblick ist eine inoffizielle App und steht in keiner Verbindung zu Netz Burgenland oder den Herstellern der Portale. Kosten und Hochrechnungen sind Schätzungen; maßgeblich ist deine Rechnung.' })),
+    section('Quellen und Hinweis', null,
+      h('p', { class: 'panel-text', text: `${GOV_DISCLAIMER} Kosten und Hochrechnungen sind Schätzungen.` }),
+      sourceList(OFFICIAL_SOURCES)),
     section('Verwendete Bausteine', null, list(
       'Apache ECharts, Apache-Lizenz 2.0',
       'Capacitor, MIT-Lizenz',
@@ -675,6 +677,12 @@ export function renderTariff(body, ctx) {
     h('ul', { class: 'plain-list' }, ...PRICE_SOURCES.map((src) => h('li', {}, h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(src.url) }, src.label))))));
 }
 
+/** Liste von Quellen als Links */
+function sourceList(sources) {
+  return h('ul', { class: 'plain-list plain-list--links' }, ...sources.map((src) => h('li', {},
+    h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(src.url) }, icon('external'), src.label))));
+}
+
 /* ---- Strompreis heute und morgen (dynamischer Tarif) */
 async function renderSpotToday(box, sup, ctx) {
   const { state } = ctx;
@@ -764,7 +772,10 @@ export function renderCostsPage(body, ctx) {
 
   const pick = h('div', { class: 'chip-row', role: 'group', 'aria-label': 'Zeitraum' });
   const out = h('div', { class: 'costs-out' });
-  body.append(pick, out);
+  body.append(pick, out,
+    section('Quellen', 'Netzentgelte und Abgaben sind amtlich festgelegt. Hier stehen die Originalquellen.',
+      h('p', { class: 'note', text: GOV_DISCLAIMER }),
+      sourceList(OFFICIAL_SOURCES)));
   const renderPick = () => {
     pick.textContent = '';
     for (const id of ['12m', ...years.map(String)]) {

@@ -88,9 +88,24 @@ export const LEVIES = {
 
 export const VAT = 0.2;
 
+/**
+ * Amtliche Quellen für Netzentgelte, Abgaben und Marktdaten. Google Play verlangt bei Behördeninformationen
+ * Links zu den Originalquellen und einen Hinweis, dass die App keine Behörde vertritt (in App und Beschreibung).
+ */
+export const OFFICIAL_SOURCES = [
+  { label: 'Netzentgelte: Systemnutzungsentgelte-Verordnung 2018 der E-Control (Rechtsinformationssystem des Bundes)', url: 'https://www.ris.bka.gv.at/GeltendeFassung.wxe?Abfrage=Bundesnormen&Gesetzesnummer=20010107' },
+  { label: 'Neue Tarifstruktur und Leistungspreis ab 2027 (E-Control)', url: 'https://www.e-control.at/konsumenten/faq-neue-tarifstruktur' },
+  { label: 'Elektrizitätsabgabe (Bundesministerium für Finanzen)', url: 'https://www.bmf.gv.at/themen/steuern/steuern-von-a-bis-z/elektrizitaetsabgabe.html' },
+  { label: 'Erneuerbaren-Förderbeitrag (Bundesministerium für Wirtschaft, Energie und Tourismus)', url: 'https://www.bmwet.gv.at/Services/Publikationen/publikationen-energie/erneuerbaren-foerderbeitragsverordnung.html' },
+  { label: 'Börsenpreise: SMARD.de (Bundesnetzagentur)', url: 'https://www.smard.de/home' },
+  { label: 'Netzpreise und Preisblatt von Netz Burgenland', url: 'https://netzburgenland.at/strom/netzpreis/' },
+];
+export const GOV_DISCLAIMER = 'Netzblick ist eine private App von geister-it. Sie vertritt keine Behörde oder staatliche Stelle, auch nicht die E-Control, und steht in keiner Verbindung zu Netz Burgenland. Alle Werte ohne Gewähr; maßgeblich sind die verlinkten Originalquellen und deine Rechnung.';
+
 export const PRICE_SOURCES = [
   { label: 'Preisblatt Strom der Netz Burgenland (Downloadcenter)', url: 'https://netzburgenland.at/downloadcenter/' },
   { label: 'Netzpreis erklärt (Netz Burgenland)', url: 'https://netzburgenland.at/strom/netzpreis/' },
+  OFFICIAL_SOURCES[0], OFFICIAL_SOURCES[2], OFFICIAL_SOURCES[3],
   { label: 'Tarifkalkulator der E-Control', url: 'https://www.e-control.at/tarifkalkulator' },
 ];
 export const TARIFF_CALCULATOR = 'https://www.e-control.at/tarifkalkulator';
