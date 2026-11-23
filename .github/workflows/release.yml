@@ -1,4 +1,5 @@
-# Erstellt ein GitHub-Release mit signierter APK (zum Installieren) und AAB (für den Play Store).
+# Erstellt ein GitHub-Release mit signierter APK (zum Installieren) und AAB (für den Play Store),
+# danach kommen die Desktop-Programme für Windows, macOS und Linux dazu (desktop.yml).
 # Auslöser, jeweils nur wenn es für die Version noch kein Release gibt:
 #   1. Neue Version in package.json (und CHANGELOG.md) nach main pushen: Release entsteht automatisch.
 #   2. Tag pushen: git tag v1.2.0 && git push origin v1.2.0
@@ -144,3 +145,16 @@ jobs:
             --title "Netzblick $VERSION" \
             --notes-file release-notes.md \
             $FLAGS
+
+  desktop:
+    name: Desktop-Programm
+    needs: [version, release]
+    if: needs.version.outputs.release == 'true'
+    uses: ./.github/workflows/desktop.yml
+    with:
+      tag: ${{ needs.version.outputs.tag }}
+      version: ${{ needs.version.outputs.version }}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write

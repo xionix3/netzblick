@@ -5,6 +5,7 @@ export const icons = {
   prev: svg('<path d="M15 18l-6-6 6-6"/>'),
   wallet: svg('<path d="M19 7V5.5A1.5 1.5 0 0 0 17.5 4h-12A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V9a2 2 0 0 0-2-2H5.5"/><path d="M16 13.5h.01"/>'),
   spot: svg('<path d="M3 18h3v-5h4v3h4V7h4v6h3"/>'),
+  desktop: svg('<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/>'),
   gauge: svg('<path d="M4.9 19a9 9 0 1 1 14.2 0"/><path d="M12 14l4-5"/><circle cx="12" cy="14" r="1.6"/>'),
   next: svg('<path d="M9 18l6-6-6-6"/>'),
   down: svg('<path d="M6 9l6 6 6-6"/>', 'width="18" height="18"'),

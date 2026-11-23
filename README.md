@@ -12,7 +12,7 @@
 
 </div>
 
-**Netzblick** zeigt deine Smart-Meter-Daten von Netz Burgenland übersichtlich auf Handy und Tablet: Verbrauch in Viertelstunden, Tagen, Monaten und Jahren, deine Leistungsspitzen für den Leistungspreis ab 2027, was dich der Strom kostet, deine Anlagen, Abrechnungen und Energiegemeinschaften. Du meldest dich mit deinem gewohnten Zugang an. Das [Smart-Meter-Portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) und das [Kundenportal](https://portal.netzburgenland.at/) verwenden dieselbe Anmeldung, Netzblick verbindet beide.
+**Netzblick** zeigt deine Smart-Meter-Daten von Netz Burgenland übersichtlich auf Handy, Tablet und Computer: Verbrauch in Viertelstunden, Tagen, Monaten und Jahren, deine Leistungsspitzen für den Leistungspreis ab 2027, was dich der Strom kostet, deine Anlagen, Abrechnungen und Energiegemeinschaften. Du meldest dich mit deinem gewohnten Zugang an. Das [Smart-Meter-Portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) und das [Kundenportal](https://portal.netzburgenland.at/) verwenden dieselbe Anmeldung, Netzblick verbindet beide.
 
 > Netzblick ist ein privates Projekt von geister-it und **keine offizielle App** von Netz Burgenland. Es nutzt dieselben Schnittstellen wie die Web-Portale. Ändert Netz Burgenland diese, kann die App vorübergehend ausfallen.
 
@@ -21,6 +21,7 @@
 - [So sieht es aus](#so-sieht-es-aus)
 - [Funktionen](#funktionen)
 - [Installation](#installation)
+- [Desktop-Programm](#desktop-programm)
 - [Bedienung](#bedienung)
 - [Kennzahlen und Kosten erklärt](#kennzahlen-und-kosten-erklärt)
 - [Datenschutz und Sicherheit](#datenschutz-und-sicherheit)
@@ -134,6 +135,39 @@ Hoch- und Querformat, für Handy und Tablet gebaut, Dunkelmodus, Offline-Anzeige
 Updates installierst du genauso, über die vorhandene App. Voraussetzung ist Android 7.0 oder neuer.
 Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at](https://portal.netzburgenland.at/auth/). Zum Ausprobieren gibt es auf der Anmeldeseite **„Demo mit Beispieldaten ansehen“**.
 
+## Desktop-Programm
+
+Netzblick gibt es auch für **Windows, macOS und Linux**, mit denselben Funktionen wie die App. Wie am Handy gehen die Anfragen direkt von deinem Computer an Netz Burgenland, ohne fremden Server dazwischen.
+
+Unter [**Releases**](https://github.com/xionix3/netzblick/releases) die passende Datei herunterladen:
+
+| System | Datei | Installation |
+|---|---|---|
+| Windows 10/11 | `Netzblick-X.Y.Z-Windows-Setup.exe` | öffnen, kein Administrator nötig |
+| macOS 10.15 oder neuer (Apple Silicon und Intel) | `Netzblick-X.Y.Z-macOS.dmg` | öffnen, Netzblick in „Programme“ ziehen |
+| Linux | `Netzblick-X.Y.Z-Linux-x86_64.AppImage` | ausführbar machen (`chmod +x`) und starten |
+| Debian, Ubuntu, Mint | `netzblick_X.Y.Z_amd64.deb` | `sudo apt install ./netzblick_X.Y.Z_amd64.deb` |
+
+### Warnung beim ersten Start
+
+Das Programm ist nicht von Microsoft oder Apple beglaubigt, das kostet Geld. Deshalb warnt das System beim ersten Start. Herausgeber ist trotzdem geister-it, und die Dateien entstehen nachprüfbar auf GitHub aus genau diesem Quellcode (siehe unten).
+
+- **Windows:** „Der Computer wurde durch Windows geschützt“ → **Weitere Informationen** → **Trotzdem ausführen**.
+- **macOS:** Netzblick öffnen, die Meldung mit **Fertig** schließen. Dann **Systemeinstellungen** → **Datenschutz & Sicherheit** → ganz unten bei Netzblick **Dennoch öffnen** → mit deinem Passwort bestätigen. Das ist nur einmal nötig.
+- **Linux:** keine Warnung.
+
+### Updates
+
+Netzblick sieht einmal am Tag auf GitHub nach einer neuen Version und meldet sich dann. Die neue Datei installierst du einfach über die bisherige, Einstellungen und Anmeldung bleiben erhalten.
+
+### Datei prüfen (freiwillig)
+
+`SHA256SUMS.txt` im Release enthält die Prüfsummen. Mit der [GitHub-CLI](https://cli.github.com) lässt sich außerdem nachweisen, dass eine Datei auf GitHub aus diesem Repository gebaut wurde:
+
+```bash
+gh attestation verify Netzblick-X.Y.Z-Windows-Setup.exe --repo xionix3/netzblick
+```
+
 ## Bedienung
 
 - **Menü:** ☰ oben links oder vom linken Rand wischen. Auf dem Tablet steht es fest am Rand.
@@ -173,6 +207,7 @@ Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at]
 - **Zugangsdaten** werden nur bei „Angemeldet bleiben“ gespeichert, verschlüsselt mit AES-256-GCM; der Schlüssel liegt im Android Keystore.
 - **Messwerte** werden für die Offline-Anzeige zwischengespeichert. „Abmelden“ löscht Zugangsdaten und Zwischenspeicher.
 - Android-Backups sind aus. Berechtigungen: Internet, Benachrichtigungen (nur für die Erinnerung), Neustart-Empfang (damit eine geplante Erinnerung bleibt).
+- **Desktop-Programm:** Zugangsdaten liegen bei „Angemeldet bleiben“ im Schlüsselbund des Systems (Windows-Anmeldeinformationsverwaltung, macOS-Schlüsselbund, unter Linux Secret Service wie GNOME-Schlüsselbund oder KWallet). Einmal am Tag fragt das Programm bei `api.github.com` nach einer neuen Version, ohne Daten über dich.
 
 Ausführlich in der [Datenschutzerklärung](DATENSCHUTZ.md).
 
@@ -212,6 +247,15 @@ npm run sync          # Pakete installieren, Oberfläche bauen, ins Android-Proj
 Dann in Android Studio den Ordner **`android/`** öffnen, warten bis Gradle fertig ist, Handy mit USB-Debugging anschließen und **Run** drücken. Ohne Android Studio, aber mit SDK: `npm run apk`.
 Jeder Push baut auf GitHub außerdem eine Debug-APK (**Actions** → Lauf → **Artifacts**).
 
+**Desktop-Programm:** zusätzlich [Rust](https://rustup.rs) (stabil) und unter Linux die WebKitGTK-Pakete (`libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libdbus-1-dev patchelf`), unter Windows die „Desktopentwicklung mit C++“ aus den Visual Studio Build Tools.
+
+```bash
+npm ci
+npx tauri build       # fertige Dateien unter src-tauri/target/release/bundle/
+```
+
+Ein Push auf einen Branch `desktop/…` baut auf GitHub alle drei Systeme (**Actions** → **Desktop** → **Artifacts**).
+
 ## Fehlerbehebung
 
 | Meldung / Problem | Lösung |
@@ -249,11 +293,13 @@ netzblick/
 │   ├── main.js          Start, Anmeldung, Menü, Verbrauchsansicht
 │   ├── pages.js         Seiten Leistung, Kosten, Strompreis, Abrechnung, Anlagen, Energiegemeinschaft, Störung, Kontakt, Konto, Info
 │   ├── ui.js            DOM-Helfer, Bottom-Sheet, Rollenzählwerk, Markenzeichen
-│   ├── platform.js      Native Brücke: HTTP ohne CORS, sicherer Speicher, Teilen, Benachrichtigungen
+│   ├── platform.js      Native Brücke: HTTP ohne CORS, sicherer Speicher, Teilen, Benachrichtigungen (Android und Desktop)
+│   ├── update.js        Desktop: Hinweis auf neue Versionen
 │   ├── demo.js          Demo-Daten im Format der echten APIs
 │   └── cache.js, format.js, icons.js, time.js
 ├── www-src/             index.html und app.css
 ├── android/             Capacitor-Android-Projekt (SecureStorePlugin.java: Keystore-Verschlüsselung)
+├── src-tauri/           Desktop-Programm (Tauri): HTTP, Schlüsselbund, Speichern, Links (src/main.rs)
 ├── test/unit/           Unit-Tests (node:test)
 ├── test/e2e/            Oberflächentest im echten Chrome
 ├── scripts/             Build-, Release- und Bild-Skripte

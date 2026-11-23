@@ -12,7 +12,7 @@
 
 </div>
 
-**Netzblick** shows your smart meter data from Netz Burgenland, the distribution grid operator in Burgenland (Austria), clearly on phone and tablet. It covers consumption in quarter hours, days, months and years, and your power peaks for the power-based grid price from 2027. It also shows what your electricity costs, plus your installations, bills and energy communities. You sign in with your usual account. The [smart meter portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) and the [customer portal](https://portal.netzburgenland.at/) share the same login, and Netzblick combines both.
+**Netzblick** shows your smart meter data from Netz Burgenland, the distribution grid operator in Burgenland (Austria), clearly on phone, tablet and computer. It covers consumption in quarter hours, days, months and years, and your power peaks for the power-based grid price from 2027. It also shows what your electricity costs, plus your installations, bills and energy communities. You sign in with your usual account. The [smart meter portal](https://smartmeter.netzburgenland.at/enview/enView.Portal/) and the [customer portal](https://portal.netzburgenland.at/) share the same login, and Netzblick combines both.
 
 > Netzblick is a private project by geister-it and **not an official app** of Netz Burgenland. It uses the same interfaces as the web portals. If Netz Burgenland changes them, the app may stop working for a while.
 >
@@ -23,6 +23,7 @@
 - [Screenshots](#screenshots)
 - [Features](#features)
 - [Installation](#installation)
+- [Desktop program](#desktop-program)
 - [How to use it](#how-to-use-it)
 - [Figures and costs explained](#figures-and-costs-explained)
 - [Privacy and security](#privacy-and-security)
@@ -136,6 +137,25 @@ Portrait and landscape, built for phones and tablets, dark mode, offline display
 Updates install the same way, over the existing app. Requires Android 7.0 or newer.
 No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgenland.at/auth/). To try it out, tap **"Demo mit Beispieldaten ansehen"** on the sign-in screen.
 
+## Desktop program
+
+Netzblick is also available for **Windows, macOS and Linux**, with the same features as the app. As on the phone, requests go straight from your computer to Netz Burgenland, with no other server in between.
+
+Download the right file from [**Releases**](https://github.com/xionix3/netzblick/releases):
+
+| System | File | Install |
+|---|---|---|
+| Windows 10/11 | `Netzblick-X.Y.Z-Windows-Setup.exe` | open it, no administrator needed |
+| macOS 10.15 or later (Apple silicon and Intel) | `Netzblick-X.Y.Z-macOS.dmg` | open it, drag Netzblick to Applications |
+| Linux | `Netzblick-X.Y.Z-Linux-x86_64.AppImage` | make it executable (`chmod +x`) and run it |
+| Debian, Ubuntu, Mint | `netzblick_X.Y.Z_amd64.deb` | `sudo apt install ./netzblick_X.Y.Z_amd64.deb` |
+
+**Warning on first start.** The program is not notarised by Microsoft or Apple (that costs money), so the system warns the first time. On **Windows**: "Windows protected your PC" → **More info** → **Run anyway**. On **macOS**: open Netzblick, close the message with **Done**, then **System Settings** → **Privacy & Security** → at the bottom next to Netzblick **Open Anyway** → confirm with your password. Linux shows no warning.
+
+**Updates.** Netzblick checks GitHub once a day and tells you when a new version is out. Install the new file over the old one; settings and login are kept.
+
+**Verify a file (optional).** `SHA256SUMS.txt` in the release lists the checksums. With the [GitHub CLI](https://cli.github.com) you can prove a file was built on GitHub from this repository: `gh attestation verify <file> --repo xionix3/netzblick`.
+
 ## How to use it
 
 - **Menu:** ☰ at the top left, or swipe in from the left edge. On tablets it stays on the side.
@@ -175,6 +195,7 @@ No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgen
 - **Credentials** are stored only with "Angemeldet bleiben" (stay signed in), encrypted with AES-256-GCM; the key lives in the Android Keystore.
 - **Values** are cached for offline display. Signing out deletes credentials and cache.
 - Android backups are disabled. Permissions: internet, notifications (only for the reminder), boot completed (so a scheduled reminder survives a restart).
+- **Desktop program:** with "stay signed in", the login is kept in the system keychain (Windows Credential Manager, macOS Keychain, Secret Service on Linux such as GNOME Keyring or KWallet). Once a day the program asks `api.github.com` for a new version, without any data about you.
 
 Details in the [privacy policy](DATENSCHUTZ.md) (German).
 
@@ -213,6 +234,8 @@ npm run sync          # install packages, build the web part, copy it into the A
 
 Then open the **`android/`** folder in Android Studio, wait for Gradle, connect a phone with USB debugging and press **Run**. With the SDK but without Android Studio: `npm run apk`.
 Every push also builds a debug APK on GitHub (**Actions** → run → **Artifacts**).
+
+**Desktop program:** you also need [Rust](https://rustup.rs) (stable), on Linux the WebKitGTK packages (`libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libdbus-1-dev patchelf`), on Windows "Desktop development with C++" from the Visual Studio Build Tools. Then `npm ci && npx tauri build`; the files end up in `src-tauri/target/release/bundle/`. A push to a `desktop/…` branch builds all three systems on GitHub (**Actions** → **Desktop** → **Artifacts**).
 
 ## Troubleshooting
 
@@ -253,11 +276,13 @@ netzblick/
 │   ├── main.js          start, sign-in, menu, consumption view
 │   ├── pages.js         pages: power, costs, price, billing, installations, energy community, outage, contact, account, info
 │   ├── ui.js            DOM helpers, bottom sheet, rolling counter, logo
-│   ├── platform.js      native bridge: HTTP without CORS, secure storage, share, notifications
+│   ├── platform.js      native bridge: HTTP without CORS, secure storage, share, notifications (Android and desktop)
+│   ├── update.js        desktop: notice about new versions
 │   ├── demo.js          demo data in the format of the real APIs
 │   └── cache.js, format.js, icons.js, time.js
 ├── www-src/             index.html and app.css
 ├── android/             Capacitor Android project (SecureStorePlugin.java: Keystore encryption)
+├── src-tauri/           desktop program (Tauri): HTTP, keychain, saving, links (src/main.rs)
 ├── test/unit/           unit tests (node:test)
 ├── test/e2e/            UI test in real Chrome
 ├── scripts/             build, release and image scripts

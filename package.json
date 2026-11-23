@@ -1,9 +1,9 @@
 {
   "name": "netzblick",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "private": true,
   "type": "module",
-  "description": "Inoffizielle Android-App für die Verbrauchsdaten aus dem Smart-Meter-Portal von Netz Burgenland",
+  "description": "Inoffizielle App für die Verbrauchsdaten aus dem Smart-Meter-Portal von Netz Burgenland (Android, Windows, macOS, Linux)",
   "author": "geister-it",
   "license": "MIT",
   "repository": {
@@ -32,10 +32,12 @@
     "@capacitor/share": "^8.0.3",
     "@fontsource/barlow": "^5.3.0",
     "@fontsource/barlow-semi-condensed": "^5.3.0",
+    "@tauri-apps/api": "^2.12.5",
     "echarts": "^6.1.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.6.2",
+    "@tauri-apps/cli": "^2.12.6",
     "esbuild": "^0.28.2",
     "puppeteer-core": "^25.17.0"
   },

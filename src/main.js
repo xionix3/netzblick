@@ -10,7 +10,8 @@ import { makePeriod, shiftPeriod, periodTitle, periodShortName, daysBetween, add
 import { num, kwh, kw, watt, euro, pct, dateLong, dateTime, dateShort, dateNum, time, isoDate, WEEKDAYS_SHORT, MONTHS_LONG } from './format.js';
 import * as charts from './charts.js';
 import { icons } from './icons.js';
-import { http, secure, loadSettings, saveSettings, shareCsv, onBack, onResume, setSystemBars, openExternal } from './platform.js';
+import { http, secure, loadSettings, saveSettings, shareCsv, onBack, onResume, setSystemBars, openExternal, isDesktop } from './platform.js';
+import { latestRelease, isNewer, dueForCheck } from './update.js';
 import { demoHttp } from './demo.js';
 import { cacheClear } from './cache.js';
 import { $, h, icon, fillIcons, reduceMotion, setCounter, countUp, openSheet, closeSheet, toast, brandMark, spinBrand } from './ui.js';
@@ -450,15 +451,33 @@ function enterDashboard() {
   refresh();
   loadReadings();
   ensureKp().catch(() => {}); // Zusatzinfos im Hintergrund
-  showWhatsNew();
+  if (!showWhatsNew() && isDesktop && !state.demo) checkForUpdate();
+}
+
+/** Desktop: einmal am Tag auf GitHub nach einer neuen Version sehen und darauf hinweisen */
+async function checkForUpdate() {
+  if (APP_VERSION === 'dev') return;
+  try {
+    if (!dueForCheck(localStorage.getItem('nb.updateCheck'))) return;
+    localStorage.setItem('nb.updateCheck', String(Date.now()));
+    const rel = await latestRelease(http);
+    if (!rel || !isNewer(rel.version, APP_VERSION) || localStorage.getItem('nb.updateSkip') === rel.version) return;
+    const body = h('div', { class: 'whatsnew' },
+      h('p', { text: `Netzblick ${rel.version} ist da (du hast ${APP_VERSION}). Lade die neue Version herunter und installiere sie über die bisherige, deine Einstellungen bleiben erhalten.` }),
+      h('div', { class: 'sheet-actions' },
+        h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { try { localStorage.setItem('nb.updateSkip', rel.version); } catch { /* */ } closeSheet(); } }, 'Diese Version auslassen'),
+        h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); openExternal(rel.url); } }, 'Herunterladen')));
+    openSheet('Neue Version', body);
+  } catch { /* offline oder GitHub nicht erreichbar: beim nächsten Start wieder */ }
 }
 
 /** Einmal pro Version zeigen, was neu ist (nicht in Demo-Links und Web-Vorschau) */
 function showWhatsNew() {
-  if (PREVIEW || PARAMS.has('demo') || APP_VERSION === 'dev') return;
+  if (PREVIEW || PARAMS.has('demo') || APP_VERSION === 'dev') return false;
   const major = APP_VERSION.split('.').slice(0, 2).join('.');
-  try { if (localStorage.getItem('nb.seenVersion') === major) return; localStorage.setItem('nb.seenVersion', major); } catch { return; }
+  try { if (localStorage.getItem('nb.seenVersion') === major) return false; localStorage.setItem('nb.seenVersion', major); } catch { return false; }
   const items = [
+    ['desktop', 'Netzblick gibt es jetzt auch für Windows, macOS und Linux, mit denselben Funktionen. Download auf github.com/xionix3/netzblick unter „Releases“.'],
     ['spot', 'Börsenpreis: die Day-Ahead-Preise für heute und morgen, je Viertelstunde oder Stunde, die günstigsten und teuersten Zeiten, der Vergleich mit den Nachbarländern und wann Strom meist günstig ist.'],
     ['euro', 'Dynamischer Stromtarif: Börsenpreis plus Aufschlag, mit Vorlagen für aWATTar, smartENERGY, VERBUND und oekostrom.'],
     ['wallet', 'Kosten: eigene Seite mit allen Kosten Monat für Monat, je Zählpunkt und als Aufstellung.'],
@@ -471,6 +490,7 @@ function showWhatsNew() {
       h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => closeSheet() }, 'Später'),
       h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); goto('spot'); } }, 'Börsenpreis ansehen')));
   setTimeout(() => openSheet(`Neu in Netzblick ${major}`, body), 700);
+  return true;
 }
 
 async function loadReadings() {

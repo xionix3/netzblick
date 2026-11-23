@@ -5,6 +5,16 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.0] – 2026-11-23
+
+### Neu
+- **Netzblick für Windows, macOS und Linux.** Dieselbe Oberfläche und dieselben Funktionen wie die App, als eigenes Programm. Die Anfragen gehen wie am Handy direkt vom Computer an Netz Burgenland, ohne Server dazwischen. Zugangsdaten liegen bei „Angemeldet bleiben“ im Schlüsselbund des Systems. Exporte speichert das Programm über den gewohnten Speichern-Dialog, Links öffnen im Browser.
+- Downloads im Release: Installer für Windows, DMG für macOS (Apple Silicon und Intel), AppImage und DEB-Paket für Linux. Die Dateien entstehen auf GitHub aus dem öffentlichen Quellcode, mit Herkunftsnachweis (Attestation) und Prüfsummen. Anleitung zur Warnmeldung beim ersten Start im README.
+- Das Programm sieht einmal am Tag auf GitHub nach einer neuen Version und weist darauf hin.
+
+### Geändert
+- Datenschutzerklärung um das Desktop-Programm ergänzt.
+
 ## [1.7.2] – 2026-11-20
 
 ### Geändert

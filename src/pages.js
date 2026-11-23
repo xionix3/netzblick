@@ -567,7 +567,7 @@ export function renderTariff(body, ctx) {
     ctx.refreshUsage();
     if (res === 'ok') toast(`Erinnerung am ${dateNum(t.at)} um 9 Uhr`);
     else if (res === 'denied') toast('Benachrichtigungen sind für Netzblick aus. Erlaube sie in den Android-Einstellungen oder nutze den Kalender.');
-    else if (res === 'unsupported') toast('Gespeichert. Benachrichtigungen gibt es nur in der App, der Hinweis erscheint in der Übersicht.');
+    else if (res === 'unsupported') toast('Gespeichert. Benachrichtigungen gibt es nur in der Android-App, der Hinweis erscheint in der Übersicht.');
     else toast('Erinnerung konnte nicht gesetzt werden. Der Hinweis erscheint trotzdem in der Übersicht.');
     showStatus();
   };

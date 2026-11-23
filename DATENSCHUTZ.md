@@ -1,8 +1,8 @@
 # Datenschutzerklärung für Netzblick
 
-Stand: 18. November 2026
+Stand: 23. November 2026
 
-Netzblick ist eine nicht-kommerzielle App von Patrick Schlögl (geister-it). Sie zeigt die Smart-Meter-Daten an, die Netz Burgenland in seinem Verbrauchsdatenportal bereitstellt, sowie Anlagen-, Vertrags- und Abrechnungsdaten aus dem Kundenportal von Netz Burgenland.
+Netzblick ist eine nicht-kommerzielle App von Patrick Schlögl (geister-it), für Android und als Programm für Windows, macOS und Linux. Sie zeigt die Smart-Meter-Daten an, die Netz Burgenland in seinem Verbrauchsdatenportal bereitstellt, sowie Anlagen-, Vertrags- und Abrechnungsdaten aus dem Kundenportal von Netz Burgenland.
 Diese Erklärung beschreibt, welche Daten die App verarbeitet und wohin sie fließen.
 
 ## Kurz gesagt
@@ -28,6 +28,16 @@ Diese Erklärung beschreibt, welche Daten die App verarbeitet und wohin sie flie
 Die Zugangsdaten werden nur an die Portale von Netz Burgenland übertragen, genauso wie bei der Anmeldung im Web-Portal.
 Bei der Abfrage der Börsenpreise sieht der Betreiber von api.energy-charts.info (Fraunhofer-Institut für Solare Energiesysteme ISE) wie jeder Webserver deine IP-Adresse; Zugangsdaten, Zählpunkte oder Messwerte werden dorthin nicht übertragen.
 Für die Verarbeitung deiner Daten auf den Servern von Netz Burgenland gilt deren Datenschutzerklärung.
+
+## Desktop-Programm (Windows, macOS, Linux)
+
+Für das Programm gilt dasselbe wie für die App, mit diesen Unterschieden:
+
+- Zugangsdaten werden bei „Angemeldet bleiben“ im **Schlüsselbund des Betriebssystems** gespeichert: Windows-Anmeldeinformationsverwaltung, macOS-Schlüsselbund bzw. unter Linux der Secret Service (z. B. GNOME-Schlüsselbund oder KWallet). Gibt es unter Linux keinen solchen Dienst, speichert Netzblick die Zugangsdaten nicht.
+- Einstellungen und Zwischenspeicher liegen im Benutzerordner des Programms auf deinem Computer.
+- Einmal am Tag fragt das Programm bei **api.github.com** nach, ob es eine neue Version gibt. Dabei sieht GitHub wie jeder Webserver deine IP-Adresse; Daten über dich oder deinen Zähler werden nicht übertragen.
+- Exportierte Dateien speicherst du selbst an einem Ort deiner Wahl.
+- Beim Deinstallieren unter Windows kannst du auswählen, dass auch die Programmdaten gelöscht werden. Gespeicherte Zugangsdaten entfernt „Abmelden“.
 
 ## CSV-Export
 
