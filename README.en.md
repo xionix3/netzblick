@@ -152,7 +152,7 @@ Download the right file from [**Releases**](https://github.com/xionix3/netzblick
 
 **Warning on first start.** The program is not notarised by Microsoft or Apple (that costs money), so the system warns the first time. On **Windows**: "Windows protected your PC" → **More info** → **Run anyway**. On **macOS**: open Netzblick, close the message with **Done**, then **System Settings** → **Privacy & Security** → at the bottom next to Netzblick **Open Anyway** → confirm with your password. Linux shows no warning.
 
-**Updates.** Netzblick checks GitHub once a day (or Info → “Nach neuer Version suchen”). From version 1.8.3 on, one click on **Jetzt aktualisieren** downloads the new version, verifies its signature, installs it and restarts, without any warning; settings and login are kept. The DEB package is updated with the new file as usual; versions up to 1.8.2 need one manual update.
+**Updates.** Netzblick checks GitHub at every start (or any time via Info → “Nach neuer Version suchen”). From version 1.8.3 on, one click on **Jetzt aktualisieren** downloads the new version, verifies its signature, installs it and restarts, without any warning; settings and login are kept. The DEB package is updated with the new file as usual; versions up to 1.8.2 need one manual update.
 
 **Verify a file (optional).** `SHA256SUMS.txt` in the release lists the checksums. With the [GitHub CLI](https://cli.github.com) you can prove a file was built on GitHub from this repository: `gh attestation verify <file> --repo xionix3/netzblick`.
 

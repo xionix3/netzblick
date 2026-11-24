@@ -452,20 +452,22 @@ function enterDashboard() {
   refresh();
   loadReadings();
   ensureKp().catch(() => {}); // Zusatzinfos im Hintergrund
-  if (!showWhatsNew() && isDesktop && !state.demo) checkForUpdate();
+  showWhatsNew();
+}
+
+/** Warten, bis kein anderes Fenster (z. B. „Neu in Netzblick“) offen ist, höchstens eine Minute */
+async function sheetClosed() {
+  for (let i = 0; i < 60 && !$('scrim').hidden; i++) await new Promise((r) => setTimeout(r, 1000));
 }
 
 /**
- * Desktop: einmal am Tag nach einer neuen Version sehen (manual: sofort, mit Rückmeldung).
- * Kann sich das Programm selbst aktualisieren, lädt und installiert es auf Knopfdruck; sonst Link zur Download-Seite.
+ * Desktop: bei jedem Start nach einer neuen Version sehen (manual: über Info, mit Rückmeldung).
+ * Kann sich das Programm selbst aktualisieren, lädt und installiert es auf Knopfdruck; sonst Link zur Download-Seite
+ * (dann höchstens einmal am Tag, wegen der Abruf-Grenze der GitHub-Schnittstelle).
  */
 async function checkForUpdate({ manual = false } = {}) {
   if (APP_VERSION === 'dev' || !isDesktop) return;
   try {
-    if (!manual) {
-      if (!dueForCheck(localStorage.getItem('nb.updateCheck'))) return;
-      localStorage.setItem('nb.updateCheck', String(Date.now()));
-    }
     if (manual) toast('Suche nach neuer Version …');
     const native = await updater.check().catch(() => ({ supported: false }));
     let version, url = null, notes = '';
@@ -475,6 +477,10 @@ async function checkForUpdate({ manual = false } = {}) {
       notes = (native.update.notes || '').trim();
       if (notes === `Netzblick ${version}`) notes = '';
     } else {
+      if (!manual) {
+        if (!dueForCheck(localStorage.getItem('nb.updateCheck'))) return;
+        localStorage.setItem('nb.updateCheck', String(Date.now()));
+      }
       const rel = await latestRelease(http);
       if (!rel || !isNewer(rel.version, APP_VERSION)) { if (manual) toast(`Du hast die neueste Version (${APP_VERSION}).`); return; }
       version = rel.version; url = rel.url;
@@ -503,6 +509,7 @@ async function checkForUpdate({ manual = false } = {}) {
       h('div', { class: 'sheet-actions' },
         h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { try { localStorage.setItem('nb.updateSkip', version); } catch { /* */ } closeSheet(); } }, manual ? 'Später' : 'Diese Version auslassen'),
         go));
+    if (!manual) await sheetClosed();
     openSheet('Neue Version', body);
   } catch {
     if (manual) toast('Keine Verbindung zu GitHub, versuch es später noch einmal.');
@@ -1803,4 +1810,7 @@ async function boot() {
   showLogin();
 }
 
-boot();
+boot().finally(() => {
+  // Desktop: bei jedem Start nach Updates sehen, egal ob angemeldet
+  if (isDesktop && !PREVIEW && !PARAMS.has('demo')) setTimeout(() => checkForUpdate(), 2000);
+});

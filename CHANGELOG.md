@@ -5,6 +5,11 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.6] – 2026-11-24
+
+### Geändert
+- Desktop-Programm: sucht bei jedem Start nach einer neuen Version, auch schon vor der Anmeldung (bisher einmal am Tag nach der Anmeldung). Ist gerade ein anderes Fenster offen, kommt der Hinweis danach.
+
 ## [1.8.5] – 2026-11-24
 
 ### Neu

@@ -158,7 +158,7 @@ Das Programm ist nicht von Microsoft oder Apple beglaubigt, das kostet Geld. Des
 
 ### Updates
 
-Netzblick sieht einmal am Tag auf GitHub nach einer neuen Version (oder unter Info → „Nach neuer Version suchen“). Ab Version 1.8.3 genügt dann ein Klick auf **Jetzt aktualisieren**: Das Programm lädt die neue Version, prüft ihre Signatur, installiert sie und startet neu. Einstellungen und Anmeldung bleiben erhalten, und es gibt dabei keine Warnmeldung. Das DEB-Paket aktualisierst du wie gewohnt über die neue Datei, ältere Versionen bis 1.8.2 einmal von Hand.
+Netzblick sieht bei jedem Start auf GitHub nach einer neuen Version (oder jederzeit unter Info → „Nach neuer Version suchen“). Ab Version 1.8.3 genügt dann ein Klick auf **Jetzt aktualisieren**: Das Programm lädt die neue Version, prüft ihre Signatur, installiert sie und startet neu. Einstellungen und Anmeldung bleiben erhalten, und es gibt dabei keine Warnmeldung. Das DEB-Paket aktualisierst du wie gewohnt über die neue Datei, ältere Versionen bis 1.8.2 einmal von Hand.
 
 ### Datei prüfen (freiwillig)
 
