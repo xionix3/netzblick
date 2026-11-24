@@ -5,6 +5,11 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.9] – 2026-11-24
+
+### Behoben
+- Android: Die randlose Anzeige aus 1.8.8 ist wieder zurückgenommen. Damit sahen die Ränder oben und unten falsch aus, und beim Anmelden schob die Tastatur das Formular aus dem Bild. Die App verhält sich wieder wie in 1.8.7.
+
 ## [1.8.8] – 2026-11-24
 
 ### Geändert

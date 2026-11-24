@@ -2,17 +2,15 @@ package at.xionix.netzblick;
 
 import android.os.Bundle;
 
-import androidx.activity.EdgeToEdge;
-
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Randlos auf allen Android-Versionen, nicht erst ab 15 (Hinweis der Play Console).
-        // Die Abstände zu Status- und Navigationsleiste setzt Capacitor (SystemBars, insetsHandling "css").
-        EdgeToEdge.enable(this);
+        // Kein EdgeToEdge.enable() (Empfehlung der Play Console): In 1.8.8 ausprobiert, danach sahen die Ränder oben
+        // und unten falsch aus und beim Anmelden schob die Tastatur das Formular aus dem Bild. Ab Android 15 ist die App
+        // ohnehin randlos, die Abstände setzt Capacitor (SystemBars, insetsHandling "css").
         // Eigene Plugins müssen vor super.onCreate registriert werden
         registerPlugin(SecureStorePlugin.class);
         super.onCreate(savedInstanceState);
