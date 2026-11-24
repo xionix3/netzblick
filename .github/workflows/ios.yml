@@ -89,6 +89,15 @@ jobs:
         run: |
           APP="$RUNNER_TEMP/dd/Build/Products/Release-iphoneos/App.app"
           test -d "$APP"
+          # Inhalt prüfen: Oberfläche, Konfiguration und alle verlinkten Frameworks müssen in der App stecken
+          du -sh "$APP"; ls -la "$APP"
+          ls -la "$APP/Frameworks" 2>/dev/null || echo "(keine eingebetteten Frameworks)"
+          test -f "$APP/public/index.html"
+          test -f "$APP/capacitor.config.json"
+          otool -L "$APP/App"
+          for lib in $(otool -L "$APP/App" | awk '/@rpath\//{print $1}'); do
+            test -e "$APP/Frameworks/${lib#@rpath/}" || { echo "::error::Framework fehlt in der App: $lib"; exit 1; }
+          done
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' -c 'Print :CFBundleVersion' -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
           mkdir -p ipa/Payload out
           cp -R "$APP" ipa/Payload/
