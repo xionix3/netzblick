@@ -161,9 +161,14 @@ jobs:
           rm -f SHA256SUMS.txt latest.json
           # Update-Beschreibung für das Programm (nur wenn signierte Update-Dateien da sind)
           if ls *.sig >/dev/null 2>&1; then
+            # Was ist neu: der Teil der Release-Beschreibung vor den Installationshinweisen
+            export NOTES="$(gh release view "$TAG" --json body --jq .body || true)"
             python3 - <<'PY'
-          import json, os, datetime
+          import json, os, datetime, re
           tag = os.environ["TAG"]; v = tag.lstrip("v")
+          body = os.environ.get("NOTES", "").split("\n### Android")[0]
+          body = re.sub(r"\*\*|`", "", body).replace("### ", "").strip()
+          notes = body[:900].rsplit("\n", 1)[0] if len(body) > 900 else body
           base = f"https://github.com/{os.environ['GH_REPO']}/releases/download/{tag}/"
           files = {
               "windows-x86_64": f"Netzblick-{v}-Windows-Setup.exe",
@@ -175,7 +180,7 @@ jobs:
           for key, name in files.items():
               if os.path.exists(name + ".sig"):
                   platforms[key] = {"signature": open(name + ".sig").read().strip(), "url": base + name}
-          doc = {"version": v, "notes": f"Netzblick {v}", "pub_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "platforms": platforms}
+          doc = {"version": v, "notes": notes or f"Netzblick {v}", "pub_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "platforms": platforms}
           json.dump(doc, open("latest.json", "w"), indent=2)
           print(json.dumps(doc, indent=2)[:2000])
           PY

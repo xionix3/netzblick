@@ -5,6 +5,11 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.4] – 2026-11-24
+
+### Neu
+- Desktop-Programm: Das Fenster „Neue Version“ zeigt jetzt auch, was sich geändert hat. Diese Version ist zugleich die erste, die sich über „Jetzt aktualisieren“ von 1.8.3 aus selbst installiert.
+
 ## [1.8.3] – 2026-11-24
 
 ### Neu

@@ -832,3 +832,6 @@ body::after {
 .seg--res { flex: 0 0 auto; margin-top: 0; padding: 2px; }
 .seg--res button { height: 30px; padding: 0 12px; font-size: 14px; }
 .seg--res button:disabled { opacity: 0.4; }
+
+/* Desktop: Was ist neu im Update-Fenster */
+.update-notes { white-space: pre-line; max-height: 40vh; overflow: auto; margin: 4px 0 12px; padding: 10px 12px; border-radius: 10px; background: var(--paper); color: var(--ink); font-size: 14px; line-height: 1.45; }

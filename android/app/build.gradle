@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 // Version: wird beim Release aus dem Git-Tag gesetzt (-PappVersionName=1.2.3 -PappVersionCode=10203)
-def appVersionName = (project.findProperty('appVersionName') ?: '1.8.3').toString()
-def appVersionCode = Integer.parseInt((project.findProperty('appVersionCode') ?: '10803').toString())
+def appVersionName = (project.findProperty('appVersionName') ?: '1.8.4').toString()
+def appVersionCode = Integer.parseInt((project.findProperty('appVersionCode') ?: '10804').toString())
 
 // Release-Signatur: über Umgebungsvariablen (GitHub-Secrets im Release-Workflow).
 // Fehlen sie, wird mit dem Debug-Schlüssel aus dem Projekt signiert (nur für Tests geeignet).

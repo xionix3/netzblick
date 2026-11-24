@@ -467,10 +467,12 @@ async function checkForUpdate({ manual = false } = {}) {
     }
     if (manual) toast('Suche nach neuer Version …');
     const native = await updater.check().catch(() => ({ supported: false }));
-    let version, url = null;
+    let version, url = null, notes = '';
     if (native.supported) {
       if (!native.update) { if (manual) toast(`Du hast die neueste Version (${APP_VERSION}).`); return; }
       version = native.update.version;
+      notes = (native.update.notes || '').trim();
+      if (notes === `Netzblick ${version}`) notes = '';
     } else {
       const rel = await latestRelease(http);
       if (!rel || !isNewer(rel.version, APP_VERSION)) { if (manual) toast(`Du hast die neueste Version (${APP_VERSION}).`); return; }
@@ -495,6 +497,7 @@ async function checkForUpdate({ manual = false } = {}) {
       h('p', { text: url
         ? `Netzblick ${version} ist da (du hast ${APP_VERSION}). Lade die neue Version herunter und installiere sie über die bisherige, deine Einstellungen bleiben erhalten.`
         : `Netzblick ${version} ist da (du hast ${APP_VERSION}). Das Programm lädt sie, prüft die Signatur, installiert sie und startet neu. Einstellungen und Anmeldung bleiben erhalten.` }),
+      notes ? h('div', { class: 'update-notes', text: notes }) : null,
       status,
       h('div', { class: 'sheet-actions' },
         h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { try { localStorage.setItem('nb.updateSkip', version); } catch { /* */ } closeSheet(); } }, manual ? 'Später' : 'Diese Version auslassen'),
