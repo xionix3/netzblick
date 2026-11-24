@@ -5,6 +5,11 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.8] – 2026-11-24
+
+### Geändert
+- Android: Die App läuft jetzt auf allen Android-Versionen randlos (Inhalt hinter Status- und Navigationsleiste, mit passenden Abständen), nicht erst ab Android 15. Damit sieht sie überall gleich aus.
+
 ## [1.8.7] – 2026-11-24
 
 ### Geändert
