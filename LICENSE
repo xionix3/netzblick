@@ -1,21 +1,75 @@
-MIT License
+Netzblick – Lizenz / License
 
-Copyright (c) 2026 geister-it
+Copyright © 2026 geister-it (Patrick Schlögl). Alle Rechte vorbehalten. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+────────────────────────────────────────────────────────────────────────
+Deutsch (maßgeblich)
+────────────────────────────────────────────────────────────────────────
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Der Quellcode in diesem Repository ist öffentlich einsehbar, damit jede und
+jeder nachprüfen kann, was Netzblick tut und wohin Daten gehen. Das ist keine
+Open-Source-Lizenz.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Erlaubt ist:
+  1. den Quellcode anzusehen und zu lesen,
+  2. die von geister-it veröffentlichten Fassungen (Google Play, Releases
+     dieses Repositorys) zu installieren und zu nutzen,
+  3. den Quellcode ausschließlich für den eigenen, privaten Gebrauch zu bauen,
+     um ihn zu prüfen.
+
+Ohne vorherige schriftliche Zustimmung von geister-it ist nicht erlaubt:
+  1. den Quellcode oder Teile davon zu kopieren, zu verändern, weiterzugeben
+     oder zu veröffentlichen,
+  2. eigene oder veränderte Fassungen zu verbreiten, auch in App-Stores, unter
+     anderem Namen oder kostenlos,
+  3. jede gewerbliche Nutzung des Quellcodes.
+
+Die Rechte, die die Nutzungsbedingungen von GitHub für öffentliche
+Repositories einräumen (Ansehen und Forken auf GitHub), bleiben unberührt; sie
+erlauben keine Nutzung außerhalb von GitHub.
+
+Fassungen bis einschließlich Version 1.8.6 wurden unter der MIT-Lizenz
+veröffentlicht; für diese Fassungen gilt weiterhin die MIT-Lizenz. Diese
+Lizenz gilt ab Version 1.8.7.
+
+Bausteine Dritter (unter anderem Capacitor, Tauri, Apache ECharts und die
+Schrift Barlow) stehen unter ihren eigenen Lizenzen.
+
+Die Software wird ohne Gewähr bereitgestellt, soweit gesetzlich zulässig.
+
+Anfragen: patrick-schloegl@gmx.at
+
+────────────────────────────────────────────────────────────────────────
+English (translation; the German text prevails)
+────────────────────────────────────────────────────────────────────────
+
+The source code in this repository is publicly visible so that anyone can
+check what Netzblick does and where data goes. This is not an open-source
+licence.
+
+You may:
+  1. view and read the source code,
+  2. install and use the versions published by geister-it (Google Play,
+     releases of this repository),
+  3. build the source code solely for your own private use in order to
+     review it.
+
+Without prior written permission from geister-it you may not:
+  1. copy, modify, distribute or publish the source code or parts of it,
+  2. distribute your own or modified versions, including in app stores,
+     under another name or free of charge,
+  3. use the source code commercially in any way.
+
+The rights granted by GitHub's terms of service for public repositories
+(viewing and forking on GitHub) remain unaffected; they do not permit any use
+outside GitHub.
+
+Versions up to and including 1.8.6 were published under the MIT licence and
+remain available under it. This licence applies from version 1.8.7 on.
+
+Third-party components (including Capacitor, Tauri, Apache ECharts and the
+Barlow typeface) are subject to their own licences.
+
+The software is provided without warranty, to the extent permitted by law.
+
+Enquiries: patrick-schloegl@gmx.at

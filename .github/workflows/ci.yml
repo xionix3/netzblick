@@ -76,9 +76,4 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: netzblick-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+      # Die APK wird nicht als Artifact abgelegt: Artifacts öffentlicher Repos kann jeder mit GitHub-Konto laden.

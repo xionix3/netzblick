@@ -5,6 +5,13 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.7] – 2026-11-24
+
+### Geändert
+- **Neue Lizenz: alle Rechte vorbehalten.** Der Quellcode bleibt öffentlich einsehbar, kopieren, weitergeben oder eigene Fassungen veröffentlichen ist aber nur mit Zustimmung von geister-it erlaubt. Versionen bis 1.8.6 bleiben unter der MIT-Lizenz.
+- Android gibt es nur noch über Google Play. APK und App-Bundle liegen nicht mehr öffentlich auf GitHub, sondern in einem privaten Entwurf; auch die Debug-APK der Prüfläufe wird nicht mehr abgelegt.
+- Desktop-Programm: „Kaffee spendieren“ jetzt auch über PayPal.
+
 ## [1.8.6] – 2026-11-24
 
 ### Geändert

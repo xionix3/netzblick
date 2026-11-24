@@ -5,6 +5,7 @@
 <img src="docs/readme/banner-de.png" alt="Netzblick: Deinen Stromverbrauch im Blick. Drei Handys mit Übersicht, Kosten und Energiegemeinschaft" width="100%" />
 
 <a href="https://github.com/sponsors/xionix3"><img src="docs/readme/sponsor-de.png" alt="☕ Kaffee spendieren über GitHub Sponsors" width="400" /></a><br />
+<sub>oder über <a href="https://paypal.me/geisterit">PayPal</a></sub><br />
 <sub>☕ Netzblick ist und bleibt kostenlos – ohne Werbung, ohne Abo. Wenn dir die App gefällt, freue ich mich über einen Kaffee. Völlig freiwillig, danke! ❤</sub>
 
 [![CI](https://github.com/xionix3/netzblick/actions/workflows/ci.yml/badge.svg)](https://github.com/xionix3/netzblick/actions/workflows/ci.yml)
@@ -128,11 +129,9 @@ Hoch- und Querformat, für Handy und Tablet gebaut, Dunkelmodus, Offline-Anzeige
 
 ## Installation
 
-1. Unter [**Releases**](https://github.com/xionix3/netzblick/releases) die neueste `netzblick-X.Y.Z.apk` am Handy herunterladen.
-2. Die Datei öffnen. Android fragt einmalig, ob dein Browser bzw. Dateimanager Apps installieren darf: erlauben.
-3. Netzblick öffnen und mit Benutzername (oder E-Mail-Adresse) und Passwort deines Netz-Burgenland-Zugangs anmelden. Hast du im Kundenportal ein anderes Konto, klapp „Andere Zugangsdaten für das Kundenportal?“ auf.
+**Android:** Netzblick gibt es im [**Google Play Store**](https://play.google.com/store/apps/details?id=at.xionix.netzblick). Derzeit läuft noch der geschlossene Test; bis zur Freigabe für alle kommen nur eingetragene Tester an die App. Updates kommen über den Play Store, Voraussetzung ist Android 7.0 oder neuer.
 
-Updates installierst du genauso, über die vorhandene App. Voraussetzung ist Android 7.0 oder neuer.
+Nach dem Start mit Benutzername (oder E-Mail-Adresse) und Passwort deines Netz-Burgenland-Zugangs anmelden. Hast du im Kundenportal ein anderes Konto, klapp „Andere Zugangsdaten für das Kundenportal?“ auf.
 Noch keinen Zugang? Registrieren kannst du dich unter [portal.netzburgenland.at](https://portal.netzburgenland.at/auth/). Zum Ausprobieren gibt es auf der Anmeldeseite **„Demo mit Beispieldaten ansehen“**.
 
 ## Desktop-Programm
@@ -230,7 +229,7 @@ npm run sync
 
 > Ändere im Projektordner nichts von Hand, dann klappt `git pull` immer. Hat Android Studio Dateien verändert (z. B. ein vorgeschlagenes Gradle-Upgrade), setzt `git checkout -- android` sie zurück.
 
-Ohne Android Studio geht es noch einfacher: die neueste APK unter [Releases](https://github.com/xionix3/netzblick/releases) am Handy installieren.
+Ohne Android Studio geht es noch einfacher: Netzblick aus dem [Google Play Store](https://play.google.com/store/apps/details?id=at.xionix.netzblick) installieren.
 
 ## Selbst bauen
 
@@ -247,7 +246,7 @@ npm run sync          # Pakete installieren, Oberfläche bauen, ins Android-Proj
 ```
 
 Dann in Android Studio den Ordner **`android/`** öffnen, warten bis Gradle fertig ist, Handy mit USB-Debugging anschließen und **Run** drücken. Ohne Android Studio, aber mit SDK: `npm run apk`.
-Jeder Push baut auf GitHub außerdem eine Debug-APK (**Actions** → Lauf → **Artifacts**).
+Jeder Push baut auf GitHub außerdem eine Debug-APK zur Kontrolle (sie wird nicht veröffentlicht).
 
 **Desktop-Programm:** zusätzlich [Rust](https://rustup.rs) (stabil) und unter Linux die WebKitGTK-Pakete (`libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libdbus-1-dev patchelf`), unter Windows die „Desktopentwicklung mit C++“ aus den Visual Studio Build Tools.
 
@@ -349,9 +348,10 @@ Bei jedem Push laufen auf GitHub drei Stufen ([CI](.github/workflows/ci.yml)):
 
 ## Releases
 
-Neue Version: Eintrag in [CHANGELOG.md](CHANGELOG.md), Version in `package.json` erhöhen und nach `main` pushen. GitHub baut signierte APK und AAB, setzt den Tag und legt beides unter **Releases** ab.
+Neue Version: Eintrag in [CHANGELOG.md](CHANGELOG.md), Version in `package.json` erhöhen und nach `main` pushen. GitHub baut die Desktop-Programme und legt sie unter **Releases** ab. APK und App-Bundle für Android landen in einem nicht öffentlichen Entwurf, der Weg zu den Nutzern ist der Play Store.
 
 ## Lizenz
 
-[MIT](LICENSE), © 2026 geister-it. Netzblick steht in keiner Verbindung zu Netz Burgenland oder VIVAVIS; genannte Namen gehören ihren Inhabern.
-Verwendet [Capacitor](https://capacitorjs.com) (MIT), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) und die Schrift [Barlow](https://github.com/jpt/barlow) (SIL OFL 1.1).
+© 2026 geister-it, **alle Rechte vorbehalten** ([LICENSE](LICENSE)). Der Quellcode ist öffentlich, damit du nachprüfen kannst, was Netzblick tut; kopieren, weitergeben oder eigene Fassungen veröffentlichen ist ohne Zustimmung nicht erlaubt. Versionen bis 1.8.6 stehen weiterhin unter der MIT-Lizenz.
+Netzblick steht in keiner Verbindung zu Netz Burgenland oder VIVAVIS; genannte Namen gehören ihren Inhabern.
+Verwendet [Capacitor](https://capacitorjs.com) (MIT), [Tauri](https://tauri.app) (MIT/Apache-2.0), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) und die Schrift [Barlow](https://github.com/jpt/barlow) (SIL OFL 1.1).

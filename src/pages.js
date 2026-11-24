@@ -354,7 +354,7 @@ export function renderInfo(body, ctx) {
           h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal('https://www.geister-it.at') }, icon('external'), 'www.geister-it.at')))),
     // body.append ist das native append: null würde als Text „null“ erscheinen, darum als Liste einfügen
     ...(isDesktop && DONATE.length ? [section('Netzblick unterstützen', 'Netzblick ist kostenlos, ohne Werbung und ohne Tracking. Wenn es dir hilft, freue ich mich über einen Kaffee.',
-      h('div', { class: 'btn-row' }, ...DONATE.map((d) => h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openExternal(d.url) }, icon('coffee'), d.label))))] : []),
+      h('div', { class: 'btn-row' }, ...DONATE.map((d, i) => h('button', { class: i === 0 ? 'btn btn--primary' : 'btn btn--ghost', type: 'button', onclick: () => openExternal(d.url) }, i === 0 ? icon('coffee') : null, d.label))))] : []),
     section('Woher die Daten kommen', null, list(
       'Messwerte und Zählerstände: Smart-Meter-Portal von Netz Burgenland (smartmeter.netzburgenland.at)',
       'Anlagen, Verträge und Abrechnungen: Kundenportal von Netz Burgenland (portal.netzburgenland.at)',
@@ -372,10 +372,10 @@ export function renderInfo(body, ctx) {
       sourceList(OFFICIAL_SOURCES)),
     section('Verwendete Bausteine', null, list(
       'Apache ECharts, Apache-Lizenz 2.0',
-      'Capacitor, MIT-Lizenz',
+      isDesktop ? 'Tauri, MIT- und Apache-Lizenz 2.0' : 'Capacitor, MIT-Lizenz',
       'Schrift Barlow, SIL Open Font License 1.1',
     )),
-    h('p', { class: 'fineprint fineprint--page', text: '© 2026 geister-it. Netzblick steht unter der MIT-Lizenz.' }),
+    h('p', { class: 'fineprint fineprint--page', text: '© 2026 geister-it. Alle Rechte vorbehalten.' }),
   );
 }
 

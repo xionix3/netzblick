@@ -5,6 +5,7 @@
 <img src="docs/readme/banner-en.png" alt="Netzblick: your electricity use at a glance. Three phones showing the overview, costs and energy community" width="100%" />
 
 <a href="https://github.com/sponsors/xionix3"><img src="docs/readme/sponsor-en.png" alt="☕ Buy me a coffee via GitHub Sponsors" width="400" /></a><br />
+<sub>or via <a href="https://paypal.me/geisterit">PayPal</a></sub><br />
 <sub>☕ Netzblick is and stays free – no ads, no subscription. If you like the app, I'd be happy about a coffee. Entirely voluntary, thank you! ❤</sub>
 
 [![CI](https://github.com/xionix3/netzblick/actions/workflows/ci.yml/badge.svg)](https://github.com/xionix3/netzblick/actions/workflows/ci.yml)
@@ -130,11 +131,9 @@ Portrait and landscape, built for phones and tablets, dark mode, offline display
 
 ## Installation
 
-1. Download the latest `netzblick-X.Y.Z.apk` from [**Releases**](https://github.com/xionix3/netzblick/releases) on your phone.
-2. Open the file. Android asks once whether your browser or file manager may install apps: allow it.
-3. Open Netzblick and sign in with the username (or e-mail) and password of your Netz Burgenland account. If you use a different account for the customer portal, expand "Andere Zugangsdaten für das Kundenportal?".
+**Android:** Netzblick is available on [**Google Play**](https://play.google.com/store/apps/details?id=at.xionix.netzblick). It is still in closed testing; until it is released to everyone, only registered testers can get it. Updates come through Google Play; requires Android 7.0 or newer.
 
-Updates install the same way, over the existing app. Requires Android 7.0 or newer.
+After starting, sign in with the username (or e-mail) and password of your Netz Burgenland account. If you use a different account for the customer portal, expand "Andere Zugangsdaten für das Kundenportal?".
 No account yet? Register at [portal.netzburgenland.at](https://portal.netzburgenland.at/auth/). To try it out, tap **"Demo mit Beispieldaten ansehen"** on the sign-in screen.
 
 ## Desktop program
@@ -218,7 +217,7 @@ npm run sync
 
 > Don't edit files in the project folder by hand, then `git pull` always works. If Android Studio changed files (e.g. a suggested Gradle upgrade), `git checkout -- android` resets them.
 
-Without Android Studio it's even simpler: install the latest APK from [Releases](https://github.com/xionix3/netzblick/releases) on your phone.
+Without Android Studio it's even simpler: install Netzblick from [Google Play](https://play.google.com/store/apps/details?id=at.xionix.netzblick).
 
 ## Building it yourself
 
@@ -235,7 +234,7 @@ npm run sync          # install packages, build the web part, copy it into the A
 ```
 
 Then open the **`android/`** folder in Android Studio, wait for Gradle, connect a phone with USB debugging and press **Run**. With the SDK but without Android Studio: `npm run apk`.
-Every push also builds a debug APK on GitHub (**Actions** → run → **Artifacts**).
+Every push also builds a debug APK on GitHub as a check (it is not published).
 
 **Desktop program:** you also need [Rust](https://rustup.rs) (stable), on Linux the WebKitGTK packages (`libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libdbus-1-dev patchelf`), on Windows "Desktop development with C++" from the Visual Studio Build Tools. Then `npm ci && npx tauri build`; the files end up in `src-tauri/target/release/bundle/`. A push to a `desktop/…` branch builds all three systems on GitHub (**Actions** → **Desktop** → **Artifacts**).
 
@@ -329,9 +328,10 @@ Every push runs three stages on GitHub ([CI](.github/workflows/ci.yml)):
 
 ## Releases
 
-New version: add an entry to [CHANGELOG.md](CHANGELOG.md), raise the version in `package.json` and push to `main`. GitHub builds a signed APK and AAB, sets the tag and publishes both under **Releases**.
+New version: add an entry to [CHANGELOG.md](CHANGELOG.md), raise the version in `package.json` and push to `main`. GitHub builds the desktop programs and publishes them under **Releases**. The Android APK and app bundle go into a non-public draft; users get the app through Google Play.
 
 ## License
 
-[MIT](LICENSE), © 2026 geister-it. Netzblick is not affiliated with Netz Burgenland or VIVAVIS; names belong to their owners.
-Uses [Capacitor](https://capacitorjs.com) (MIT), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) and the [Barlow](https://github.com/jpt/barlow) typeface (SIL OFL 1.1).
+© 2026 geister-it, **all rights reserved** ([LICENSE](LICENSE)). The source code is public so you can check what Netzblick does; copying, redistributing or publishing your own versions is not allowed without permission. Versions up to 1.8.6 remain under the MIT licence.
+Netzblick is not affiliated with Netz Burgenland or VIVAVIS; names belong to their owners.
+Uses [Capacitor](https://capacitorjs.com) (MIT), [Tauri](https://tauri.app) (MIT/Apache-2.0), [Apache ECharts](https://echarts.apache.org) (Apache-2.0) and the [Barlow](https://github.com/jpt/barlow) typeface (SIL OFL 1.1).

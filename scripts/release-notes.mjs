@@ -22,17 +22,16 @@ if (start >= 0) {
   body = `Version ${version}. Für diese Version gibt es keinen Eintrag im CHANGELOG.`;
 }
 
+// „### Android“ muss direkt nach den Änderungen kommen: desktop.yml schneidet dort die Notizen für das Update-Fenster ab
 const parts = [body, '', '### Android', '',
-  `1. \`netzblick-${version}.apk\` unten herunterladen und am Handy öffnen.`,
-  '2. Android fragt einmalig, ob Apps aus dieser Quelle installiert werden dürfen.',
-  '3. Ein Update installierst du einfach über die vorhandene App.',
-  '', '`netzblick-' + version + '.aab` ist das App-Bundle für den Play Store.',
+  'Netzblick für Android gibt es im [Google Play Store](https://play.google.com/store/apps/details?id=at.xionix.netzblick), Updates kommen von dort.',
   '', '### Windows, macOS, Linux', '',
   '| System | Datei |', '|---|---|',
   `| Windows 10/11 | \`Netzblick-${version}-Windows-Setup.exe\` |`,
   `| macOS (Apple Silicon und Intel) | \`Netzblick-${version}-macOS.dmg\` |`,
   `| Linux | \`Netzblick-${version}-Linux-x86_64.AppImage\` oder \`netzblick_${version}_amd64.deb\` |`,
-  '', 'Die Desktop-Dateien kommen einige Minuten nach dem Release dazu. Sie sind nicht von Microsoft oder Apple beglaubigt, deshalb warnt das System beim ersten Start. '
+  '', 'Die Dateien kommen einige Minuten nach dem Release dazu. Ein installiertes Programm ab Version 1.8.3 aktualisiert sich selbst. '
+    + 'Die Dateien sind nicht von Microsoft oder Apple beglaubigt, deshalb warnt das System bei der ersten Installation. '
     + 'So startest du trotzdem: [Anleitung](https://github.com/xionix3/netzblick#desktop-programm).',
   '', '`SHA256SUMS.txt` enthält die Prüfsummen aller Dateien. Herkunft prüfen: `gh attestation verify <Datei> --repo xionix3/netzblick`.'];
 if (signing === 'debug') {

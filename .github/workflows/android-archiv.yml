@@ -1,0 +1,55 @@
+# Einmalig: APK und AAB aus allen öffentlichen Releases in den Entwurf „Android-Archiv (privat)“ verschieben.
+# Entwürfe sieht nur, wer Schreibrechte hat. Erst nach erfolgreichem Hochladen wird aus den Releases entfernt;
+# die Prüfsummen-Dateien werden ohne APK/AAB neu geschrieben.
+# Läuft, wenn diese Datei geändert wird, oder von Hand unter Actions → Android-Dateien privat → Run workflow.
+name: Android-Dateien privat
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/android-archiv.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  move:
+    name: APK und AAB ins private Archiv
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Verschieben
+        run: |
+          set -euo pipefail
+          mkdir files && cd files
+          TAGS=$(gh release list --limit 200 --json tagName,isDraft --jq '.[] | select(.isDraft | not) | .tagName')
+          for t in $TAGS; do
+            gh release download "$t" --pattern '*.apk' --pattern '*.aab' --skip-existing 2>/dev/null || true
+          done
+          ls -la
+          if ! ls *.apk *.aab >/dev/null 2>&1; then echo "Nichts zu verschieben."; exit 0; fi
+
+          if ! gh release view android-archiv >/dev/null 2>&1; then
+            gh release create android-archiv --draft --title "Android-Archiv (privat)" \
+              --notes "APK und AAB der Versionen bis 1.8.6. Nur für dich sichtbar, nicht veröffentlichen."
+          fi
+          gh release upload android-archiv *.apk *.aab --clobber
+          echo "Im Archiv:"; gh release view android-archiv --json assets --jq '.assets[].name'
+
+          for t in $TAGS; do
+            for a in $(gh release view "$t" --json assets --jq '.assets[].name | select(test("\\.(apk|aab)$"))'); do
+              echo "Entferne $a aus $t"
+              gh release delete-asset "$t" "$a" --yes
+            done
+            if gh release download "$t" --pattern SHA256SUMS.txt --output - > sums.txt 2>/dev/null && grep -qE '\.(apk|aab)$' sums.txt; then
+              grep -vE '\.(apk|aab)$' sums.txt > SHA256SUMS.txt || true
+              if [ -s SHA256SUMS.txt ]; then gh release upload "$t" SHA256SUMS.txt --clobber; else gh release delete-asset "$t" SHA256SUMS.txt --yes; fi
+            fi
+          done

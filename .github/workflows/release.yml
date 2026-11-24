@@ -1,5 +1,5 @@
-# Erstellt ein GitHub-Release mit signierter APK (zum Installieren) und AAB (für den Play Store),
-# danach kommen die Desktop-Programme für Windows, macOS und Linux dazu (desktop.yml).
+# Erstellt ein GitHub-Release mit den Desktop-Programmen für Windows, macOS und Linux (desktop.yml).
+# Signierte APK und AAB (für die Play Console) kommen in einen nicht öffentlichen Entwurf „Android X (privat)“.
 # Auslöser, jeweils nur wenn es für die Version noch kein Release gibt:
 #   1. Neue Version in package.json (und CHANGELOG.md) nach main pushen: Release entsteht automatisch.
 #   2. Tag pushen: git tag v1.2.0 && git push origin v1.2.0
@@ -133,14 +133,26 @@ jobs:
       - name: Release-Notizen aus dem CHANGELOG
         run: node scripts/release-notes.mjs "$VERSION" "$SIGNING" > release-notes.md
 
-      - name: GitHub-Release veröffentlichen
+      - name: Android privat ablegen (Entwurf, nur für dich sichtbar)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Entwürfe sieht nur, wer Schreibrechte hat. Der Tag entsteht erst beim Veröffentlichen, also nie.
+          gh release create "android-$TAG" dist/* \
+            --draft \
+            --target "$GITHUB_SHA" \
+            --title "Android $VERSION (privat)" \
+            --notes "APK zum Ausprobieren und App-Bundle (AAB) für die Play Console. Nur für dich sichtbar, nicht veröffentlichen."
+
+      - name: Öffentliches Release anlegen (Desktop-Dateien kommen danach dazu)
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           FLAGS=""
           if [ "$SIGNING" = "debug" ]; then FLAGS="--prerelease"; fi
-          gh release create "$TAG" dist/* \
+          gh release create "$TAG" \
             --target "$GITHUB_SHA" \
             --title "Netzblick $VERSION" \
             --notes-file release-notes.md \

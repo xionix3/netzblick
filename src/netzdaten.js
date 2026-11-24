@@ -130,7 +130,8 @@ export const PRIVACY_URL = 'https://gist.github.com/xionix3/f85c9898dc518f80e8a4
  * Links zu Zahlungen außerhalb von Google Play, auch zu Seiten, die dorthin führen.
  */
 export const DONATE = [
-  { id: 'github', label: 'Kaffee spendieren über GitHub Sponsors', url: 'https://github.com/sponsors/xionix3' },
+  { id: 'paypal', label: 'Kaffee spendieren über PayPal', url: 'https://paypal.me/geisterit' },
+  { id: 'github', label: 'Über GitHub Sponsors', url: 'https://github.com/sponsors/xionix3' },
 ];
 
 export const CONTACT = {
