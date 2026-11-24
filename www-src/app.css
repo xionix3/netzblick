@@ -614,6 +614,18 @@ body::after {
   .cards > .panel:nth-child(odd) { margin-right: 0; }
 }
 
+/* ------------------------------------------------------------ Große Bildschirme und Desktop-Programm:
+   Kennzahlen als Leiste unter Summe und Diagramm, Diagramm so hoch wie die Summe daneben */
+@media (min-width: 1560px) { .page { max-width: 1440px; } }
+@container page (min-width: 1000px) {
+  .content > .kpis { grid-column: 1 / -1; grid-row: 3; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .content > .kpis .kpi { border-bottom: 0; border-right: 1px solid var(--line); }
+  .content > .kpis .kpi:last-child { border-right: 0; }
+  .content > .panel--main { grid-row: 2; align-self: stretch; display: flex; flex-direction: column; }
+  .content > .panel--main .chart--main { flex: 1 1 auto; height: auto; min-height: 340px; }
+  .content > .hero { padding-bottom: 18px; }
+}
+
 /* ------------------------------------------------------------ Querformat am Handy */
 @media (orientation: landscape) and (max-height: 560px) {
   .controls { position: static; }

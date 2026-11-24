@@ -236,7 +236,8 @@ export function renderSpotPage(body, ctx) {
         h('span', { class: 'seq-bar', style: `background:linear-gradient(90deg, ${charts.tokens().divBar.join(', ')})` }),
         h('span', { text: 'teurer als der Tagesschnitt' })),
       st.negative ? h('p', { class: 'note', text: `${st.negative} ${per === 'Stunde' ? (st.negative === 1 ? 'Stunde' : 'Stunden') : (st.negative === 1 ? 'Viertelstunde' : 'Viertelstunden')} mit negativem ${mode === 'mine' ? 'Preis: Du bekommst Geld für den Strom.' : 'Börsenpreis.'}` }) : null);
-    charts.render(chart, charts.spotDayOption(charts.tokens(), { pts, step, now: isToday ? now : null, scale, label: label() }));
+    const T = charts.tokens();
+    charts.render(chart, charts.zoomable(charts.spotDayOption(T, { pts, step, now: isToday ? now : null, scale, label: label() }), T, pts.length, { min: 96 }));
 
     // Zeitfenster: heute ab jetzt, sonst der ganze Tag
     const from = cur ? cur.t : null;

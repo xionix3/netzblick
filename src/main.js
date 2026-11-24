@@ -1026,7 +1026,7 @@ function renderPower(d) {
     const series = per.map((x, i) => ({ name: x.name, color: x.color, data: axis.map((m) => { const e = maps[i].get(m.getTime()); return { v: e ? e.kw : null, t: e ? e.t : null }; }) }));
     cfg = { bucket: 'month', axis, days: daysBetween(v.period.start, v.period.end), series, limit: lineOn ? limit : null };
   }
-  charts.render(chartEl, charts.powerOption(T, cfg));
+  charts.render(chartEl, charts.zoomable(charts.powerOption(T, cfg), T, cfg.axis.length));
   renderPowerBox(d);
 }
 
@@ -1088,7 +1088,7 @@ function renderMain(d) {
     }
     renderMainLegend(d, type, compare ? compare.name : null);
     chartEl.classList.toggle('chart--tall', bucket === 'quarter');
-    charts.render(chartEl, charts.mainOption(T, { bucket, axis, days, series, compare, type }));
+    charts.render(chartEl, charts.zoomable(charts.mainOption(T, { bucket, axis, days, series, compare, type }), T, axis.length));
   }
 
   // Hinweise: Ersatzwerte, Filter, die nicht greifen

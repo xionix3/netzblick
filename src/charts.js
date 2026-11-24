@@ -1,12 +1,12 @@
 // Diagramme (ECharts, nur benötigte Module → kleines Bundle)
 import * as echarts from 'echarts/core';
 import { BarChart, LineChart, HeatmapChart, PieChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, MarkLineComponent } from 'echarts/components';
+import { GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, MarkLineComponent, DataZoomComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { num, time, dateLong, dateShort, dateNum, WEEKDAYS_SHORT, MONTHS_SHORT, MONTHS_LONG, isoDate } from './format.js';
 import { STATUS_LABEL } from './model.js';
 
-echarts.use([BarChart, LineChart, HeatmapChart, PieChart, GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, MarkLineComponent, CanvasRenderer]);
+echarts.use([BarChart, LineChart, HeatmapChart, PieChart, GridComponent, TooltipComponent, VisualMapComponent, CalendarComponent, MarkPointComponent, MarkLineComponent, DataZoomComponent, CanvasRenderer]);
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -36,9 +36,93 @@ export function render(el, option) {
     c = echarts.init(el, null, { renderer: 'canvas' });
     hosts.set(el, c);
     if (ro) ro.observe(el);
+    // Doppelklick setzt den Zoom zurück
+    c.getZr().on('dblclick', () => {
+      const dz = c.getOption().dataZoom;
+      if (dz && dz.length) c.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+    });
+    el.addEventListener('wheel', (e) => wheelZoom(c, el, e), { passive: false });
   }
   c.setOption(option, true);
+  c.off('datazoom');
+  const relabel = relabelers.get(option);
+  const count = option.xAxis && option.xAxis.data ? option.xAxis.data.length : 0;
+  if (relabel && option.dataZoom && count) {
+    let last = count;
+    c.on('datazoom', () => {
+      const dz = (c.getOption().dataZoom || [])[0];
+      if (!dz) return;
+      const span = Math.max(2, Math.round(((dz.end - dz.start) / 100) * count));
+      if (Math.abs(span - last) < Math.max(2, last * 0.05)) return;
+      last = span;
+      c.setOption({ xAxis: { axisLabel: relabel(span) } });
+    });
+  }
   return c;
+}
+
+/* ------------------------------------------------------------ Zoomen */
+// Regler unter dem Diagramm (Maus und Touch). Dazu mit Maus/Touchpad: Strg + Mausrad oder zwei Finger spreizen zoomt,
+// Umschalt + Mausrad oder seitlich wischen verschiebt, Doppelklick setzt zurück. Das normale Mausrad scrollt weiter die Seite
+// (ECharts' eigener „inside“-Zoom würde es abfangen, darum eigene Behandlung in wheelZoom()).
+
+function rgba(hex, a) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex).trim());
+  return m ? `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${a})` : hex;
+}
+
+/** Strg + Rad zoomt um den Mauszeiger, Umschalt + Rad bzw. seitliches Wischen verschiebt; sonst nichts tun (Seite scrollt) */
+function wheelZoom(c, el, e) {
+  const opt = c.getOption();
+  const dz = opt.dataZoom && opt.dataZoom[0];
+  if (!dz) return;
+  const sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+  if (!e.ctrlKey && !e.shiftKey && !sideways) return;
+  e.preventDefault();
+  const count = (opt.xAxis && opt.xAxis[0] && opt.xAxis[0].data ? opt.xAxis[0].data.length : 0) || 1;
+  const minWidth = Math.min(100, ((dz.minValueSpan || 4) / count) * 100);
+  let start = dz.start, end = dz.end;
+  const width = end - start;
+  if (e.ctrlKey) {
+    const rect = el.getBoundingClientRect();
+    const idx = c.convertFromPixel({ xAxisIndex: 0 }, e.clientX - rect.left);
+    const p = Number.isFinite(idx) ? Math.min(100, Math.max(0, (idx / Math.max(1, count - 1)) * 100)) : start + width / 2;
+    const factor = Math.exp(Math.max(-1, Math.min(1, e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.002))));
+    const w = Math.min(100, Math.max(minWidth, width * factor));
+    start = p - ((p - start) * w) / width;
+    end = start + w;
+  } else {
+    const d = sideways ? e.deltaX : e.deltaY;
+    const shift = (width * Math.max(-1, Math.min(1, d * (e.deltaMode === 1 ? 0.05 : 0.002)))) / 2;
+    start += shift;
+    end += shift;
+  }
+  if (start < 0) { end -= start; start = 0; }
+  if (end > 100) { start -= end - 100; end = 100; }
+  c.dispatchAction({ type: 'dataZoom', start: Math.max(0, start), end: Math.min(100, end) });
+}
+
+/** Zeitachse zoombar machen, sobald es viele Werte sind. Ändert und liefert option. */
+export function zoomable(option, T, count, { min = 48 } = {}) {
+  if (count <= min) return option;
+  const span = Math.min(12, Math.max(4, Math.round(count / 40)));
+  option.dataZoom = [
+    {
+      type: 'slider', xAxisIndex: 0, filterMode: 'none', minValueSpan: span,
+      height: 22, bottom: 4, left: 44, right: 18,
+      showDetail: false, brushSelect: false, throttle: 60,
+      borderColor: T.line, borderRadius: 6, backgroundColor: 'transparent',
+      fillerColor: rgba(T.s[0], 0.12),
+      dataBackground: { lineStyle: { color: T.axis, width: 1, opacity: 0.6 }, areaStyle: { color: T.line, opacity: 0.6 } },
+      selectedDataBackground: { lineStyle: { color: T.s[0], width: 1, opacity: 0.8 }, areaStyle: { color: T.s[0], opacity: 0.18 } },
+      handleSize: '120%', handleStyle: { color: T.surface, borderColor: T.axis, borderWidth: 1 },
+      moveHandleSize: 6, moveHandleStyle: { color: T.axis, opacity: 0.5 },
+      emphasis: { handleStyle: { borderColor: T.s[0] }, moveHandleStyle: { color: T.s[0], opacity: 0.8 } },
+      textStyle: { color: T.muted },
+    },
+  ];
+  option.grid = { ...option.grid, bottom: 38 };
+  return option;
 }
 
 export function dispose(el) {
@@ -79,36 +163,71 @@ function yAxis(T, unit) {
 }
 
 /** Beschriftung einer Kategorie-Achse je nach Bucket */
-function axisLabelFor(bucket, axis, days) {
+// Beschriftung der Zeitachse. Datum aus dem Kategoriewert (Zeitstempel), nicht aus dem Index:
+// beim Zoomen zählt ECharts den Index ab dem sichtbaren Ausschnitt.
+// span = Anzahl sichtbarer Werte (beim Zoomen kleiner als axis.length)
+const dateOf = (v) => new Date(Number(v));
+const midnight = (d) => d.getHours() === 0 && d.getMinutes() === 0;
+function axisLabelFor(bucket, axis, days, span = axis.length) {
+  const zoomed = span < axis.length;
   if (bucket === 'quarter') {
-    const multiDay = days > 1;
-    const long = days > 7; // Monat in Viertelstunden: jede Woche ein Datum
+    const visDays = span / 96;
+    if (!zoomed) {
+      const multiDay = days > 1;
+      const long = days > 7; // Monat in Viertelstunden: jede Woche ein Datum
+      return {
+        interval: (_, v) => {
+          const d = dateOf(v);
+          if (long) return midnight(d) && (d.getDate() - 1) % 7 === 0;
+          if (multiDay) return midnight(d);
+          return d.getMinutes() === 0 && d.getHours() % 6 === 0;
+        },
+        formatter: (v) => {
+          const d = dateOf(v);
+          return long ? `${d.getDate()}.${d.getMonth() + 1}.` : multiDay ? WEEKDAYS_SHORT[(d.getDay() + 6) % 7] : time(d);
+        },
+      };
+    }
+    // Gezoomt: Abstände nach sichtbarer Spanne, an Tagesgrenzen immer das Datum
+    const hours = visDays > 14 ? 0 : visDays > 4 ? 24 : visDays > 2 ? 12 : visDays > 1 ? 6 : visDays > 0.5 ? 3 : 1;
+    const everyDays = visDays > 28 ? 7 : visDays > 14 ? 2 : 1;
     return {
-      interval: (i) => {
-        const d = axis[i];
-        if (!d) return false;
-        if (long) return d.getHours() === 0 && d.getMinutes() === 0 && (d.getDate() - 1) % 7 === 0;
-        if (multiDay) return d.getHours() === 0 && d.getMinutes() === 0;
-        return d.getMinutes() === 0 && d.getHours() % 6 === 0;
+      interval: (_, v) => {
+        const d = dateOf(v);
+        if (hours === 0 || hours === 24) return midnight(d) && (d.getDate() - 1) % everyDays === 0;
+        return d.getMinutes() === 0 && d.getHours() % hours === 0;
       },
-      formatter: (_, i) => {
-        const d = axis[i];
-        return long ? `${d.getDate()}.${d.getMonth() + 1}.` : multiDay ? WEEKDAYS_SHORT[(d.getDay() + 6) % 7] : time(d);
+      formatter: (v) => {
+        const d = dateOf(v);
+        if (midnight(d)) return visDays > 4 ? `${d.getDate()}.${d.getMonth() + 1}.` : `${WEEKDAYS_SHORT[(d.getDay() + 6) % 7]} ${d.getDate()}.${d.getMonth() + 1}.`;
+        return time(d);
       },
     };
   }
   if (bucket === 'day') {
-    const step = axis.length > 40 ? 14 : axis.length > 14 ? 7 : 1;
+    const step = span > 120 ? 30 : span > 40 ? 14 : span > 14 ? 7 : 1;
+    const first = axis.length ? axis[0].getTime() : 0;
+    const idx = (v) => Math.round((Number(v) - first) / 86400000);
     return {
-      interval: (i) => (axis.length <= 14 ? true : (i % step === 0)),
-      formatter: (_, i) => (axis.length <= 7 ? WEEKDAYS_SHORT[(axis[i].getDay() + 6) % 7] : axis.length <= 31 ? String(axis[i].getDate()) : dateShort(axis[i])),
+      interval: (_, v) => (span <= 14 ? true : idx(v) % step === 0),
+      formatter: (v) => {
+        const d = dateOf(v);
+        return axis.length <= 7 ? WEEKDAYS_SHORT[(d.getDay() + 6) % 7] : axis.length <= 31 ? String(d.getDate()) : dateShort(d);
+      },
     };
   }
   if (bucket === 'month') {
-    return { interval: (i) => axis.length <= 12 || i % 3 === 0, formatter: (_, i) => (axis.length <= 12 ? MONTHS_SHORT[axis[i].getMonth()] : `${MONTHS_SHORT[axis[i].getMonth()]} ${String(axis[i].getFullYear()).slice(2)}`) };
+    const step = span <= 12 ? 1 : span <= 48 ? 3 : 6;
+    return {
+      interval: (_, v) => { const d = dateOf(v); return step === 1 || d.getMonth() % step === 0; },
+      formatter: (v) => { const d = dateOf(v); return axis.length <= 12 ? MONTHS_SHORT[d.getMonth()] : `${MONTHS_SHORT[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`; },
+    };
   }
-  return { interval: 0, formatter: (_, i) => (axis.length > 6 ? `’${String(axis[i].getFullYear()).slice(2)}` : String(axis[i].getFullYear())) };
+  return { interval: 0, formatter: (v) => { const d = dateOf(v); return axis.length > 6 ? `’${String(d.getFullYear()).slice(2)}` : String(d.getFullYear()); } };
 }
+
+/** Beschriftung neu berechnen, wenn gezoomt wird (render() ruft das bei „datazoom“ auf) */
+const relabelers = new WeakMap();
 
 export function bucketLabel(bucket, d) {
   if (bucket === 'quarter') return `${dateLong(d)}, ${time(d)}–${time(new Date(d.getTime() + 900000))}`;
@@ -199,7 +318,7 @@ export function mainOption(T, cfg) {
   });
 
   const fmtVal = (v) => (v == null ? '–' : `${num(v, power && v < 10 ? 2 : undefined)} ${unit}`);
-  return {
+  const option = {
     animationDuration: 450,
     animationEasing: 'cubicOut',
     textStyle: { fontFamily: T.font },
@@ -239,6 +358,8 @@ export function mainOption(T, cfg) {
     yAxis: yAxis(T, unit),
     series: out,
   };
+  relabelers.set(option, (span) => axisLabelFor(bucket, axis, cfg.days, span));
+  return option;
 }
 
 /**
@@ -302,7 +423,7 @@ export function powerOption(T, cfg) {
   }
   const y = yAxis(T, 'kW');
   if (limit != null) y.max = (v) => Math.ceil(Math.max(v.max, limit) * 1.12);
-  return {
+  const option = {
     animationDuration: 450,
     animationEasing: 'cubicOut',
     textStyle: { fontFamily: T.font },
@@ -334,6 +455,8 @@ export function powerOption(T, cfg) {
     yAxis: y,
     series: out,
   };
+  relabelers.set(option, (span) => axisLabelFor(months ? 'month' : 'quarter', axis, cfg.days, span));
+  return option;
 }
 
 /**

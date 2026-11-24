@@ -165,6 +165,8 @@ Download the right file from [**Releases**](https://github.com/xionix3/netzblick
 - **Meters:** tap the name at the top (tick several or "nur dieser"), or tap them in the chart legend.
 - **Power:** its own chart below consumption; toggle the 10 kW line at its top right.
 - **Chart type:** icons above the chart; the choice is remembered per resolution.
+- **Zoom:** with many values (quarter hours over days or weeks) there is a slider under the chart: drag the ends to zoom, the middle to pan. With mouse or touchpad also Ctrl + mouse wheel or pinch, pan with Shift + wheel or a sideways swipe; double-click shows everything again.
+- **Desktop program:** Ctrl + plus/minus (Mac: ⌘) zooms the whole view, Ctrl + 0 resets it.
 - **Comparison and filters:** chips below the date. Active filters turn dark and can be removed with ✕.
 - **Strompreis:** supplier price (incl. VAT), reminder, yearly cost, grid prices.
 - **Konto:** status of both portals and how the app signs in to the customer portal.

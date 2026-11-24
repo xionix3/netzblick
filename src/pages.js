@@ -737,7 +737,8 @@ async function renderSpotToday(box, sup, ctx) {
     chart,
     h('p', { class: 'note', text: `Börsenpreis EPEX Spot Österreich + ${sup.pct ? `${num(sup.pct, 1)} % + ` : ''}${num(sup.ct, 2)} ct Aufschlag, inklusive USt. Quelle der Börsenpreise: ${SPOT_SOURCE.label}.` }),
     h('div', { class: 'panel-actions' }, h('button', { class: 'btn btn--small', type: 'button', onclick: () => ctx.goto('spot') }, icon('spot'), 'Alle Börsenpreise')));
-  charts.render(chart, charts.spotOption(charts.tokens(), { pts, step, now }));
+  const T = charts.tokens();
+  charts.render(chart, charts.zoomable(charts.spotOption(T, { pts, step, now }), T, pts.length, { min: 96 }));
 }
 
 /* ================================================================ Kosten */

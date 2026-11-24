@@ -177,6 +177,8 @@ gh attestation verify Netzblick-X.Y.Z-Windows-Setup.exe --repo xionix3/netzblick
 - **Zählpunkte:** Tipp auf den Namen oben (mehrere ankreuzen oder „nur dieser“), oder in der Diagrammlegende antippen.
 - **Leistung:** eigenes Diagramm unter dem Verbrauch; die 10-kW-Linie schaltest du oben rechts darin ein und aus.
 - **Diagrammart:** Symbole rechts über dem Diagramm; die Wahl wird je Auflösung gemerkt.
+- **Zoomen:** Bei vielen Werten (Viertelstunden über Tage oder Wochen) liegt unter dem Diagramm ein Regler: Enden ziehen zum Zoomen, Mitte ziehen zum Verschieben. Mit Maus oder Touchpad geht es auch mit Strg + Mausrad bzw. zwei Finger spreizen, verschieben mit Umschalt + Mausrad oder seitlich wischen; Doppelklick zeigt wieder alles.
+- **Desktop-Programm:** Strg + Plus/Minus (Mac: ⌘) vergrößert oder verkleinert die ganze Ansicht, Strg + 0 setzt sie zurück.
 - **Vergleich und Filter:** Chips unter dem Datum. Aktive Filter erscheinen dunkel und lassen sich mit ✕ entfernen.
 - **Strompreis:** Preis des Lieferanten (brutto), Erinnerung an Rabatt- oder Bindungsende, Jahreskosten, Netzpreise.
 - **Konto:** Status beider Portale; dort wählst du, ob das Kundenportal die Smart-Meter-Anmeldung nutzt, eigene Zugangsdaten bekommt oder aus ist.

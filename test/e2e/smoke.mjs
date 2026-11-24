@@ -510,6 +510,42 @@ await scenario('Tablet quer: Menü fest, Summe neben dem Diagramm', {
     ];
   },
 });
+await scenario('Computer: Kennzahlen als Leiste, Leistung zoombar', {
+  query: '&period=month&sel=all',
+  viewport: { width: 1600, height: 1000, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
+  checks: async (s, page) => {
+    const g = await page.evaluate(() => {
+      const r = (el) => { const x = el.getBoundingClientRect(); return { top: x.top, bottom: x.bottom, left: x.left, right: x.right }; };
+      const kpis = [...document.querySelectorAll('.content > .kpis .kpi')].map((k) => r(k).top);
+      return { kpis, hero: r(document.querySelector('#hero')), main: r(document.querySelector('#mainPanel')), slider: !!document.querySelector('.panel--power .chart canvas') };
+    });
+    const sameRow = g.kpis.length >= 4 && Math.max(...g.kpis) - Math.min(...g.kpis) < 2;
+    return [
+      expect(sameRow, 'Kennzahlen stehen nicht in einer Reihe: ' + JSON.stringify(g.kpis)),
+      expect(g.main.bottom >= g.hero.bottom - 2, `Unter dem Diagramm bleibt eine Lücke: Diagramm endet bei ${Math.round(g.main.bottom)}, Summe bei ${Math.round(g.hero.bottom)}`),
+    ];
+  },
+  actions: async (page) => {
+    // Strg + Mausrad über dem Leistungsdiagramm zoomt, ohne die Seite zu scrollen
+    await page.$eval('.panel--power .chart', (el) => window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 200));
+    await sleep(300);
+    const before = await page.evaluate(() => scrollY);
+    const bb = await (await page.$('.panel--power .chart')).boundingBox();
+    await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 3);
+    await page.keyboard.down('Control');
+    await page.mouse.wheel({ deltaY: -300 });
+    await page.keyboard.up('Control');
+    await sleep(300);
+    const after = await page.evaluate(() => scrollY);
+    if (after !== before) throw new Error(`Strg + Mausrad hat gescrollt (${before} → ${after})`);
+    await page.mouse.wheel({ deltaY: 200 });
+    await sleep(400);
+    const scrolled = await page.evaluate(() => scrollY);
+    if (scrolled <= after) throw new Error('Mausrad über dem Diagramm scrollt die Seite nicht');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await sleep(200);
+  },
+});
 await scenario('Handy quer: Diagramm neben der Summe', {
   query: '&period=day&date=2026-10-07&sel=all',
   viewport: { width: 844, height: 390, deviceScaleFactor: 2, isMobile: true, hasTouch: true, isLandscape: true },

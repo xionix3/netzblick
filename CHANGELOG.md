@@ -5,6 +5,16 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.1] – 2026-11-24
+
+### Neu
+- **Zoomen in den Diagrammen.** Verbrauch, Leistung und Börsenpreis haben bei vielen Werten einen Regler unter dem Diagramm (auch am Handy). Mit Maus oder Touchpad zusätzlich Strg + Mausrad bzw. zwei Finger spreizen, Umschalt + Mausrad zum Verschieben, Doppelklick setzt zurück. Die Achsenbeschriftung passt sich dem Ausschnitt an (Tage, Stunden).
+- Desktop-Programm: Strg + Plus/Minus/0 vergrößert, verkleinert oder setzt die ganze Ansicht zurück.
+
+### Geändert
+- Große Bildschirme: Die Kennzahlen stehen als Leiste unter Summe und Diagramm, das Diagramm ist so hoch wie die Summe daneben. Keine leere Fläche mehr unter dem Diagramm, und auf sehr breiten Bildschirmen nutzt die Ansicht mehr Breite.
+- Desktop-Programm: Das Fenster passt beim ersten Start zum Bildschirm (auf kleinen Bildschirmen maximiert) und bekommt gleich den Fokus, damit Mausrad und Tastatur sofort scrollen.
+
 ## [1.8.0] – 2026-11-23
 
 ### Neu

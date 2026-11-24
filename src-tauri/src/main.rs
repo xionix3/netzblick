@@ -163,12 +163,28 @@ fn main() {
                 .build()?;
             app.manage(Http(client));
 
+            // Fenstergröße passend zum Bildschirm: auf kleinen Bildschirmen maximiert, sonst groß und mittig.
+            // Eine gespeicherte Größe vom letzten Mal (window-state) hat Vorrang.
+            let screen = app.handle().primary_monitor().ok().flatten().map(|m| {
+                let s = m.scale_factor();
+                (m.size().width as f64 / s, m.size().height as f64 / s)
+            });
+            let (w, h, maximized) = match screen {
+                Some((sw, sh)) if sw < 1400.0 || sh < 900.0 => (sw.min(1280.0), (sh - 80.0).max(560.0), true),
+                Some((sw, sh)) => ((sw * 0.85).min(1480.0), ((sh - 80.0) * 0.9).min(1000.0), false),
+                None => (1180.0, 760.0, false),
+            };
+
             let handle = app.handle().clone();
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Netzblick")
-                .inner_size(1180.0, 820.0)
-                .min_inner_size(380.0, 560.0)
+                .inner_size(w, h)
+                .min_inner_size(380.0, 520.0)
+                .maximized(maximized)
                 .center()
+                .focused(true)
+                // Strg + Plus/Minus/0 und Strg + Mausrad vergrößern die ganze Oberfläche
+                .zoom_hotkeys_enabled(true)
                 // Fremde Adressen nicht im Programmfenster laden, sondern im Browser öffnen
                 .on_navigation(move |url| {
                     if is_internal(url) {
@@ -179,7 +195,9 @@ fn main() {
                     }
                     false
                 })
-                .build()?;
+                .build()?
+                // Fokus gleich ins Fenster, damit Mausrad und Tastatur sofort scrollen
+                .set_focus()?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
