@@ -17,7 +17,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "app", "dmg", "appimage", "deb"],
+    "targets": [
+      "nsis",
+      "app",
+      "dmg",
+      "appimage",
+      "deb"
+    ],
     "publisher": "geister-it",
     "copyright": "© 2026 geister-it",
     "homepage": "https://github.com/xionix3/netzblick",
@@ -36,7 +42,10 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["German", "English"],
+        "languages": [
+          "German",
+          "English"
+        ],
         "displayLanguageSelector": false
       }
     },
@@ -47,6 +56,17 @@
     "linux": {
       "deb": {
         "section": "utils"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/xionix3/netzblick/releases/latest/download/latest.json"
+      ],
+      "pubkey": "",
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

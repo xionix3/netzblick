@@ -3,15 +3,18 @@
 //   - Anfragen an die Portale direkt vom Programm aus (kein Umweg über einen Server, keine Browser-Sperre)
 //   - Ablage der Zugangsdaten im Schlüsselbund des Systems
 //   - Speichern von Dateien und Öffnen von Links im Standardprogramm
+//   - Updates im Programm (signiert mit eigenem Schlüssel, siehe build.rs)
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
+use tauri_plugin_updater::UpdaterExt;
 
 /// Nur diese Server darf die Oberfläche ansprechen.
 const ALLOWED_HOSTS: &[&str] = &[
@@ -102,6 +105,51 @@ fn secret_remove(key: String) -> Result<(), String> {
     }
 }
 
+/* ------------------------------------------------------------------ Updates im Programm */
+
+/// Öffentlicher Schlüssel, mit dem Updates signiert sein müssen (aus updater.pub, siehe build.rs)
+const UPDATER_PUBKEY: Option<&str> = option_env!("NETZBLICK_UPDATER_PUBKEY");
+
+/// Selbst aktualisieren geht mit Schlüssel und unter Linux nur als AppImage (ein .deb-Paket aktualisiert die Paketverwaltung)
+fn updater_supported() -> bool {
+    if UPDATER_PUBKEY.map_or(true, |k| k.trim().is_empty()) {
+        return false;
+    }
+    if cfg!(target_os = "linux") && std::env::var_os("APPIMAGE").is_none() {
+        return false;
+    }
+    true
+}
+
+#[derive(Default)]
+struct PendingUpdate(Mutex<Option<tauri_plugin_updater::Update>>);
+
+#[derive(Serialize)]
+struct UpdateInfo {
+    version: String,
+    notes: Option<String>,
+}
+
+/// Neue Version suchen. Fehler „unsupported“: dann zeigt die Oberfläche den Download-Link.
+#[tauri::command]
+async fn update_check(app: tauri::AppHandle, pending: tauri::State<'_, PendingUpdate>) -> Result<Option<UpdateInfo>, String> {
+    if !updater_supported() {
+        return Err("unsupported".into());
+    }
+    let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
+    let info = update.as_ref().map(|u| UpdateInfo { version: u.version.clone(), notes: u.body.clone() });
+    *pending.0.lock().map_err(|e| e.to_string())? = update;
+    Ok(info)
+}
+
+/// Gefundene Version herunterladen (Signatur wird geprüft), installieren und neu starten
+#[tauri::command]
+async fn update_install(app: tauri::AppHandle, pending: tauri::State<'_, PendingUpdate>) -> Result<(), String> {
+    let update = pending.0.lock().map_err(|e| e.to_string())?.take().ok_or("Keine neue Version gefunden")?;
+    update.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    app.restart();
+}
+
 /* ------------------------------------------------------------------ Dateien und Links */
 
 /// Fragt nach dem Speicherort und schreibt die Textdatei. Ergebnis: false, wenn abgebrochen.
@@ -141,10 +189,15 @@ fn is_internal(url: &tauri::Url) -> bool {
 }
 
 fn main() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(PendingUpdate::default());
+    if let Some(key) = UPDATER_PUBKEY.filter(|k| !k.trim().is_empty()) {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().pubkey(key).build());
+    }
+    builder
         .setup(|app| {
             let version = app.package_info().version.to_string();
             let client = reqwest::Client::builder()
@@ -206,7 +259,9 @@ fn main() {
             secret_set,
             secret_remove,
             save_text_file,
-            open_external
+            open_external,
+            update_check,
+            update_install
         ])
         .run(tauri::generate_context!())
         .expect("Netzblick konnte nicht gestartet werden");

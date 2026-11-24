@@ -12,7 +12,7 @@ import { makePeriod, addDays, startOfDay, daysBetween } from './time.js';
 import { num, kwh, kw, euro, pct, dateNum, dateLong, time, MONTHS_LONG, MONTHS_SHORT } from './format.js';
 import { costParts, costTotal, costTable, costNotes } from './costview.js';
 import * as charts from './charts.js';
-import { secure, saveSettings, scheduleReminder, cancelReminder, reminderPending, shareFile, openExternal, isNative } from './platform.js';
+import { secure, saveSettings, scheduleReminder, cancelReminder, reminderPending, shareFile, openExternal, isNative, isDesktop } from './platform.js';
 import { cacheClear } from './cache.js';
 import { ApiError } from './api.js';
 
@@ -338,7 +338,8 @@ export function renderInfo(body, ctx) {
     mark,
     h('h2', { class: 'info-name', text: 'Netzblick' }),
     h('p', { class: 'info-tag', text: 'Deinen Stromverbrauch im Blick' }),
-    h('p', { class: 'info-ver', text: `Version ${ctx.APP_VERSION}` }));
+    h('p', { class: 'info-ver', text: `Version ${ctx.APP_VERSION}` }),
+    isDesktop && !ctx.PREVIEW ? h('button', { class: 'btn btn--small', type: 'button', onclick: () => ctx.checkForUpdate({ manual: true }) }, 'Nach neuer Version suchen') : null);
   body.append(hero);
   requestAnimationFrame(() => requestAnimationFrame(() => spinBrand(mark, ['1', '8', '0'])));
 
@@ -401,8 +402,8 @@ export function renderTariff(body, ctx) {
   const numIn = (val, ph) => h('input', { class: 'input', type: 'number', inputmode: 'decimal', step: '0.01', placeholder: ph, value: val != null ? String(val) : '' });
   const contract = s.contract || {};
   const all = s.supplier.all;
-  // Name nur, wenn du ihn selbst eingetragen hast; der Lieferant laut Netz Burgenland steht als Hinweis darunter
-  const nameIn = h('input', { class: 'input', type: 'text', maxlength: '60', placeholder: 'z. B. Burgenland Energie', value: contract.supplier || '' });
+  // Vorbelegt mit dem Lieferanten laut Kundenportal, solange du keinen eigenen Namen gespeichert hast
+  const nameIn = h('input', { class: 'input', type: 'text', maxlength: '60', placeholder: 'z. B. Burgenland Energie', value: contract.supplier || kpSupplier });
   const apIn = numIn(all.ap, 'z. B. 14,9');
   const gpIn = numIn(all.gp, 'z. B. 3,9');
   let tariffKind = all.kind === 'dynamic' ? 'dynamic' : 'fixed';
@@ -477,7 +478,7 @@ export function renderTariff(body, ctx) {
     return { mp, ap: numIn(m.ap, 'wie oben'), gp: numIn(m.gp, 'wie oben') };
   }) : [];
   let meterType = s.meterType || 'three';
-  const typeBtns = [['three', 'Drehstrom'], ['single', 'Wechselstrom']].map(([id, label]) => h('button', {
+  const typeBtns = [['three', 'Drehstrom (3 Phasen)'], ['single', 'Wechselstrom (1 Phase)']].map(([id, label]) => h('button', {
     type: 'button', class: meterType === id ? 'on' : '', 'aria-pressed': meterType === id ? 'true' : 'false',
     onclick: (e) => { meterType = id; typeBtns.forEach((b) => { const on = b === e.currentTarget; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); },
   }, label));
@@ -509,7 +510,9 @@ export function renderTariff(body, ctx) {
     h('div', { class: 'form form--inline' },
       h('div', { class: 'field' }, h('span', { text: 'Tarif' }), h('div', { class: 'seg seg--small' }, ...tariffBtns)),
       h('label', { class: 'field' }, h('span', { text: 'Lieferant (optional)' }), nameIn),
-      kpSupplier ? h('p', { class: 'hint', text: `Bei Netz Burgenland als Lieferant gemeldet: ${kpSupplier}. Stimmt das nicht mehr, läuft ein Wechsel oft noch.` }) : null,
+      kpSupplier ? h('p', { class: 'hint', text: contract.supplier && contract.supplier.toLowerCase() !== kpSupplier.toLowerCase()
+        ? `Bei Netz Burgenland als Lieferant gemeldet: ${kpSupplier}. Weicht das ab, läuft ein Wechsel oft noch.`
+        : 'Aus dem Kundenportal von Netz Burgenland. Hast du gerade gewechselt, trag den neuen Lieferanten ein.' }) : null,
       fixedBox,
       dynBox,
       perMeter.length ? h('details', { class: 'more more--inline' }, h('summary', {}, 'Eigener Fixpreis je Zählpunkt, z. B. für eine Wärmepumpe'),
@@ -518,8 +521,8 @@ export function renderTariff(body, ctx) {
           h('div', { class: 'field-row' },
             h('label', { class: 'field' }, h('span', { text: 'Arbeitspreis (ct/kWh)' }), x.ap),
             h('label', { class: 'field' }, h('span', { text: 'Grundpreis (€/Monat)' }), x.gp))))) : null,
-      h('div', { class: 'field' }, h('span', { text: 'Zähler (für das Messentgelt)' }), h('div', { class: 'seg seg--small' }, ...typeBtns)),
-      h('p', { class: 'hint', text: `Messentgelt laut Netz Burgenland: Drehstrom ${euro(METERING.three * (1 + VAT))}, Wechselstrom ${euro(METERING.single * (1 + VAT))} pro Monat (brutto). Im Zweifel Drehstrom.` }),
+      h('div', { class: 'field' }, h('span', { text: 'Stromanschluss' }), h('div', { class: 'seg seg--small' }, ...typeBtns)),
+      h('p', { class: 'hint', text: `Davon hängt nur das Messentgelt von Netz Burgenland ab: Drehstrom ${euro(METERING.three * (1 + VAT))}, Wechselstrom ${euro(METERING.single * (1 + VAT))} im Monat. Fast jedes Haus hat Drehstrom (Starkstrom, z. B. für Herd, Wallbox oder Wärmepumpe). Wechselstrom gibt es meist nur bei kleinen Wohnungen, Gartenhäusern oder Garagen. Weißt du es nicht, lass Drehstrom.` }),
       h('button', { class: 'btn btn--primary', type: 'button', onclick: saveSupplier }, 'Speichern'))));
 
   /* ---- 1b) Börsenpreis heute und morgen (nur bei dynamischem Tarif) */

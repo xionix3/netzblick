@@ -154,6 +154,7 @@ jobs:
     with:
       tag: ${{ needs.version.outputs.tag }}
       version: ${{ needs.version.outputs.version }}
+    secrets: inherit
     permissions:
       contents: write
       id-token: write

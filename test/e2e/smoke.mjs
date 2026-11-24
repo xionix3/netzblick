@@ -343,14 +343,14 @@ await scenario('Übersicht: „Alle Kosten“ öffnet die Seite Kosten', {
     expect(await page.$eval('#pageTitle', (e) => e.textContent === 'Kosten'), 'Seite Kosten nicht geöffnet'),
   ],
 });
-await scenario('Strompreis: Lieferant nicht aus dem Portal vorbelegt', {
+await scenario('Strompreis: Lieferant aus dem Kundenportal vorbelegt', {
   query: '&page=tariff',
-  actions: async (page) => { await waitText(page, /Bei Netz Burgenland als Lieferant gemeldet/); },
+  actions: async (page) => { await waitText(page, /Aus dem Kundenportal von Netz Burgenland/); },
   checks: async (s, page) => {
     const v = await page.evaluate(() => [...document.querySelectorAll('.field')].find((f) => /Lieferant \(optional\)/.test(f.textContent))?.querySelector('input')?.value);
     return [
-      expect(v === '', `Lieferant ist vorbelegt: ${v}`),
-      expect(/gemeldet: Musterstrom GmbH/.test(s.text), 'Hinweis auf gemeldeten Lieferanten fehlt'),
+      expect(v === 'Musterstrom GmbH', `Lieferant nicht vorbelegt: ${v}`),
+      expect(/Stromanschluss/.test(s.text) && /Fast jedes Haus hat Drehstrom/.test(s.text), 'Erklärung Drehstrom/Wechselstrom fehlt'),
       expect(!/Dein Strompreis heute und morgen/.test(s.text), 'Börsenpreise ohne dynamischen Tarif'),
     ];
   },

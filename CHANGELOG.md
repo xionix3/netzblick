@@ -5,6 +5,15 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.2] – 2026-11-24
+
+### Neu
+- **Desktop-Programm aktualisiert sich selbst** (sobald der Update-Schlüssel eingerichtet ist): Bei einer neuen Version lädt Netzblick sie auf Knopfdruck, prüft die Signatur, installiert und startet neu. Unter Info gibt es „Nach neuer Version suchen“. Ohne Schlüssel und beim .deb-Paket bleibt es beim Link zur Download-Seite.
+
+### Geändert
+- Strompreis: Das Feld „Lieferant“ ist wieder mit dem Lieferanten aus dem Kundenportal vorbelegt (seit 1.5.0 stand er nur als Hinweis darunter).
+- Strompreis: „Stromanschluss“ statt „Zähler“, mit Erklärung, was Drehstrom und Wechselstrom bedeuten und wie viel das Messentgelt ausmacht.
+
 ## [1.8.1] – 2026-11-24
 
 ### Neu

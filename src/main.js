@@ -10,8 +10,8 @@ import { makePeriod, shiftPeriod, periodTitle, periodShortName, daysBetween, add
 import { num, kwh, kw, watt, euro, pct, dateLong, dateTime, dateShort, dateNum, time, isoDate, WEEKDAYS_SHORT, MONTHS_LONG } from './format.js';
 import * as charts from './charts.js';
 import { icons } from './icons.js';
-import { http, secure, loadSettings, saveSettings, shareCsv, onBack, onResume, setSystemBars, openExternal, isDesktop } from './platform.js';
-import { latestRelease, isNewer, dueForCheck } from './update.js';
+import { http, secure, loadSettings, saveSettings, shareCsv, onBack, onResume, setSystemBars, openExternal, isDesktop, updater } from './platform.js';
+import { latestRelease, isNewer, dueForCheck, RELEASES_PAGE } from './update.js';
 import { demoHttp } from './demo.js';
 import { cacheClear } from './cache.js';
 import { $, h, icon, fillIcons, reduceMotion, setCounter, countUp, openSheet, closeSheet, toast, brandMark, spinBrand } from './ui.js';
@@ -359,7 +359,7 @@ function pageCtx() {
   return {
     state, APP_VERSION, PREVIEW,
     names: state.settings.meterNames,
-    meterColor, podFor, ensureKp, setupKp, logout, goto, openSettings, toast, renderPage,
+    meterColor, podFor, ensureKp, setupKp, logout, goto, openSettings, toast, renderPage, checkForUpdate,
     showUsage: (ids, period, opts = {}) => {
       if (ids) { state.selected = normalizeSelection(ids, state.mps); saveSelection(); }
       if (opts.power) state.scrollTo = 'powerPanel';
@@ -454,21 +454,55 @@ function enterDashboard() {
   if (!showWhatsNew() && isDesktop && !state.demo) checkForUpdate();
 }
 
-/** Desktop: einmal am Tag auf GitHub nach einer neuen Version sehen und darauf hinweisen */
-async function checkForUpdate() {
-  if (APP_VERSION === 'dev') return;
+/**
+ * Desktop: einmal am Tag nach einer neuen Version sehen (manual: sofort, mit Rückmeldung).
+ * Kann sich das Programm selbst aktualisieren, lädt und installiert es auf Knopfdruck; sonst Link zur Download-Seite.
+ */
+async function checkForUpdate({ manual = false } = {}) {
+  if (APP_VERSION === 'dev' || !isDesktop) return;
   try {
-    if (!dueForCheck(localStorage.getItem('nb.updateCheck'))) return;
-    localStorage.setItem('nb.updateCheck', String(Date.now()));
-    const rel = await latestRelease(http);
-    if (!rel || !isNewer(rel.version, APP_VERSION) || localStorage.getItem('nb.updateSkip') === rel.version) return;
+    if (!manual) {
+      if (!dueForCheck(localStorage.getItem('nb.updateCheck'))) return;
+      localStorage.setItem('nb.updateCheck', String(Date.now()));
+    }
+    if (manual) toast('Suche nach neuer Version …');
+    const native = await updater.check().catch(() => ({ supported: false }));
+    let version, url = null;
+    if (native.supported) {
+      if (!native.update) { if (manual) toast(`Du hast die neueste Version (${APP_VERSION}).`); return; }
+      version = native.update.version;
+    } else {
+      const rel = await latestRelease(http);
+      if (!rel || !isNewer(rel.version, APP_VERSION)) { if (manual) toast(`Du hast die neueste Version (${APP_VERSION}).`); return; }
+      version = rel.version; url = rel.url;
+    }
+    if (!manual && localStorage.getItem('nb.updateSkip') === version) return;
+    const status = h('p', { class: 'hint', hidden: true });
+    const go = h('button', { class: 'btn btn--primary', type: 'button' }, url ? 'Herunterladen' : 'Jetzt aktualisieren');
+    go.addEventListener('click', async () => {
+      if (url) { closeSheet(); openExternal(url); return; }
+      go.disabled = true; go.textContent = 'Wird geladen …';
+      status.hidden = false; status.textContent = 'Netzblick lädt die neue Version, prüft sie und startet danach neu.';
+      try {
+        await updater.install();
+      } catch (e) {
+        go.disabled = false; go.textContent = 'Nochmal versuchen';
+        status.textContent = `Das hat nicht geklappt (${e.message}). Du kannst die neue Version auch selbst herunterladen.`;
+        status.append(' ', h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal(RELEASES_PAGE) }, 'Download-Seite öffnen'));
+      }
+    });
     const body = h('div', { class: 'whatsnew' },
-      h('p', { text: `Netzblick ${rel.version} ist da (du hast ${APP_VERSION}). Lade die neue Version herunter und installiere sie über die bisherige, deine Einstellungen bleiben erhalten.` }),
+      h('p', { text: url
+        ? `Netzblick ${version} ist da (du hast ${APP_VERSION}). Lade die neue Version herunter und installiere sie über die bisherige, deine Einstellungen bleiben erhalten.`
+        : `Netzblick ${version} ist da (du hast ${APP_VERSION}). Das Programm lädt sie, prüft die Signatur, installiert sie und startet neu. Einstellungen und Anmeldung bleiben erhalten.` }),
+      status,
       h('div', { class: 'sheet-actions' },
-        h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { try { localStorage.setItem('nb.updateSkip', rel.version); } catch { /* */ } closeSheet(); } }, 'Diese Version auslassen'),
-        h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { closeSheet(); openExternal(rel.url); } }, 'Herunterladen')));
+        h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { try { localStorage.setItem('nb.updateSkip', version); } catch { /* */ } closeSheet(); } }, manual ? 'Später' : 'Diese Version auslassen'),
+        go));
     openSheet('Neue Version', body);
-  } catch { /* offline oder GitHub nicht erreichbar: beim nächsten Start wieder */ }
+  } catch {
+    if (manual) toast('Keine Verbindung zu GitHub, versuch es später noch einmal.');
+  }
 }
 
 /** Einmal pro Version zeigen, was neu ist (nicht in Demo-Links und Web-Vorschau) */

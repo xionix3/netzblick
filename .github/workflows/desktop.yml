@@ -80,7 +80,17 @@ jobs:
         shell: bash
         env:
           APP_VERSION: ${{ inputs.version }}
-        run: npx tauri build ${{ matrix.args }}
+          # Updates im Programm: nur mit Schlüssel (Secrets) und öffentlichem Schlüssel in src-tauri/updater.pub
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] && [ -s src-tauri/updater.pub ]; then
+            echo "Mit Update-Dateien (signiert)"
+            npx tauri build ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true}}'
+          else
+            echo "Ohne Update-Dateien (kein Schlüssel)"
+            npx tauri build ${{ matrix.args }}
+          fi
 
       - name: Dateien benennen
         id: files
@@ -91,9 +101,15 @@ jobs:
           mkdir out
           B="${{ matrix.dir }}"
           case "${{ matrix.name }}" in
-            Windows) cp "$B"/nsis/*-setup.exe "out/Netzblick-$V-Windows-Setup.exe" ;;
-            macOS)   cp "$B"/dmg/*.dmg "out/Netzblick-$V-macOS.dmg" ;;
+            Windows) cp "$B"/nsis/*-setup.exe "out/Netzblick-$V-Windows-Setup.exe"
+                     for f in "$B"/nsis/*-setup.exe.sig; do [ -f "$f" ] && cp "$f" "out/Netzblick-$V-Windows-Setup.exe.sig"; done ;;
+            macOS)   cp "$B"/dmg/*.dmg "out/Netzblick-$V-macOS.dmg"
+                     if [ -f "$B/macos/Netzblick.app.tar.gz.sig" ]; then
+                       cp "$B/macos/Netzblick.app.tar.gz" "out/Netzblick-$V-macOS.app.tar.gz"
+                       cp "$B/macos/Netzblick.app.tar.gz.sig" "out/Netzblick-$V-macOS.app.tar.gz.sig"
+                     fi ;;
             Linux)   cp "$B"/appimage/*.AppImage "out/Netzblick-$V-Linux-x86_64.AppImage"
+                     for f in "$B"/appimage/*.AppImage.sig; do [ -f "$f" ] && cp "$f" "out/Netzblick-$V-Linux-x86_64.AppImage.sig"; done
                      cp "$B"/deb/*.deb "out/netzblick_${V}_amd64.deb" ;;
           esac
           ls -la out
@@ -132,7 +148,29 @@ jobs:
         run: |
           mkdir files && cd files
           gh release download "$TAG" --pattern '*' --skip-existing
-          rm -f SHA256SUMS.txt
+          rm -f SHA256SUMS.txt latest.json
+          # Update-Beschreibung für das Programm (nur wenn signierte Update-Dateien da sind)
+          if ls *.sig >/dev/null 2>&1; then
+            python3 - <<'PY'
+          import json, os, datetime
+          tag = os.environ["TAG"]; v = tag.lstrip("v")
+          base = f"https://github.com/{os.environ['GH_REPO']}/releases/download/{tag}/"
+          files = {
+              "windows-x86_64": f"Netzblick-{v}-Windows-Setup.exe",
+              "darwin-aarch64": f"Netzblick-{v}-macOS.app.tar.gz",
+              "darwin-x86_64": f"Netzblick-{v}-macOS.app.tar.gz",
+              "linux-x86_64": f"Netzblick-{v}-Linux-x86_64.AppImage",
+          }
+          platforms = {}
+          for key, name in files.items():
+              if os.path.exists(name + ".sig"):
+                  platforms[key] = {"signature": open(name + ".sig").read().strip(), "url": base + name}
+          doc = {"version": v, "notes": f"Netzblick {v}", "pub_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "platforms": platforms}
+          json.dump(doc, open("latest.json", "w"), indent=2)
+          print(json.dumps(doc, indent=2)[:2000])
+          PY
+            gh release upload "$TAG" latest.json --clobber
+          fi
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
           gh release upload "$TAG" SHA256SUMS.txt --clobber

@@ -188,6 +188,22 @@ export function setSystemBars(dark) {
   SystemBars.setStyle({ style: dark ? SystemBarsStyle.Dark : SystemBarsStyle.Light }).catch(() => {});
 }
 
+/* ------------------------------------------------------------ Desktop: Updates im Programm */
+// supported: false → das Programm kann sich nicht selbst aktualisieren (kein Schlüssel, .deb-Paket): Download-Link zeigen
+export const updater = {
+  async check() {
+    if (!isDesktop) return { supported: false };
+    try {
+      return { supported: true, update: await call('update_check') };
+    } catch (e) {
+      if (/unsupported/.test(e.message)) return { supported: false };
+      throw e;
+    }
+  },
+  /** Lädt, prüft die Signatur, installiert und startet neu (kehrt bei Erfolg nicht zurück) */
+  install: () => call('update_install'),
+};
+
 /* ------------------------------------------------------------ Desktop: Links im Browser öffnen */
 // Links mit fremder Adresse nicht im Programmfenster laden (das Programm blockiert es ohnehin), sondern im Standardprogramm öffnen
 if (isDesktop) {
