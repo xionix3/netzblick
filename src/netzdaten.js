@@ -125,6 +125,14 @@ export const OUTAGE = {
 /** Vollständige Datenschutzerklärung (öffentlicher Gist, Inhalt wie DATENSCHUTZ.md) */
 export const PRIVACY_URL = 'https://gist.github.com/xionix3/f85c9898dc518f80e8a40bceea5199b2';
 
+/**
+ * Unterstützen: nur im Desktop-Programm. In der Android-App verbieten die Google-Play-Regeln
+ * Links zu Zahlungen außerhalb von Google Play, auch zu Seiten, die dorthin führen.
+ */
+export const DONATE = [
+  { id: 'github', label: 'Kaffee spendieren über GitHub Sponsors', url: 'https://github.com/sponsors/xionix3' },
+];
+
 export const CONTACT = {
   company: 'Netz Burgenland GmbH',
   address: 'Kasernenstraße 9, 7000 Eisenstadt',

@@ -5,6 +5,15 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.5] – 2026-11-24
+
+### Neu
+- Desktop-Programm: „Kaffee spendieren“ in der Seitenleiste und unter Info (über GitHub Sponsors). In der Android-App gibt es das nicht, weil Google Play Links zu Zahlungen außerhalb von Play nicht erlaubt.
+
+### Geändert
+- Android: Der Hinweis auf das Desktop-Programm nennt keine GitHub-Adresse mehr.
+- Info im Desktop-Programm: Datenschutz-Hinweis nennt den Schlüsselbund des Computers statt des Android-Schlüsselspeichers.
+
 ## [1.8.4] – 2026-11-24
 
 ### Neu

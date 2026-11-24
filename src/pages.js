@@ -4,7 +4,7 @@ import { meterLabel, firstDataDate } from './model.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { billingYearStatus, consumptionFor } from './billing.js';
 import { yearCost, meterCost, sumCosts, supplierFor, forYear, powerCharge, tariffClassOf } from './costs.js';
-import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, DYNAMIC_PROVIDERS, PRIVACY_URL, OFFICIAL_SOURCES, GOV_DISCLAIMER, ecTypeLabel } from './netzdaten.js';
+import { GRID, LEVIES, METERING, VAT, STAND, PRICE_SOURCES, TARIFF_CALCULATOR, OUTAGE, CONTACT, POWER_TARIFF, DYNAMIC_PROVIDERS, PRIVACY_URL, OFFICIAL_SOURCES, GOV_DISCLAIMER, ecTypeLabel, DONATE } from './netzdaten.js';
 import { dynamicPrice, SPOT_SOURCE } from './spot.js';
 import { currentFactor } from './kundenportal.js';
 import { reminderIcs, reminderTime } from './reminder.js';
@@ -352,13 +352,16 @@ export function renderInfo(body, ctx) {
           h('p', { class: 'panel-text' }, 'geister-it'),
           h('p', { class: 'panel-text' }, h('a', { href: 'mailto:patrick-schloegl@gmx.at', class: 'link' }, 'patrick-schloegl@gmx.at')),
           h('button', { class: 'link-btn', type: 'button', onclick: () => openExternal('https://www.geister-it.at') }, icon('external'), 'www.geister-it.at')))),
+    // body.append ist das native append: null würde als Text „null“ erscheinen, darum als Liste einfügen
+    ...(isDesktop && DONATE.length ? [section('Netzblick unterstützen', 'Netzblick ist kostenlos, ohne Werbung und ohne Tracking. Wenn es dir hilft, freue ich mich über einen Kaffee.',
+      h('div', { class: 'btn-row' }, ...DONATE.map((d) => h('button', { class: 'btn btn--primary', type: 'button', onclick: () => openExternal(d.url) }, icon('coffee'), d.label))))] : []),
     section('Woher die Daten kommen', null, list(
       'Messwerte und Zählerstände: Smart-Meter-Portal von Netz Burgenland (smartmeter.netzburgenland.at)',
       'Anlagen, Verträge und Abrechnungen: Kundenportal von Netz Burgenland (portal.netzburgenland.at)',
       'Börsenpreise: Energy-Charts (Fraunhofer ISE), Daten Bundesnetzagentur | SMARD.de, CC BY 4.0',
     )),
     section('Datenschutz', null, list(
-      'Zugangsdaten werden verschlüsselt im Android-Schlüsselspeicher dieses Geräts abgelegt.',
+      isDesktop ? 'Zugangsdaten liegen bei „Angemeldet bleiben“ im Schlüsselbund deines Computers.' : 'Zugangsdaten werden verschlüsselt im Android-Schlüsselspeicher dieses Geräts abgelegt.',
       'Deine Zugangsdaten und Messwerte gehen nur an die beiden Portale von Netz Burgenland. Für die Börsenpreise fragt Netzblick bei Energy-Charts nur Preiszone und Zeitraum ab, keine Daten über dich.',
       'Es gibt keinen eigenen Server, keine Werbung und keine Analyse.',
       'Abmelden löscht Zugangsdaten und zwischengespeicherte Messwerte.',

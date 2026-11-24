@@ -20,7 +20,7 @@ import { renderSpotPage } from './spotpage.js';
 import { parseBillingPeriod } from './kundenportal.js';
 import { meterCost, sumCosts, supplierFor, tariffClassOf, projectCost, anyDynamic } from './costs.js';
 import { SpotStore } from './spot.js';
-import { STAND, TARIFF_CALCULATOR, POWER_TARIFF, GRID, DYNAMIC_PROVIDERS } from './netzdaten.js';
+import { STAND, TARIFF_CALCULATOR, POWER_TARIFF, GRID, DYNAMIC_PROVIDERS, DONATE } from './netzdaten.js';
 import { costParts, costTotal, costTable, costNotes } from './costview.js';
 
 // Web-Vorschau (ohne native Schicht): nur Demo-Daten möglich, da der Browser die Portal-API blockiert
@@ -299,6 +299,7 @@ function buildNav() {
       }, icon(it.icon), h('span', { text: it.label }))))),
     h('div', { class: 'nav-foot' },
       h('p', { class: 'nav-user', id: 'navUser' }),
+      isDesktop && DONATE.length ? h('button', { type: 'button', class: 'nav-item nav-item--quiet', onclick: () => goto('info') }, icon('coffee'), h('span', { text: 'Kaffee spendieren' })) : null,
       h('button', { type: 'button', class: 'nav-item nav-item--quiet', onclick: logout }, icon('logout'), h('span', { id: 'navLogout', text: 'Abmelden' })),
       h('p', { class: 'nav-version', text: `Version ${APP_VERSION}` })),
   );
@@ -514,7 +515,7 @@ function showWhatsNew() {
   const major = APP_VERSION.split('.').slice(0, 2).join('.');
   try { if (localStorage.getItem('nb.seenVersion') === major) return false; localStorage.setItem('nb.seenVersion', major); } catch { return false; }
   const items = [
-    ['desktop', 'Netzblick gibt es jetzt auch für Windows, macOS und Linux, mit denselben Funktionen. Download auf github.com/xionix3/netzblick unter „Releases“.'],
+    ['desktop', 'Netzblick gibt es jetzt auch als Programm für Windows, macOS und Linux, mit denselben Funktionen.'],
     ['spot', 'Börsenpreis: die Day-Ahead-Preise für heute und morgen, je Viertelstunde oder Stunde, die günstigsten und teuersten Zeiten, der Vergleich mit den Nachbarländern und wann Strom meist günstig ist.'],
     ['euro', 'Dynamischer Stromtarif: Börsenpreis plus Aufschlag, mit Vorlagen für aWATTar, smartENERGY, VERBUND und oekostrom.'],
     ['wallet', 'Kosten: eigene Seite mit allen Kosten Monat für Monat, je Zählpunkt und als Aufstellung.'],
