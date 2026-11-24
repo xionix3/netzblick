@@ -1,0 +1,116 @@
+# Baut die iPhone-App (Capacitor, ios/) als unsignierte IPA zum Sideloaden (Sideloadly, AltStore).
+# Ohne Apple-Entwicklerkonto: signiert wird erst beim Installieren mit der eigenen Apple-ID.
+# Die IPA kommt nur in den privaten Entwurf „android-vX.Y.Z“, nie an das öffentliche Release.
+# Auslöser:
+#   1. Aus dem Release-Workflow (neue Version).
+#   2. Auf GitHub: Actions → iPhone → Run workflow, mit Tag eines bestehenden Releases (z. B. v1.8.7).
+#   3. Push auf einen Branch ios/…: nur bauen, keine Dateien (Artifacts wären für alle sichtbar).
+name: iPhone
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        default: ''
+      version:
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release, zu dessen privatem Entwurf die IPA kommt (z. B. v1.8.7); leer = nur bauen
+        type: string
+        default: ''
+  push:
+    branches: ['ios/**']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: iPhone-App (IPA)
+    runs-on: macos-latest
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Neuestes Xcode wählen
+        run: |
+          X="$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)"
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+
+      - name: Version bestimmen
+        run: |
+          V="${{ inputs.version }}"
+          if [ -z "$V" ] && [ -n "$TAG" ]; then V="${TAG#v}"; fi
+          if [ -z "$V" ]; then V="$(node -p "require('./package.json').version")"; fi
+          IFS=. read -r A B C <<< "$V"
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+          echo "BUILD=$(( A * 10000 + B * 100 + C ))" >> "$GITHUB_ENV"
+          echo "Version $V"
+
+      - run: npm ci
+
+      - name: Oberfläche bauen und ins iOS-Projekt kopieren
+        env:
+          APP_VERSION: ${{ env.VERSION }}
+        run: |
+          npm run build
+          npx cap sync ios
+
+      - name: App bauen (ohne Signatur)
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+            build > "$RUNNER_TEMP/build.log" 2>&1 || {
+              grep -E ' error: |error: ' "$RUNNER_TEMP/build.log" | head -n 60
+              tail -n 80 "$RUNNER_TEMP/build.log"
+              exit 1
+            }
+          tail -n 15 "$RUNNER_TEMP/build.log"
+
+      - name: IPA packen
+        run: |
+          APP="$RUNNER_TEMP/dd/Build/Products/Release-iphoneos/App.app"
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' -c 'Print :CFBundleVersion' -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          mkdir -p ipa/Payload out
+          cp -R "$APP" ipa/Payload/
+          (cd ipa && zip -qry "../out/Netzblick-$VERSION-iPhone.ipa" Payload)
+          ls -la out
+          shasum -a 256 out/*.ipa
+
+      - name: In den privaten Entwurf legen
+        if: env.TAG != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          DRAFT="android-$TAG"
+          gh release view "$DRAFT" --json isDraft --jq '.isDraft' | grep -qx true || { echo "::error::$DRAFT ist kein Entwurf, IPA wird nicht hochgeladen"; exit 1; }
+          gh release upload "$DRAFT" out/*.ipa --clobber
+          # Prüfsummen im Entwurf um die IPA ergänzen
+          mkdir sums && cd sums
+          gh release download "$DRAFT" --pattern SHA256SUMS.txt 2>/dev/null || touch SHA256SUMS.txt
+          grep -v 'iPhone\.ipa$' SHA256SUMS.txt > s.txt || true
+          (cd ../out && shasum -a 256 *.ipa) >> s.txt
+          mv s.txt SHA256SUMS.txt && cat SHA256SUMS.txt
+          gh release upload "$DRAFT" SHA256SUMS.txt --clobber
+          gh release edit "$DRAFT" --title "Android und iPhone $VERSION (privat)"

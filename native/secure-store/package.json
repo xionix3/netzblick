@@ -1,0 +1,12 @@
+{
+  "name": "netzblick-secure-store",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Netzblick: Zugangsdaten im iOS-Schlüsselbund (Android: SecureStorePlugin.java im App-Projekt)",
+  "license": "SEE LICENSE IN ../../LICENSE",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  }
+}

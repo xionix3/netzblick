@@ -1,5 +1,6 @@
 # Erstellt ein GitHub-Release mit den Desktop-Programmen für Windows, macOS und Linux (desktop.yml).
-# Signierte APK und AAB (für die Play Console) kommen in einen nicht öffentlichen Entwurf „Android X (privat)“.
+# Signierte APK und AAB (für die Play Console) kommen in einen nicht öffentlichen Entwurf „Android X (privat)“,
+# dazu die iPhone-App als unsignierte IPA zum Sideloaden (ios.yml); danach heißt der Entwurf „Android und iPhone X (privat)“.
 # Auslöser, jeweils nur wenn es für die Version noch kein Release gibt:
 #   1. Neue Version in package.json (und CHANGELOG.md) nach main pushen: Release entsteht automatisch.
 #   2. Tag pushen: git tag v1.2.0 && git push origin v1.2.0
@@ -171,3 +172,14 @@ jobs:
       contents: write
       id-token: write
       attestations: write
+
+  iphone:
+    name: iPhone-App
+    needs: [version, release]
+    if: needs.version.outputs.release == 'true'
+    uses: ./.github/workflows/ios.yml
+    with:
+      tag: ${{ needs.version.outputs.tag }}
+      version: ${{ needs.version.outputs.version }}
+    permissions:
+      contents: write

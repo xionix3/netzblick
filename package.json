@@ -28,12 +28,14 @@
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.6.2",
     "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/ios": "^8.6.2",
     "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/share": "^8.0.3",
     "@fontsource/barlow": "^5.3.0",
     "@fontsource/barlow-semi-condensed": "^5.3.0",
     "@tauri-apps/api": "^2.12.5",
-    "echarts": "^6.1.0"
+    "echarts": "^6.1.0",
+    "netzblick-secure-store": "file:native/secure-store"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.6.2",

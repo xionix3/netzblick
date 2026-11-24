@@ -1,5 +1,5 @@
 // Plattform-Schicht: nativer HTTP-Zugriff (kein CORS), sicherer Speicher, Teilen, Zurück-Taste
-// Android: Capacitor. Windows, macOS, Linux: Tauri (src-tauri/src/main.rs). Sonst: Browser (nur Demo).
+// Android, iPhone: Capacitor. Windows, macOS, Linux: Tauri (src-tauri/src/main.rs). Sonst: Browser (nur Demo).
 import { Capacitor, CapacitorHttp, SystemBars, SystemBarsStyle, registerPlugin } from '@capacitor/core';
 import { invoke } from '@tauri-apps/api/core';
 import { App } from '@capacitor/app';
@@ -7,8 +7,10 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-/** Android-App */
+/** App (Android oder iPhone) */
 export const isNative = Capacitor.isNativePlatform();
+/** iPhone/iPad-App */
+export const isIOS = Capacitor.getPlatform() === 'ios';
 /** Desktop-Programm (Windows, macOS, Linux) */
 export const isDesktop = typeof window !== 'undefined' && !!window.__TAURI_INTERNALS__;
 /** App oder Desktop-Programm: echte Anmeldung möglich */
@@ -57,6 +59,7 @@ export async function http({ method = 'GET', url, headers = {}, data }) {
 
 /* ------------------------------------------------------------ Sicherer Speicher */
 // Android: eigenes natives Plugin (SecureStorePlugin.java), AES-GCM mit Schlüssel im Android Keystore.
+// iPhone: gleiches Plugin in Swift (native/secure-store), Schlüsselbund, nur dieses Gerät.
 // Desktop: Schlüsselbund des Systems (Windows-Anmeldeinformationen, macOS-Schlüsselbund, Linux Secret Service).
 const SecureStore = registerPlugin('SecureStore');
 

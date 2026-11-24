@@ -12,7 +12,7 @@ import { makePeriod, addDays, startOfDay, daysBetween } from './time.js';
 import { num, kwh, kw, euro, pct, dateNum, dateLong, time, MONTHS_LONG, MONTHS_SHORT } from './format.js';
 import { costParts, costTotal, costTable, costNotes } from './costview.js';
 import * as charts from './charts.js';
-import { secure, saveSettings, scheduleReminder, cancelReminder, reminderPending, shareFile, openExternal, isNative, isDesktop } from './platform.js';
+import { secure, saveSettings, scheduleReminder, cancelReminder, reminderPending, shareFile, openExternal, isNative, isDesktop, isIOS } from './platform.js';
 import { cacheClear } from './cache.js';
 import { ApiError } from './api.js';
 
@@ -361,7 +361,7 @@ export function renderInfo(body, ctx) {
       'Börsenpreise: Energy-Charts (Fraunhofer ISE), Daten Bundesnetzagentur | SMARD.de, CC BY 4.0',
     )),
     section('Datenschutz', null, list(
-      isDesktop ? 'Zugangsdaten liegen bei „Angemeldet bleiben“ im Schlüsselbund deines Computers.' : 'Zugangsdaten werden verschlüsselt im Android-Schlüsselspeicher dieses Geräts abgelegt.',
+      isDesktop ? 'Zugangsdaten liegen bei „Angemeldet bleiben“ im Schlüsselbund deines Computers.' : isIOS ? 'Zugangsdaten liegen bei „Angemeldet bleiben“ im Schlüsselbund dieses iPhones, nur auf diesem Gerät.' : 'Zugangsdaten werden verschlüsselt im Android-Schlüsselspeicher dieses Geräts abgelegt.',
       'Deine Zugangsdaten und Messwerte gehen nur an die beiden Portale von Netz Burgenland. Für die Börsenpreise fragt Netzblick bei Energy-Charts nur Preiszone und Zeitraum ab, keine Daten über dich.',
       'Es gibt keinen eigenen Server, keine Werbung und keine Analyse.',
       'Abmelden löscht Zugangsdaten und zwischengespeicherte Messwerte.',
@@ -572,8 +572,8 @@ export function renderTariff(body, ctx) {
     ctx.saveSettings();
     ctx.refreshUsage();
     if (res === 'ok') toast(`Erinnerung am ${dateNum(t.at)} um 9 Uhr`);
-    else if (res === 'denied') toast('Benachrichtigungen sind für Netzblick aus. Erlaube sie in den Android-Einstellungen oder nutze den Kalender.');
-    else if (res === 'unsupported') toast('Gespeichert. Benachrichtigungen gibt es nur in der Android-App, der Hinweis erscheint in der Übersicht.');
+    else if (res === 'denied') toast(`Benachrichtigungen sind für Netzblick aus. Erlaube sie in den ${isIOS ? 'iPhone' : 'Android'}-Einstellungen oder nutze den Kalender.`);
+    else if (res === 'unsupported') toast('Gespeichert. Benachrichtigungen gibt es nur in der Handy-App, der Hinweis erscheint in der Übersicht.');
     else toast('Erinnerung konnte nicht gesetzt werden. Der Hinweis erscheint trotzdem in der Übersicht.');
     showStatus();
   };
@@ -1179,7 +1179,7 @@ export function renderCommunity(body, ctx) {
 
 /* ================================================================ Störung */
 const telLink = (tel) => `tel:${tel}`;
-const mapLink = (addr) => (isNative ? `geo:0,0?q=${encodeURIComponent(addr)}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`);
+const mapLink = (addr) => (isIOS ? `https://maps.apple.com/?q=${encodeURIComponent(addr)}` : isNative ? `geo:0,0?q=${encodeURIComponent(addr)}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`);
 
 function callCard(entry, primary) {
   return h('button', { class: 'callcard' + (primary ? ' callcard--primary' : ''), type: 'button', onclick: () => openExternal(telLink(entry.tel)) },
