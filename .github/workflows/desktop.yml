@@ -16,6 +16,15 @@ on:
         type: string
         default: ''
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Bestehendes Release, an das die Dateien kommen (z. B. v1.8.3); leer = nur Artifacts
+        type: string
+        default: ''
+      version:
+        description: Leer lassen (Version aus package.json)
+        type: string
+        default: ''
   push:
     branches: ['desktop/**']
 
@@ -80,11 +89,12 @@ jobs:
         shell: bash
         env:
           APP_VERSION: ${{ inputs.version }}
-          # Updates im Programm: nur mit Schlüssel (Secrets) und öffentlichem Schlüssel in src-tauri/updater.pub
+          # Updates im Programm: nur mit Schlüssel (Secrets) und öffentlichem Schlüssel in tauri.conf.json
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] && [ -s src-tauri/updater.pub ]; then
+          PUBKEY="$(node -p "(require('./src-tauri/tauri.conf.json').plugins?.updater?.pubkey || '').trim()")"
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] && [ -n "$PUBKEY" ]; then
             echo "Mit Update-Dateien (signiert)"
             npx tauri build ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true}}'
           else

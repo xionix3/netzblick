@@ -64,7 +64,7 @@
       "endpoints": [
         "https://github.com/xionix3/netzblick/releases/latest/download/latest.json"
       ],
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY0NDA2M0YwMEQ2MzM1MzUKUldRMU5XTU44R05BOURzZjNsWUt0cEhyZ1NzeFVkZ1Vpa09YQitzVW5sRGlqYysrQTY0WTgwT0IK",
       "windows": {
         "installMode": "passive"
       }

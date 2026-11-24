@@ -107,7 +107,7 @@ fn secret_remove(key: String) -> Result<(), String> {
 
 /* ------------------------------------------------------------------ Updates im Programm */
 
-/// Öffentlicher Schlüssel, mit dem Updates signiert sein müssen (aus updater.pub, siehe build.rs)
+/// Öffentlicher Schlüssel, mit dem Updates signiert sein müssen (aus tauri.conf.json, siehe build.rs)
 const UPDATER_PUBKEY: Option<&str> = option_env!("NETZBLICK_UPDATER_PUBKEY");
 
 /// Selbst aktualisieren geht mit Schlüssel und unter Linux nur als AppImage (ein .deb-Paket aktualisiert die Paketverwaltung)
