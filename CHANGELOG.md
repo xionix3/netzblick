@@ -5,6 +5,11 @@ Versionsnummern nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [1.8.3] – 2026-11-24
+
+### Neu
+- **Updates im Desktop-Programm sind aktiv.** Bei einer neuen Version zeigt Netzblick „Jetzt aktualisieren“, lädt sie, prüft die Signatur (eigener Schlüssel von geister-it), installiert und startet neu. Windows, macOS und Linux (AppImage). Diese Version selbst musst du noch einmal von Hand installieren.
+
 ## [1.8.2] – 2026-11-24
 
 ### Neu
